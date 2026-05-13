@@ -219,6 +219,51 @@ API:
 GET /api/system/market-data/status
 ```
 
+1단계에서 새로 만든 파일:
+
+```text
+docs/steps/01-binance-market-data.md
+
+src/main/java/com/example/futurespapertrading/config/BinanceProperties.java
+
+src/main/java/com/example/futurespapertrading/market/client/BinanceMarketDataClient.java
+src/main/java/com/example/futurespapertrading/market/client/BinanceMarketEventMapper.java
+src/main/java/com/example/futurespapertrading/market/client/BinanceStreamDescriptor.java
+
+src/main/java/com/example/futurespapertrading/market/event/MarketEvent.java
+src/main/java/com/example/futurespapertrading/market/event/BookTickerEvent.java
+src/main/java/com/example/futurespapertrading/market/event/MarkPriceEvent.java
+src/main/java/com/example/futurespapertrading/market/event/AggTradeEvent.java
+
+src/main/java/com/example/futurespapertrading/system/MarketDataStatus.java
+src/main/java/com/example/futurespapertrading/system/MarketDataStatusController.java
+
+src/test/java/com/example/futurespapertrading/market/client/BinanceMarketEventMapperTest.java
+src/test/java/com/example/futurespapertrading/system/MarketDataStatusTest.java
+```
+
+기존 파일 중 1단계에서 코드 또는 설정이 추가된 파일:
+
+```text
+src/main/resources/application.yaml
+  - paper-trading.binance.enabled 설정 추가
+  - Binance WebSocket base URL, symbol, reconnect delay, log interval 설정 추가
+
+src/test/java/com/example/futurespapertrading/FuturesPaperTradingApplicationTests.java
+  - 테스트 실행 중 Binance WebSocket 자동 연결을 끄는 설정 추가
+  - GET /api/system/market-data/status disabled 응답 검증 추가
+```
+
+기존 파일 중 1단계에서 함께 정리된 파일:
+
+```text
+build.gradle
+settings.gradle
+src/main/java/com/example/futurespapertrading/FuturesPaperTradingApplication.java
+src/main/java/com/example/futurespapertrading/config/PaperTradingProperties.java
+src/main/java/com/example/futurespapertrading/system/HealthController.java
+```
+
 응답 예시:
 
 ```json
@@ -320,3 +365,33 @@ curl.exe -s "http://localhost:8080/api/system/market-data/status"
 ```
 
 2단계에서는 `MarketPriceSnapshot`, `MarketPriceStore`, `GET /api/market/{symbol}`을 만든다.
+
+---
+
+## 10. 보충 페이지 읽는 순서
+
+01단계 코드 설명 보충 페이지는 아래 순서로 읽는다.
+
+```text
+application.yaml
+  -> BinanceProperties
+  -> BinanceStreamDescriptor
+  -> Event들
+  -> BinanceMarketEventMapper
+  -> MarketDataStatus
+  -> BinanceMarketDataClient
+  -> MarketDataStatusController
+```
+
+읽는 기준:
+
+```text
+설정값이 어디서 시작되는지 본다.
+설정값이 Java 객체로 어떻게 들어오는지 본다.
+WebSocket stream 이름과 URL이 어떻게 만들어지는지 본다.
+Binance payload를 담을 이벤트 타입의 모양을 본다.
+JSON payload가 이벤트 객체로 바뀌는 과정을 본다.
+수신 상태와 이벤트 카운트를 어떻게 보관하는지 본다.
+실제 WebSocket 연결, 수신, 재연결 흐름이 어떻게 합쳐지는지 본다.
+마지막으로 내부 상태를 HTTP API로 어떻게 확인하는지 본다.
+```

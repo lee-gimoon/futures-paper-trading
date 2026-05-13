@@ -39,6 +39,17 @@
 | `N/A (Notion 하위 보충 페이지)` | 00-보충. application.yaml 설정 파일 설명 | `35f81af1-4757-8144-ad85-cf90a1fb6cc3` | https://www.notion.so/35f81af147578144ad85cf90a1fb6cc3 | 00단계 페이지 하위 문서 |
 | `N/A (Notion 하위 보충 페이지)` | 00-보충. HealthController 코드 설명 | `35f81af1-4757-8175-8ef0-d86d4276f340` | https://www.notion.so/35f81af1475781758ef0d86d4276f340 | 00단계 페이지 하위 문서 |
 | `N/A (Notion 하위 보충 페이지)` | 00-보충. record 직관 설명 | `35f81af1-4757-8122-9d04-e6532ece1ac4` | https://www.notion.so/35f81af1475781229d04e6532ece1ac4 | 00단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. application.yaml Binance 설정 설명 | `35f81af1-4757-814e-b37d-f6dfb1c95557` | https://www.notion.so/35f81af14757814eb37df6dfb1c95557 | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. BinanceProperties 코드 설명 | `35f81af1-4757-8167-ac9b-ef22ace8a549` | https://www.notion.so/35f81af147578167ac9bef22ace8a549 | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. BinanceMarketDataClient 코드 설명 | `35f81af1-4757-8190-9411-e0d3f8c88f17` | https://www.notion.so/35f81af1475781909411e0d3f8c88f17 | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. BinanceMarketEventMapper 코드 설명 | `35f81af1-4757-8125-aa0e-cd1fb939cd69` | https://www.notion.so/35f81af147578125aa0ecd1fb939cd69 | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. BinanceStreamDescriptor 코드 설명 | `35f81af1-4757-81b0-b7f9-dc5a5ba60163` | https://www.notion.so/35f81af1475781b0b7f9dc5a5ba60163 | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. MarketEvent 코드 설명 | `35f81af1-4757-81da-b1e3-e18278064f1f` | https://www.notion.so/35f81af1475781dab1e3e18278064f1f | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. BookTickerEvent 코드 설명 | `35f81af1-4757-81a6-a9f1-e36853a8381d` | https://www.notion.so/35f81af1475781a6a9f1e36853a8381d | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. MarkPriceEvent 코드 설명 | `35f81af1-4757-819c-8d58-e275b04759a9` | https://www.notion.so/35f81af14757819c8d58e275b04759a9 | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. AggTradeEvent 코드 설명 | `35f81af1-4757-8145-a696-ee2e3af0e8a1` | https://www.notion.so/35f81af147578145a696ee2e3af0e8a1 | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. MarketDataStatus 코드 설명 | `35f81af1-4757-814b-9d7f-eeedb6f65610` | https://www.notion.so/35f81af14757814b9d7feeedb6f65610 | 01단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 01-보충. MarketDataStatusController 코드 설명 | `35f81af1-4757-810b-8c34-c432f7ff5b7b` | https://www.notion.so/35f81af14757810b8c34c432f7ff5b7b | 01단계 페이지 하위 문서 |
 
 ---
 
@@ -64,3 +75,14 @@
 - 2026-05-13: `00단계. 프로젝트 뼈대 만들기` 하위에 `00-보충. HealthController 코드 설명` 페이지 생성 후 매핑 추가.
 - 2026-05-13: `00단계. 프로젝트 뼈대 만들기` 하위에 `00-보충. record 직관 설명` 페이지 생성 후 매핑 추가.
 - 2026-05-13: `01단계. Binance 실시간 시세 수신` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. application.yaml Binance 설정 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. BinanceProperties 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. BinanceMarketDataClient 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. BinanceMarketEventMapper 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. BinanceStreamDescriptor 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. MarketEvent 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. BookTickerEvent 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. MarkPriceEvent 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. AggTradeEvent 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. MarketDataStatus 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 하위에 `01-보충. MarketDataStatusController 코드 설명` 페이지 생성 후 매핑 추가.

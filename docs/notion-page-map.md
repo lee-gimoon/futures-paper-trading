@@ -31,15 +31,20 @@
 |---|---|---|---|---|
 | `docs/implementation-roadmap.md` | futures-paper-trading 구현 로드맵 | `35e81af1-4757-8140-868e-fcb349e8a30e` | https://www.notion.so/35e81af147578140868efcb349e8a30e | 로컬 md가 원본 |
 | `docs/steps/00-project-skeleton.md` | 00단계. 프로젝트 뼈대 만들기 | `35e81af1-4757-81ab-9148-e1d9ea3ff0cc` | https://www.notion.so/35e81af1475781ab9148e1d9ea3ff0cc | 로컬 md가 원본 |
+| `docs/steps/01-binance-market-data.md` | 01단계. Binance 실시간 시세 수신 | `35f81af1-4757-8123-bd1f-cf360a712f93` | https://www.notion.so/35f81af147578123bd1fcf360a712f93 | 로컬 md가 원본 |
 | `docs/notion-page-map.md` | Notion 페이지 매핑 | `35e81af1-4757-81e3-bca8-e9b8581fff93` | https://www.notion.so/35e81af1475781e3bca8e9b8581fff93 | 로컬 md가 원본 |
 | `AGENTS.md` | AGENTS 작업 가이드 | `35e81af1-4757-813a-a9d5-eba55fc5bf44` | https://www.notion.so/35e81af14757813aa9d5eba55fc5bf44 | 로컬 md가 원본 |
 | `HELP.md` | futures-paper-trading 도움말 | `35e81af1-4757-8196-9712-e54335e67d45` | https://www.notion.so/35e81af1475781969712e54335e67d45 | 로컬 md가 원본 |
+| `N/A (Notion 하위 보충 페이지)` | 00-보충. PaperTradingProperties 코드 설명 | `35f81af1-4757-81b5-ad26-e6320d9f51c2` | https://www.notion.so/35f81af1475781b5ad26e6320d9f51c2 | 00단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 00-보충. application.yaml 설정 파일 설명 | `35f81af1-4757-8144-ad85-cf90a1fb6cc3` | https://www.notion.so/35f81af147578144ad85cf90a1fb6cc3 | 00단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 00-보충. HealthController 코드 설명 | `35f81af1-4757-8175-8ef0-d86d4276f340` | https://www.notion.so/35f81af1475781758ef0d86d4276f340 | 00단계 페이지 하위 문서 |
+| `N/A (Notion 하위 보충 페이지)` | 00-보충. record 직관 설명 | `35f81af1-4757-8122-9d04-e6532ece1ac4` | https://www.notion.so/35f81af1475781229d04e6532ece1ac4 | 00단계 페이지 하위 문서 |
 
 ---
 
 ## 아직 매핑되지 않은 md
 
-현재 없음.
+현재 미매핑 md 없음.
 
 새 문서를 만들면 아래 형식으로 위 표에 추가한다.
 
@@ -54,3 +59,8 @@
 - 2026-05-13: 기존 Notion 페이지 검색 결과를 기준으로 최초 매핑 작성.
 - 2026-05-13: `docs/notion-page-map.md` 자체도 Notion 페이지로 만들고 매핑에 추가.
 - 이후 Notion 동기화 작업에서는 이 문서를 먼저 보고, 매핑이 없을 때만 검색한다.
+- 2026-05-13: `00단계. 프로젝트 뼈대 만들기` 하위에 `00-보충. PaperTradingProperties 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `00단계. 프로젝트 뼈대 만들기` 하위에 `00-보충. application.yaml 설정 파일 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `00단계. 프로젝트 뼈대 만들기` 하위에 `00-보충. HealthController 코드 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `00단계. 프로젝트 뼈대 만들기` 하위에 `00-보충. record 직관 설명` 페이지 생성 후 매핑 추가.
+- 2026-05-13: `01단계. Binance 실시간 시세 수신` 페이지 생성 후 매핑 추가.

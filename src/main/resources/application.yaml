@@ -1,14 +1,14 @@
-# Spring Boot가 애플리케이션을 구분할 때 사용하는 이름이다.
-# 로그, Actuator, 테스트 응답 등에서 서버 식별값으로 활용된다.
 spring:
   application:
     name: futures-paper-trading
 
-# futures-paper-trading 프로젝트 전용 설정 영역이다.
-# 실제 Binance 주문 API 키나 비밀값은 이 파일에 저장하지 않는다.
 paper-trading:
   app:
-    # 모의 선물 거래소의 기준 통화다. 잔고, 증거금, PnL 계산의 기본 단위로 이어진다.
     base-currency: USDT
-    # 초기 단계에서 먼저 다룰 기본 심볼이다. 1단계 Binance WebSocket 연결의 출발점으로 사용한다.
     default-symbol: BTCUSDT
+  binance:
+    enabled: true
+    web-socket-base-url: wss://fstream.binance.com
+    symbol: BTCUSDT
+    reconnect-delay: 5s
+    log-every-events: 50

@@ -295,6 +295,8 @@ MockMvc 기반 GET /api/health 테스트 통과
 
 ### 1단계. Binance 실시간 시세 수신
 
+상세 문서: [01단계. Binance 실시간 시세 수신](steps/01-binance-market-data.md)
+
 목표:
 
 ```text
@@ -304,6 +306,7 @@ BTCUSDT bookTicker, markPrice, aggTrade 수신
 사용하는 concurrency:
 
 ```text
+Step03 - 공유 상태, AtomicReference, AtomicLong, ConcurrentHashMap
 Step06 - 외부 I/O, WebClient
 Step07 - Flux, Mono, 실시간 스트림
 Step09 - 연결 실패 대비
@@ -926,4 +929,21 @@ stale
 [x] 0-8. 주요 코드와 설정 파일에 목적/역할 주석 추가
 ```
 
-다음 작업에서는 `docs/steps/01-binance-market-data.md`를 먼저 만들고, 1단계 Binance WebSocket 연결을 붙인다.
+1단계 Binance 실시간 시세 수신 구현도 완료했다.
+
+완료한 작업 목록:
+
+```text
+[x] 1-1. docs/steps/01-binance-market-data.md 작성
+[x] 1-2. Binance WebSocket 설정 추가
+[x] 1-3. BinanceProperties 생성
+[x] 1-4. bookTicker, markPrice, aggTrade event record 생성
+[x] 1-5. Binance payload mapper 생성
+[x] 1-6. MarketDataStatus 생성
+[x] 1-7. BinanceMarketDataClient 생성
+[x] 1-8. GET /api/system/market-data/status 생성
+[x] 1-9. mapper와 status API 테스트 추가
+[x] 1-10. ./gradlew.bat test 실행
+```
+
+다음 작업에서는 2단계로 넘어가 `MarketPriceSnapshot`, `MarketPriceStore`, `GET /api/market/{symbol}`을 만든다.

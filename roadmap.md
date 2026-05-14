@@ -15,6 +15,9 @@
 처음부터 health, properties, status, reconnect, 주문, 계좌를 만들지 않는다.
 먼저 실제 Binance Futures 호가 데이터가 화면에서 움직이는 것을 확인한다.
 
+초기 단계에서는 신규 테스트 파일을 만들지 않는다.
+필요하면 기존 테스트만 유지하고, 검증은 실행 로그와 수동 확인 중심으로 진행한다.
+
 ---
 
 ## 0단계. Spring Boot 초기 실행
@@ -42,6 +45,7 @@ Spring Boot 애플리케이션이 실행된다.
 ```text
 BTCUSDT USDⓈ-M Futures 호가 stream에 연결한다.
 받은 JSON 문자열을 그대로 로그에 찍는다.
+애플리케이션 시작 시 자동 연결하지 않고, 사용자가 요청을 보냈을 때 연결한다.
 ```
 
 기본 후보 stream:

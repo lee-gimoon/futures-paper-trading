@@ -2,14 +2,12 @@ package com.example.futurespapertrading.market;
 
 import java.net.URI;
 
-import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
-import reactor.core.Disposable;
 
 // Binance Futures BTCUSDT partial depth WebSocket에 연결하고 받은 raw JSON을 로그로 출력한다.
 @Component
@@ -22,50 +20,24 @@ public class BinanceFuturesRawDepthLogger {
 	private static final URI BTCUSDT_DEPTH_STREAM_URI =
 			URI.create("wss://fstream.binance.com/ws/btcusdt@depth20@100ms");
 
-	// Spring WebFlux가 제공하는 WebSocket 클라이언트 추상화다.
-	private final WebSocketClient webSocketClient;
+	// Spring WebFlux가 제공하는 Reactor Netty 기반 WebSocket 클라이언트다.
+	private final WebSocketClient webSocketClient = new ReactorNettyWebSocketClient();
 
-	// 현재 실행 중인 WebSocket 구독이다. 연결 중복 실행을 막고 종료 시 dispose하기 위해 보관한다.
-	private volatile Disposable subscription;
-
-	// 운영 코드에서는 Reactor Netty 기반 WebSocket 클라이언트를 사용한다.
-	public BinanceFuturesRawDepthLogger() {
-		this(new ReactorNettyWebSocketClient());
-	}
-
-	// WebSocketClient를 외부에서 넣을 수 있게 분리한 생성자다.
-	BinanceFuturesRawDepthLogger(WebSocketClient webSocketClient) {
-		this.webSocketClient = webSocketClient;
-	}
-
-	// Binance WebSocket 연결을 시작한다. 이미 연결 중이면 새 연결을 만들지 않는다.
-	public synchronized boolean connect() {
-		if (subscription != null && !subscription.isDisposed()) {
-			return false;
-		}
-
+	// Binance WebSocket에 연결하고, 들어오는 메시지를 그대로 로그에 남긴다.
+	public void connect() {
 		log.info("Connecting to Binance Futures depth stream: {}", BTCUSDT_DEPTH_STREAM_URI);
-		subscription = webSocketClient.execute(BTCUSDT_DEPTH_STREAM_URI, session ->
-						// 서버에서 들어오는 WebSocket 메시지 본문을 문자열로 꺼낸 뒤 그대로 로그에 남긴다.
+		webSocketClient.execute(BTCUSDT_DEPTH_STREAM_URI, session ->
+						// session.receive()는 서버에서 오는 메시지들의 Flux 스트림이다.
 						session.receive()
+								// 각 메시지의 payload를 문자열로 꺼낸다.
 								.map(WebSocketMessage::getPayloadAsText)
+								// 메시지가 들어올 때마다 부수효과로 로그를 찍는다.
 								.doOnNext(message -> log.info("Binance Futures raw depth JSON: {}", message))
+								// 스트림이 끝났음을 알리는 Mono<Void>로 변환한다.
 								.then())
+				// 연결 자체가 실패하거나 도중에 에러가 나면 로그로 남긴다.
 				.doOnError(error -> log.warn("Binance Futures depth stream failed", error))
-				.doFinally(signalType -> {
-					// 연결이 끝나면 다음 요청에서 다시 시작할 수 있도록 구독 상태를 비운다.
-					log.info("Binance Futures depth stream finished: {}", signalType);
-					subscription = null;
-				})
+				// 실제로 구독을 시작해야 위 체인이 동작한다. 호출하지 않으면 아무 일도 일어나지 않는다.
 				.subscribe();
-		return true;
-	}
-
-	// 애플리케이션이 종료될 때 열려 있는 WebSocket 구독을 정리한다.
-	@PreDestroy
-	void disconnect() {
-		if (subscription != null) {
-			subscription.dispose();
-		}
 	}
 }

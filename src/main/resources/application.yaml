@@ -1,14 +1,3 @@
 spring:
   application:
     name: futures-paper-trading
-
-paper-trading:
-  app:
-    base-currency: USDT
-    default-symbol: BTCUSDT
-  binance:
-    enabled: true
-    web-socket-base-url: wss://fstream.binance.com
-    symbol: BTCUSDT
-    reconnect-delay: 5s
-    log-every-events: 50

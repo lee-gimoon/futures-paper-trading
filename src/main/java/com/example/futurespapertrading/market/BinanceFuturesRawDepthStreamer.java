@@ -11,10 +11,10 @@ import org.springframework.web.reactive.socket.client.WebSocketClient;
 
 // Binance Futures BTCUSDT partial depth WebSocket에 연결하고 받은 raw JSON을 로그로 출력한다.
 @Component
-public class BinanceFuturesRawDepthLogger {
+public class BinanceFuturesRawDepthStreamer {
 
 	// 이 클래스 이름으로 로그를 남기기 위한 SLF4J Logger다.
-	private static final Logger log = LoggerFactory.getLogger(BinanceFuturesRawDepthLogger.class);
+	private static final Logger log = LoggerFactory.getLogger(BinanceFuturesRawDepthStreamer.class);
 
 	// BTCUSDT 상위 20개 bid/ask를 100ms 단위로 받는 Binance USDⓈ-M Futures stream 주소다.
 	private static final URI BTCUSDT_DEPTH_STREAM_URI =

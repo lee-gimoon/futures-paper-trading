@@ -18,7 +18,7 @@ public class BinanceFuturesRawDepthStreamer {
 
 	// BTCUSDT 상위 20개 bid/ask를 100ms 단위로 받는 Binance USDⓈ-M Futures stream 주소다.
 	private static final URI BTCUSDT_DEPTH_STREAM_URI =
-			URI.create("wss://fstream.binance.com/ws/btcusdt@depth20@100ms");
+			URI.create("wss://fstream.binance.com/ws/btcusdt@depth20@100ms"); // URI 객체 = “이 글자는 주소다”라는 의미와 기능이 붙은 객체
 
 	// Spring WebFlux가 제공하는 Reactor Netty 기반 WebSocket 클라이언트다.
 	private final WebSocketClient webSocketClient = new ReactorNettyWebSocketClient();

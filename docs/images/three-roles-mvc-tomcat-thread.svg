@@ -1,0 +1,325 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 920" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif">
+
+  <defs>
+    <marker id="arr-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <!-- ===== TITLE ===== -->
+  <rect x="0" y="0" width="1200" height="52" fill="#1e293b"/>
+  <text x="600" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="white">
+    Spring MVC + Tomcat + OS 스레드 — 3가지 정체와 역할
+  </text>
+
+  <!-- ===== SECTION 1: 3 cards ===== -->
+  <text x="20" y="82" font-size="13" font-weight="700" fill="#475569">정체 한눈에 (카테고리 2개로 나뉜다):</text>
+
+  <text x="385" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#334155">━━━ 코드 덩어리 (글자, JAR 파일) ━━━</text>
+
+  <!-- Card 1: Spring MVC -->
+  <g transform="translate(40, 120)">
+    <rect width="350" height="280" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" rx="8"/>
+    <rect width="350" height="36" fill="#d97706" rx="8"/>
+    <rect y="28" width="350" height="8" fill="#d97706"/>
+    <text x="175" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="white">Spring MVC</text>
+
+    <g transform="translate(20, 55)">
+      <path d="M0,0 L70,0 L88,18 L88,90 L0,90 Z" fill="white" stroke="#d97706" stroke-width="1.5"/>
+      <path d="M70,0 L70,18 L88,18 Z" fill="#fde68a" stroke="#d97706" stroke-width="1.5"/>
+      <text x="44" y="55" text-anchor="middle" font-size="9" fill="#78350f" font-weight="700">.jar</text>
+      <text x="44" y="76" text-anchor="middle" font-size="8" fill="#a16207">spring-webmvc</text>
+    </g>
+
+    <text x="125" y="80" font-size="11" font-weight="700" fill="#78350f">= 자바 코드 덩어리</text>
+    <text x="125" y="98" font-size="10" fill="#475569">(클래스 수백 개의 묶음)</text>
+
+    <g font-family="ui-monospace, monospace" font-size="10" fill="#475569">
+      <text x="125" y="120">- DispatcherServlet</text>
+      <text x="125" y="135">- @Controller</text>
+      <text x="125" y="150">- HandlerMapping</text>
+      <text x="125" y="165">- ...</text>
+    </g>
+
+    <line x1="20" y1="185" x2="330" y2="185" stroke="#fcd34d" stroke-dasharray="3,2"/>
+
+    <text x="20" y="205" font-size="12" font-weight="700" fill="#78350f">역할:</text>
+    <text x="20" y="225" font-size="11" fill="#334155">- URL → 어느 @Controller? 결정</text>
+    <text x="20" y="243" font-size="11" fill="#334155">- JSON ↔ 자바 객체 변환</text>
+    <text x="20" y="261" font-size="11" fill="#334155">- 너의 메서드 호출</text>
+
+    <text x="175" y="278" text-anchor="middle" font-size="10" font-style="italic" fill="#a16207">스스로 실행 안 됨</text>
+  </g>
+
+  <!-- Card 2: Tomcat (REVISED — callout right next to highlighted code) -->
+  <g transform="translate(410, 120)">
+    <rect width="350" height="280" fill="#fee2e2" stroke="#dc2626" stroke-width="2.5" rx="8"/>
+    <rect width="350" height="36" fill="#dc2626" rx="8"/>
+    <rect y="28" width="350" height="8" fill="#dc2626"/>
+    <text x="175" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="white">Tomcat</text>
+
+    <g transform="translate(20, 55)">
+      <path d="M0,0 L70,0 L88,18 L88,90 L0,90 Z" fill="white" stroke="#dc2626" stroke-width="1.5"/>
+      <path d="M70,0 L70,18 L88,18 Z" fill="#fecaca" stroke="#dc2626" stroke-width="1.5"/>
+      <text x="44" y="55" text-anchor="middle" font-size="9" fill="#7f1d1d" font-weight="700">.jar</text>
+      <text x="44" y="73" text-anchor="middle" font-size="7" fill="#991b1b">tomcat-embed</text>
+      <text x="44" y="82" text-anchor="middle" font-size="7" fill="#991b1b">-core</text>
+    </g>
+
+    <text x="125" y="80" font-size="11" font-weight="700" fill="#7f1d1d">= 똑같이 자바 코드</text>
+    <text x="125" y="98" font-size="10" fill="#475569">(클래스 수백 개의 묶음)</text>
+
+    <!-- Highlighted code box -->
+    <rect x="120" y="108" width="220" height="22" fill="#fee2e2" stroke="#dc2626" stroke-width="2" rx="3"/>
+    <text x="130" y="123" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#7f1d1d">★ new Thread().start() ★</text>
+
+    <!-- Direct callout pointing UP to the highlighted box -->
+    <text x="125" y="146" font-size="10" font-weight="700" fill="#dc2626">↑ ★ 이 한 줄 ★ 때문에</text>
+    <text x="125" y="160" font-size="10" font-weight="700" fill="#dc2626">"실행 중"인 것처럼 보임</text>
+
+    <g font-family="ui-monospace, monospace" font-size="10">
+      <text x="125" y="178" fill="#475569">- Connector, Endpoint, ...</text>
+    </g>
+
+    <line x1="20" y1="195" x2="330" y2="195" stroke="#fca5a5" stroke-dasharray="3,2"/>
+
+    <text x="20" y="215" font-size="12" font-weight="700" fill="#7f1d1d">역할:</text>
+    <text x="20" y="235" font-size="11" fill="#334155">- 8080 포트 listen</text>
+    <text x="20" y="253" font-size="11" fill="#334155">- HTTP 바이트 ↔ 자바 객체 변환</text>
+    <text x="20" y="271" font-size="11" fill="#334155">- Spring MVC 호출</text>
+  </g>
+
+  <!-- Vertical divider -->
+  <line x1="780" y1="100" x2="780" y2="410" stroke="#334155" stroke-width="3" stroke-dasharray="10,6"/>
+  <text x="780" y="95" text-anchor="middle" font-size="10" fill="#334155" font-weight="700">| 카테고리 |</text>
+
+  <text x="980" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#334155">━━━ 실행 주체 (코드 아님) ━━━</text>
+
+  <!-- Card 3: OS Thread -->
+  <g transform="translate(800, 120)">
+    <rect width="360" height="280" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5" rx="8"/>
+    <rect width="360" height="36" fill="#ea580c" rx="8"/>
+    <rect y="28" width="360" height="8" fill="#ea580c"/>
+    <text x="180" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="white">OS 스레드</text>
+
+    <g transform="translate(20, 50)">
+      <g transform="translate(15, 25)">
+        <circle r="12" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+        <path d="M6,-6 L14,-13" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M8,0 L16,0" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M6,6 L14,13" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(50, 25)">
+        <circle r="12" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+        <path d="M6,-6 L14,-13" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M8,0 L16,0" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M6,6 L14,13" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(85, 25)">
+        <circle r="12" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+        <path d="M6,-6 L14,-13" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M8,0 L16,0" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M6,6 L14,13" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <text x="50" y="55" text-anchor="middle" font-size="9" fill="#7c2d12">...N개 (코어 수)</text>
+    </g>
+
+    <text x="135" y="80" font-size="11" font-weight="700" fill="#7c2d12">= 코드 아님!</text>
+    <text x="135" y="98" font-size="10" fill="#475569">OS가 만들어주는</text>
+    <text x="135" y="113" font-size="10" fill="#475569">"실행 일꾼" (손)</text>
+
+    <text x="135" y="138" font-size="10" fill="#475569" font-style="italic">JAR 파일이 아니라</text>
+    <text x="135" y="153" font-size="10" fill="#475569" font-style="italic">OS(커널)의 영역</text>
+
+    <line x1="20" y1="185" x2="340" y2="185" stroke="#fdba74" stroke-dasharray="3,2"/>
+
+    <text x="20" y="205" font-size="12" font-weight="700" fill="#7c2d12">역할:</text>
+    <text x="20" y="225" font-size="11" fill="#334155">- 메모리에 있는 자바 코드를</text>
+    <text x="20" y="243" font-size="11" fill="#334155">  한 줄씩 실제로 실행</text>
+    <text x="20" y="261" font-size="11" fill="#334155">- CPU 시간을 받아서 일함</text>
+
+    <text x="180" y="278" text-anchor="middle" font-size="10" font-style="italic" fill="#9a3412">손이 있어야 코드도 깨어남</text>
+  </g>
+
+  <!-- ===== SECTION 2: 5-step flow ===== -->
+  <rect x="0" y="425" width="1200" height="2" fill="#cbd5e1"/>
+
+  <text x="20" y="460" font-size="15" font-weight="700" fill="#334155">어떻게 함께 작동하나 (앱 시작 시 일어나는 일, 시간 순서)</text>
+
+  <!-- Step 1: JVM start + main thread creation -->
+  <g transform="translate(42, 480)">
+    <rect width="215" height="270" fill="#ffedd5" stroke="#ea580c" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#ea580c"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">1</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7c2d12">JVM 시작 + main 스레드</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#7c2d12">트리거:</text>
+    <text x="14" y="78" font-size="10" fill="#334155">"java -jar app.jar" 실행</text>
+
+    <text x="14" y="100" font-size="10" font-weight="700" fill="#7c2d12">언제 생성:</text>
+    <text x="14" y="116" font-size="10" fill="#334155">JVM 시작 시 OS가</text>
+    <text x="14" y="130" font-size="10" fill="#334155">main 스레드 1개 자동 생성</text>
+
+    <rect x="14" y="142" width="187" height="80" fill="white" stroke="#fdba74" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="155">@SpringBootApplication</text>
+      <text x="18" y="168">public class App {</text>
+      <text x="18" y="181">  public static void</text>
+      <text x="18" y="194">  main(String[] args) {</text>
+      <text x="18" y="207" fill="#dc2626" font-weight="700">    SpringApplication</text>
+      <text x="18" y="218" fill="#dc2626" font-weight="700">      .run(...)</text>
+    </g>
+
+    <text x="14" y="240" font-size="10" font-weight="700" fill="#7c2d12">→ main 스레드가</text>
+    <text x="14" y="256" font-size="10" font-weight="700" fill="#7c2d12">  main() 메서드 실행 시작</text>
+  </g>
+
+  <line x1="257" y1="615" x2="285" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 2: main thread runs Tomcat init code -->
+  <g transform="translate(287, 480)">
+    <rect width="215" height="270" fill="#fee2e2" stroke="#dc2626" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">2</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">main 스레드 → Tomcat 코드</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">main 스레드가 계속 실행:</text>
+    <text x="14" y="78" font-size="10" fill="#334155">SpringApplication.run() →</text>
+    <text x="14" y="94" font-size="10" fill="#334155">Spring Boot이 Tomcat</text>
+    <text x="14" y="110" font-size="10" fill="#334155">초기화 코드까지 호출.</text>
+
+    <text x="14" y="135" font-size="10" font-weight="700" fill="#7f1d1d">그 Tomcat 코드 안에:</text>
+
+    <rect x="14" y="143" width="187" height="36" fill="white" stroke="#dc2626" stroke-width="2" rx="3"/>
+    <text x="20" y="158" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#7f1d1d">★ new Thread()</text>
+    <text x="20" y="172" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#7f1d1d">      .start()  × 200 ★</text>
+
+    <text x="14" y="200" font-size="10" font-weight="700" fill="#7f1d1d">= main 스레드가 OS에게</text>
+    <text x="14" y="216" font-size="10" font-weight="700" fill="#7f1d1d">  "자식 스레드 200개</text>
+    <text x="14" y="232" font-size="10" font-weight="700" fill="#7f1d1d">   만들어줘"라고 요청</text>
+
+    <text x="107" y="258" text-anchor="middle" font-size="10" font-style="italic" fill="#991b1b">main 스레드의 임무</text>
+  </g>
+
+  <line x1="502" y1="615" x2="530" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 3: OS creates child threads -->
+  <g transform="translate(532, 480)">
+    <rect width="215" height="270" fill="#f1f5f9" stroke="#475569" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#475569"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">3</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#334155">OS가 자식 스레드 200개 생성</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">OS(Windows/Linux 커널)가</text>
+    <text x="14" y="78" font-size="10" fill="#334155">main 스레드의 요청 받음.</text>
+
+    <text x="14" y="100" font-size="10" fill="#334155">→ 자식 스레드 200개를</text>
+    <text x="14" y="115" font-size="10" fill="#334155">  메모리에 만들어 띄움.</text>
+
+    <!-- Hand icons - more of them -->
+    <g transform="translate(14, 130)">
+      <g transform="translate(15, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(50, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(85, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(120, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <text x="160" y="30" font-size="11" fill="#ea580c" font-weight="700">×200</text>
+    </g>
+
+    <text x="14" y="200" font-size="10" fill="#475569" font-style="italic">손 200개가 메모리에 생김</text>
+
+    <text x="14" y="225" font-size="10" font-weight="700" fill="#334155">★ 핵심: main 스레드와는</text>
+    <text x="14" y="240" font-size="10" font-weight="700" fill="#334155">    별개의 새 스레드들 ★</text>
+    <text x="14" y="258" font-size="9" fill="#64748b" font-style="italic">main은 자식을 만들어달라고만 요청</text>
+  </g>
+
+  <line x1="747" y1="615" x2="775" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 4: child threads run Tomcat code -->
+  <g transform="translate(777, 480)">
+    <rect width="215" height="270" fill="#fee2e2" stroke="#dc2626" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">4</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">자식들이 Tomcat 코드 실행</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">자식 스레드 200개가</text>
+    <text x="14" y="78" font-size="10" fill="#334155">각자 Tomcat 책을 펴서</text>
+    <text x="14" y="94" font-size="10" fill="#334155">무한 루프 시작.</text>
+
+    <text x="14" y="120" font-size="10" font-weight="700" fill="#7f1d1d">하는 일:</text>
+    <text x="22" y="140" font-size="10" fill="#334155">- 8080에서 요청 대기</text>
+    <text x="22" y="158" font-size="10" fill="#334155">- HTTP 바이트 받기</text>
+    <text x="22" y="176" font-size="10" fill="#334155">- 자바 객체로 변환</text>
+    <text x="22" y="194" font-size="10" fill="#334155">- Spring MVC 메서드 호출</text>
+
+    <line x1="14" y1="210" x2="200" y2="210" stroke="#fca5a5" stroke-dasharray="2,2"/>
+
+    <text x="14" y="228" font-size="10" font-style="italic" fill="#991b1b">한편 main 스레드는:</text>
+    <text x="14" y="245" font-size="10" font-style="italic" fill="#991b1b">"띄우는 일 끝났다" 하고</text>
+    <text x="14" y="262" font-size="10" font-style="italic" fill="#991b1b">한쪽에서 대기.</text>
+  </g>
+
+  <line x1="992" y1="615" x2="1020" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 5: Spring MVC -->
+  <g transform="translate(1022, 480)">
+    <rect width="158" height="270" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#d97706"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">5</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#78350f">Spring MVC</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">요청 1개 들어오면</text>
+    <text x="14" y="74" font-size="10" fill="#334155">자식 스레드 중 1개가</text>
+    <text x="14" y="90" font-size="10" fill="#334155">Tomcat 코드 → Spring</text>
+    <text x="14" y="106" font-size="10" fill="#334155">MVC 책으로 점프.</text>
+
+    <text x="14" y="135" font-size="10" font-weight="700" fill="#78350f">하는 일:</text>
+    <text x="22" y="153" font-size="10" fill="#334155">- 라우팅</text>
+    <text x="22" y="170" font-size="10" fill="#334155">- 너의 @Controller</text>
+    <text x="22" y="184" font-size="10" fill="#334155">  호출</text>
+    <text x="22" y="201" font-size="10" fill="#334155">- 응답 만들기</text>
+
+    <line x1="14" y1="217" x2="144" y2="217" stroke="#fcd34d" stroke-dasharray="2,2"/>
+
+    <text x="14" y="234" font-size="10" font-style="italic" fill="#a16207">한 스레드가</text>
+    <text x="14" y="250" font-size="10" font-style="italic" fill="#a16207">Tomcat → Spring MVC</text>
+    <text x="14" y="262" font-size="10" font-style="italic" fill="#a16207">→ 너의 코드 다 실행</text>
+  </g>
+
+  <!-- Bottom summary -->
+  <rect x="30" y="775" width="1140" height="125" fill="#fef9c3" stroke="#ca8a04" stroke-width="2" rx="8"/>
+  <text x="600" y="803" text-anchor="middle" font-size="14" font-weight="700" fill="#713f12">★ 한 문장으로 ★</text>
+  <text x="600" y="828" text-anchor="middle" font-size="13" fill="#334155">
+    <tspan font-weight="700" fill="#78350f">Spring MVC</tspan>와 <tspan font-weight="700" fill="#7f1d1d">Tomcat</tspan>은 둘 다 JAR 파일(코드 덩어리).
+    <tspan font-weight="700" fill="#7c2d12">OS 스레드</tspan>는 코드가 아니라 그 코드를 실제로 실행하는 손.
+  </text>
+  <text x="600" y="853" text-anchor="middle" font-size="13" fill="#334155">
+    JVM 시작 시 OS가 만들어준 <tspan font-weight="700" fill="#ea580c">main 스레드</tspan>가 → Tomcat 코드 안의 <tspan font-family="ui-monospace, monospace" font-weight="700" fill="#7f1d1d">new Thread().start()</tspan>를 실행 →
+  </text>
+  <text x="600" y="878" text-anchor="middle" font-size="13" fill="#334155">
+    OS가 <tspan font-weight="700" fill="#ea580c">자식 스레드 200개</tspan>를 만들어줌 → 그 자식들이 Tomcat + Spring MVC + 너의 코드를 차례로 실행.
+  </text>
+
+</svg>

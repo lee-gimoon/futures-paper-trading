@@ -16,6 +16,7 @@ public class BinanceFuturesRawDepthController {
 	}
 
 	// 클라이언트가 이 POST 주소로 요청하면 BTCUSDT raw depth stream 연결을 시작한다.
+	// curl -X POST http://localhost:8080/api/binance-futures/btcusdt/depth/raw/start
 	@PostMapping("/api/binance-futures/btcusdt/depth/raw/start")
 	public String start() {
 		rawDepthStreamer.connect();

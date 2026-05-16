@@ -20,12 +20,16 @@ public class BinanceFuturesRawDepthStreamer {
 	private static final URI BTCUSDT_DEPTH_STREAM_URI =
 			URI.create("wss://fstream.binance.com/ws/btcusdt@depth20@100ms"); // URI 객체 = “이 글자는 주소다”라는 의미와 기능이 붙은 객체
 
-	// Spring WebFlux가 제공하는 Reactor Netty 기반 WebSocket 클라이언트다.
+	// WebSocketClient(인터페이스)와 ReactorNettyWebSocketClient(구현체) — 둘 다 spring-webflux.jar 코드.
+	// 구현체 내부에서 reactor-netty.jar의 HttpClient.websocket()을 호출해 실제 TCP/WebSocket 연결을 맺는다.
 	private final WebSocketClient webSocketClient = new ReactorNettyWebSocketClient();
 
 	// Binance WebSocket에 연결하고, 들어오는 메시지를 그대로 로그에 남긴다.
 	public void connect() {
 		log.info("Connecting to Binance Futures depth stream: {}", BTCUSDT_DEPTH_STREAM_URI);
+		// webSocketClient.execute(URI, handler) — Mono<Void>(연결 종료 시 완료되는 약속)를 만들어 반환만 한다.
+		// 인자: URI = 어디로 연결할지, handler = 연결 후 세션으로 뭘 할지 + 언제 끝낼지(반환 Mono<Void>로 신호).
+		// 실제 TCP/TLS/WebSocket 핸드셰이크는 아래 .subscribe() 시점에야 reactor-netty가 시작.
 		webSocketClient.execute(BTCUSDT_DEPTH_STREAM_URI, session ->
 						// session.receive()는 서버에서 오는 메시지들의 Flux 스트림이다.
 						session.receive()
@@ -37,7 +41,15 @@ public class BinanceFuturesRawDepthStreamer {
 								.then())
 				// 연결 자체가 실패하거나 도중에 에러가 나면 로그로 남긴다.
 				.doOnError(error -> log.warn("Binance Futures depth stream failed", error))
-				// 실제로 구독을 시작해야 위 체인이 동작한다. 호출하지 않으면 아무 일도 일어나지 않는다.
+				// 이 람다는 .subscribe() 시점에 reactor-netty가 고른 event loop 1개(예: 손 5)의 selector에 채널 등록되어,
+				// 그 한 손(event loop(스레드))이 모든 콜백을 평생 실행한다.
+				// (참고: execute() 안의 "Binance URI 실제 연결 + 람다 콜백"은 HTTP 요청을 받은 손 3이 아니라 보통
+				//  다른 손(예: 손 5)에 배정된다 — reactor-netty가 호출 스레드와 무관하게 EventLoopGroup.next()로 round-robin해서 부하를 분산하기 때문.)
 				.subscribe();
 	}
 }
+
+// 람다식을 쓰는 이유:
+//   목적(왜): 나중에 실행할 동작을 값처럼 넘기기 위해.
+//   자바의 우회(어떻게): 함수가 1급 시민이 아니라서, "동작 1개짜리 인터페이스의 1회용 구현체 객체"를
+//                      즉석에서 만들어 넘기는 방식으로 실현. 람다(->)는 그 우회를 한 줄로 적는 문법.

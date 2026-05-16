@@ -1,0 +1,320 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 980" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif">
+
+  <defs>
+    <marker id="arr-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <!-- ===== TITLE ===== -->
+  <rect x="0" y="0" width="1200" height="52" fill="#1e293b"/>
+  <text x="600" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="white">
+    1단계 코드 실행 흐름 — 앱 시작부터 Binance raw JSON 로그까지 (시간 순서)
+  </text>
+
+  <!-- ===== Phase A header ===== -->
+  <text x="20" y="82" font-size="14" font-weight="700" fill="#475569">
+    Phase A — 앱 부팅 (자동, java -jar 직후 / bootRun)
+  </text>
+
+  <!-- ===== Row 1: 4 boxes ===== -->
+
+  <!-- Step 1: JVM start + main thread -->
+  <g transform="translate(55, 95)">
+    <rect width="250" height="290" fill="#ffedd5" stroke="#ea580c" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#ea580c"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">1</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7c2d12">JVM 시작 + main 스레드</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#7c2d12">트리거:</text>
+    <text x="14" y="78" font-size="10" fill="#334155">./gradlew.bat bootRun</text>
+    <text x="14" y="92" font-size="10" fill="#334155">또는 java -jar app.jar</text>
+
+    <text x="14" y="115" font-size="10" font-weight="700" fill="#7c2d12">언제 생성:</text>
+    <text x="14" y="131" font-size="10" fill="#334155">JVM 시작 시 OS가</text>
+    <text x="14" y="145" font-size="10" fill="#334155">main 스레드 1개 자동 생성</text>
+
+    <rect x="14" y="158" width="222" height="92" fill="white" stroke="#fdba74" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="171">@SpringBootApplication</text>
+      <text x="18" y="184">public class</text>
+      <text x="18" y="197">  FuturesPaperTrading...</text>
+      <text x="18" y="210">  public static void</text>
+      <text x="18" y="223">  main(String[] args) {</text>
+      <text x="18" y="236" fill="#16a34a" font-weight="700">    SpringApplication</text>
+      <text x="18" y="247" fill="#16a34a" font-weight="700">      .run(...)</text>
+    </g>
+
+    <text x="14" y="268" font-size="10" font-weight="700" fill="#7c2d12">→ main 스레드가 main()</text>
+    <text x="14" y="282" font-size="10" font-weight="700" fill="#7c2d12">  실행 시작</text>
+  </g>
+
+  <line x1="305" y1="240" x2="335" y2="240" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 2: main runs Reactor Netty init -->
+  <g transform="translate(335, 95)">
+    <rect width="250" height="290" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#16a34a"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">2</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#14532d">main → Reactor Netty 초기화</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">main 스레드가 계속 실행:</text>
+    <text x="14" y="78" font-size="10" fill="#334155">SpringApplication.run() →</text>
+    <text x="14" y="94" font-size="10" fill="#334155">Spring Boot이 내장 WebFlux</text>
+    <text x="14" y="110" font-size="10" fill="#334155">서버(Reactor Netty) 초기화</text>
+    <text x="14" y="126" font-size="10" fill="#334155">코드까지 호출.</text>
+
+    <text x="14" y="150" font-size="10" font-weight="700" fill="#14532d">Netty 코드 안에:</text>
+
+    <rect x="14" y="158" width="222" height="40" fill="white" stroke="#16a34a" stroke-width="2" rx="3"/>
+    <text x="20" y="174" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#14532d">★ new Thread()</text>
+    <text x="20" y="190" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#14532d">     .start() × N ★</text>
+
+    <text x="14" y="220" font-size="10" font-weight="700" fill="#14532d">= main이 OS에게</text>
+    <text x="14" y="236" font-size="10" font-weight="700" fill="#14532d">  "event loop 스레드 N개</text>
+    <text x="14" y="252" font-size="10" font-weight="700" fill="#14532d">   만들어달라"고 요청</text>
+
+    <text x="125" y="280" text-anchor="middle" font-size="10" font-style="italic" fill="#15803d">우리 코드는 아직 안 도는 단계</text>
+  </g>
+
+  <line x1="585" y1="240" x2="615" y2="240" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 3: OS creates event loop threads -->
+  <g transform="translate(615, 95)">
+    <rect width="250" height="290" fill="#f1f5f9" stroke="#475569" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#475569"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">3</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#334155">OS가 event loop 스레드 N개</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">OS(Windows) 커널이</text>
+    <text x="14" y="78" font-size="10" fill="#334155">main 스레드의 요청 받음.</text>
+
+    <text x="14" y="100" font-size="10" fill="#334155">→ event loop 스레드 N개를</text>
+    <text x="14" y="115" font-size="10" fill="#334155">  메모리에 만들어 띄움.</text>
+
+    <g transform="translate(14, 130)">
+      <g transform="translate(15, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(50, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(85, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <text x="115" y="30" font-size="11" fill="#ea580c" font-weight="700">×N(≈8)</text>
+    </g>
+
+    <text x="14" y="200" font-size="10" fill="#475569">스레드 이름 예시:</text>
+    <rect x="14" y="207" width="222" height="35" fill="white" stroke="#cbd5e1" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="220">reactor-http-nio-1</text>
+      <text x="18" y="232">reactor-http-nio-2  ...</text>
+    </g>
+
+    <text x="14" y="262" font-size="10" font-weight="700" fill="#334155">★ 손 1개가 연결 수천 개를</text>
+    <text x="14" y="278" font-size="10" font-weight="700" fill="#334155">  돌볼 준비를 마침 ★</text>
+  </g>
+
+  <line x1="865" y1="240" x2="895" y2="240" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 4: event loops listen + idle -->
+  <g transform="translate(895, 95)">
+    <rect width="250" height="290" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#16a34a"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">4</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#14532d">event loop이 8080 listen + 대기</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">event loop 스레드들이</text>
+    <text x="14" y="78" font-size="10" fill="#334155">각자 selector 루프 시작:</text>
+    <text x="14" y="94" font-size="10" fill="#334155">"8080에 뭐 들어왔나?"</text>
+    <text x="14" y="110" font-size="10" fill="#334155">무한 체크.</text>
+
+    <text x="14" y="135" font-size="10" font-style="italic" fill="#15803d">한편 main 스레드는</text>
+    <text x="14" y="151" font-size="10" font-style="italic" fill="#15803d">"띄울 일 끝" 하고 빠짐.</text>
+
+    <line x1="14" y1="165" x2="236" y2="165" stroke="#dc2626" stroke-dasharray="3,2"/>
+
+    <text x="14" y="185" font-size="11" font-weight="700" fill="#dc2626">★ 1단계의 핵심 차이점 ★</text>
+    <text x="14" y="203" font-size="10" fill="#334155">Binance에 자동 연결 안 함.</text>
+    <text x="14" y="219" font-size="10" fill="#334155">우리 코드</text>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#581c87">
+      <text x="14" y="234">  BinanceFuturesRawDepth</text>
+      <text x="14" y="247">  Streamer.connect()</text>
+    </g>
+    <text x="14" y="263" font-size="10" fill="#334155">는 아직 호출 안 됨.</text>
+
+    <text x="125" y="282" text-anchor="middle" font-size="10" font-style="italic" fill="#15803d">→ POST 요청을 기다리는 상태</text>
+  </g>
+
+  <!-- ===== Phase divider ===== -->
+  <line x1="20" y1="410" x2="1180" y2="410" stroke="#dc2626" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="600" y="430" text-anchor="middle" font-size="12" font-weight="700" fill="#dc2626">
+    ⬇ 여기서부터 사용자가 POST 요청을 보낸 뒤 — 표준 흐름에 없는 "반전": 우리 앱이 WebSocket 클라이언트로도 변신
+  </text>
+
+  <!-- Phase B header -->
+  <text x="20" y="455" font-size="14" font-weight="700" fill="#475569">
+    Phase B — 사용자 트리거 (POST 요청 → Binance로 outbound 연결)
+  </text>
+
+  <!-- ===== Row 2: 4 boxes ===== -->
+
+  <!-- Step 5: POST arrives -->
+  <g transform="translate(55, 470)">
+    <rect width="250" height="290" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">5</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">POST 요청 8080 도착</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#7f1d1d">사용자가 보냄:</text>
+    <rect x="14" y="70" width="222" height="60" fill="white" stroke="#fca5a5" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="85" font-weight="700" fill="#dc2626">POST</text>
+      <text x="18" y="99">/api/binance-futures/</text>
+      <text x="18" y="112">btcusdt/depth/raw/start</text>
+      <text x="18" y="125" fill="#64748b">(curl / Postman / IntelliJ)</text>
+    </g>
+
+    <text x="14" y="155" font-size="10" fill="#334155">→ 8080을 듣고 있던</text>
+    <text x="14" y="171" font-size="10" fill="#334155">  event loop 스레드 1개가</text>
+    <text x="14" y="187" font-size="10" fill="#334155">  selector에서 "준비됨" 감지</text>
+    <text x="14" y="203" font-size="10" fill="#334155">  → 깨어남.</text>
+
+    <text x="14" y="227" font-size="10" font-weight="700" fill="#14532d">하는 일:</text>
+    <text x="22" y="245" font-size="10" fill="#334155">- 소켓에서 HTTP 바이트 읽기</text>
+    <text x="22" y="261" font-size="10" fill="#334155">- 헤더/URL 파싱</text>
+    <text x="22" y="277" font-size="10" fill="#334155">- WebFlux로 점프</text>
+  </g>
+
+  <line x1="305" y1="615" x2="335" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 6: WebFlux routing → start() -->
+  <g transform="translate(335, 470)">
+    <rect width="250" height="290" fill="#dbeafe" stroke="#2563eb" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#2563eb"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">6</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#1e3a8a">WebFlux 라우팅 → start()</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">같은 event loop 스레드가</text>
+    <text x="14" y="78" font-size="10" fill="#334155">Netty → WebFlux로 점프.</text>
+
+    <text x="14" y="102" font-size="10" font-weight="700" fill="#1e3a8a">WebFlux가 하는 일:</text>
+    <text x="22" y="120" font-size="10" fill="#334155">- URL → @PostMapping 매칭</text>
+    <text x="22" y="136" font-size="10" fill="#334155">- 우리 컨트롤러 메서드 호출</text>
+
+    <rect x="14" y="148" width="222" height="92" fill="white" stroke="#93c5fd" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="162" fill="#9333ea" font-weight="700">@PostMapping("...start")</text>
+      <text x="18" y="176">public String start() {</text>
+      <text x="18" y="190" fill="#9333ea" font-weight="700">  rawDepthStreamer</text>
+      <text x="18" y="203" fill="#9333ea" font-weight="700">    .connect();</text>
+      <text x="18" y="217">  return "...started.";</text>
+      <text x="18" y="230">}</text>
+    </g>
+
+    <text x="14" y="258" font-size="10" font-style="italic" fill="#1d4ed8">즉시 문자열 반환 →</text>
+    <text x="14" y="274" font-size="10" font-style="italic" fill="#1d4ed8">8080 응답으로 "started." 보냄</text>
+  </g>
+
+  <line x1="585" y1="615" x2="615" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 7: connect() → subscribe() -->
+  <g transform="translate(615, 470)">
+    <rect width="250" height="290" fill="#f3e8ff" stroke="#9333ea" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#9333ea"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">7</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#581c87">connect() → subscribe()</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">우리가 짠 코드</text>
+    <text x="14" y="78" font-size="10" font-family="ui-monospace, monospace" fill="#581c87">BinanceFutures...Streamer</text>
+    <text x="14" y="94" font-size="10" fill="#334155">의 connect() 실행:</text>
+
+    <rect x="14" y="105" width="222" height="125" fill="white" stroke="#d8b4fe" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="120" fill="#16a34a" font-weight="700">webSocketClient</text>
+      <text x="18" y="133">  .execute(URI, session -&gt;</text>
+      <text x="18" y="146">    session.receive()</text>
+      <text x="18" y="159">      .map(getPayloadAsText)</text>
+      <text x="18" y="172" fill="#dc2626" font-weight="700">      .doOnNext(log.info)</text>
+      <text x="18" y="185">      .then())</text>
+      <text x="18" y="198">  .doOnError(log.warn)</text>
+      <text x="18" y="211" fill="#dc2626" font-weight="700">  .subscribe();</text>
+      <text x="18" y="225" fill="#9333ea">// → 즉시 반환</text>
+    </g>
+
+    <text x="14" y="252" font-size="10" font-weight="700" fill="#581c87">★ .subscribe() 의미:</text>
+    <text x="14" y="268" font-size="10" fill="#334155">"Binance 연결 작업을 event</text>
+    <text x="14" y="284" font-size="10" fill="#334155">loop에 예약" — 호출은 안 막힘.</text>
+  </g>
+
+  <line x1="865" y1="615" x2="895" y2="615" stroke="#dc2626" stroke-width="3" marker-end="url(#arr-red)"/>
+
+  <!-- Step 8: ★ TWIST ★ outbound WebSocket client -->
+  <g transform="translate(895, 470)">
+    <rect width="250" height="290" fill="#dcfce7" stroke="#dc2626" stroke-width="3" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">8</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">★ 반전: 클라이언트로 변신 ★</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#dc2626">같은 Netty event loop이</text>
+    <text x="14" y="78" font-size="10" font-weight="700" fill="#dc2626">이번엔 Binance로 OUT 연결!</text>
+
+    <rect x="14" y="90" width="222" height="42" fill="white" stroke="#16a34a" stroke-width="1.5" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="104">wss://fstream.binance.com</text>
+      <text x="18" y="117">  /ws/btcusdt</text>
+      <text x="18" y="128" fill="#dc2626" font-weight="700">  @depth20@100ms</text>
+    </g>
+
+    <text x="14" y="152" font-size="10" fill="#334155">→ TCP/TLS 핸드셰이크</text>
+    <text x="14" y="168" font-size="10" fill="#334155">→ WebSocket 업그레이드</text>
+    <text x="14" y="184" font-size="10" fill="#334155">→ 연결 성공</text>
+
+    <line x1="14" y1="198" x2="236" y2="198" stroke="#86efac" stroke-dasharray="3,2"/>
+
+    <text x="14" y="215" font-size="10" font-weight="700" fill="#14532d">100ms마다 Binance에서</text>
+    <text x="14" y="231" font-size="10" font-weight="700" fill="#14532d">메시지 도착 → event loop이</text>
+    <text x="14" y="247" font-size="10" font-weight="700" fill="#14532d">doOnNext의 log.info 실행:</text>
+
+    <rect x="14" y="255" width="222" height="28" fill="white" stroke="#cbd5e1" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="8" fill="#475569">
+      <text x="18" y="267">Binance Futures raw depth</text>
+      <text x="18" y="277">JSON: {"e":"depthUpdate"...}</text>
+    </g>
+  </g>
+
+  <!-- ===== Bottom summary ===== -->
+  <rect x="30" y="785" width="1140" height="170" fill="#ecfeff" stroke="#0891b2" stroke-width="2" rx="8"/>
+  <text x="600" y="810" text-anchor="middle" font-size="14" font-weight="700" fill="#155e75">★ 1단계 흐름 한 문장으로 ★</text>
+
+  <text x="600" y="838" text-anchor="middle" font-size="13" fill="#334155">
+    java -jar로 JVM 뜸 → <tspan font-weight="700" fill="#ea580c">main 스레드</tspan>가 SpringApplication.run() 실행 →
+    Netty 코드의 <tspan font-family="ui-monospace, monospace" font-weight="700" fill="#14532d">new Thread().start() × N</tspan>으로
+  </text>
+  <text x="600" y="861" text-anchor="middle" font-size="13" fill="#334155">
+    OS가 <tspan font-weight="700" fill="#ea580c">event loop 스레드 N개</tspan>를 만들어줌 → 그 손들이 8080을 listen하며 대기.
+  </text>
+  <text x="600" y="884" text-anchor="middle" font-size="13" fill="#334155">
+    이 시점까지 우리 코드는 한 줄도 안 돔. <tspan font-weight="700" fill="#dc2626">자동 connect 없음</tspan>이 1단계의 핵심 차이.
+  </text>
+  <text x="600" y="912" text-anchor="middle" font-size="13" fill="#334155">
+    사용자가 <tspan font-family="ui-monospace, monospace" font-weight="700" fill="#dc2626">POST .../depth/raw/start</tspan> 보내면 → event loop이 깨어나 WebFlux → <tspan font-weight="700" fill="#9333ea">Streamer.connect()</tspan> →
+  </text>
+  <text x="600" y="935" text-anchor="middle" font-size="13" fill="#334155">
+    <tspan font-weight="700" fill="#dc2626">★반전★</tspan> 같은 Netty event loop이 이번엔 <tspan font-weight="700" fill="#14532d">Binance로 outbound WebSocket 연결</tspan>까지 들고, 100ms마다 raw JSON을 로그에 찍는다.
+  </text>
+
+</svg>

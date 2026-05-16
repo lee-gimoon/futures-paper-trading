@@ -12,7 +12,7 @@
   <!-- ===== TITLE ===== -->
   <rect x="0" y="0" width="1200" height="52" fill="#1e293b"/>
   <text x="600" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="white">
-    Spring MVC + Tomcat + OS 스레드 — 3가지 정체와 역할
+    Spring WebFlux + Reactor Netty + OS 스레드 — 3가지 정체와 역할
   </text>
 
   <!-- ===== SECTION 1: 3 cards ===== -->
@@ -20,76 +20,76 @@
 
   <text x="385" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#334155">━━━ 코드 덩어리 (글자, JAR 파일) ━━━</text>
 
-  <!-- Card 1: Spring MVC -->
+  <!-- Card 1: Spring WebFlux -->
   <g transform="translate(40, 120)">
-    <rect width="350" height="280" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" rx="8"/>
-    <rect width="350" height="36" fill="#d97706" rx="8"/>
-    <rect y="28" width="350" height="8" fill="#d97706"/>
-    <text x="175" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="white">Spring MVC</text>
+    <rect width="350" height="280" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5" rx="8"/>
+    <rect width="350" height="36" fill="#2563eb" rx="8"/>
+    <rect y="28" width="350" height="8" fill="#2563eb"/>
+    <text x="175" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="white">Spring WebFlux</text>
 
     <g transform="translate(20, 55)">
-      <path d="M0,0 L70,0 L88,18 L88,90 L0,90 Z" fill="white" stroke="#d97706" stroke-width="1.5"/>
-      <path d="M70,0 L70,18 L88,18 Z" fill="#fde68a" stroke="#d97706" stroke-width="1.5"/>
-      <text x="44" y="55" text-anchor="middle" font-size="9" fill="#78350f" font-weight="700">.jar</text>
-      <text x="44" y="76" text-anchor="middle" font-size="8" fill="#a16207">spring-webmvc</text>
+      <path d="M0,0 L70,0 L88,18 L88,90 L0,90 Z" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+      <path d="M70,0 L70,18 L88,18 Z" fill="#bfdbfe" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="44" y="55" text-anchor="middle" font-size="9" fill="#1e3a8a" font-weight="700">.jar</text>
+      <text x="44" y="76" text-anchor="middle" font-size="8" fill="#1d4ed8">spring-webflux</text>
     </g>
 
-    <text x="125" y="80" font-size="11" font-weight="700" fill="#78350f">= 자바 코드 덩어리</text>
+    <text x="125" y="80" font-size="11" font-weight="700" fill="#1e3a8a">= 자바 코드 덩어리</text>
     <text x="125" y="98" font-size="10" fill="#475569">(클래스 수백 개의 묶음)</text>
 
     <g font-family="ui-monospace, monospace" font-size="10" fill="#475569">
-      <text x="125" y="120">- DispatcherServlet</text>
-      <text x="125" y="135">- @Controller</text>
-      <text x="125" y="150">- HandlerMapping</text>
+      <text x="125" y="120">- DispatcherHandler</text>
+      <text x="125" y="135">- @Controller (Mono/Flux)</text>
+      <text x="125" y="150">- RouterFunction</text>
       <text x="125" y="165">- ...</text>
     </g>
 
-    <line x1="20" y1="185" x2="330" y2="185" stroke="#fcd34d" stroke-dasharray="3,2"/>
+    <line x1="20" y1="185" x2="330" y2="185" stroke="#93c5fd" stroke-dasharray="3,2"/>
 
-    <text x="20" y="205" font-size="12" font-weight="700" fill="#78350f">역할:</text>
+    <text x="20" y="205" font-size="12" font-weight="700" fill="#1e3a8a">역할:</text>
     <text x="20" y="225" font-size="11" fill="#334155">- URL → 어느 @Controller? 결정</text>
-    <text x="20" y="243" font-size="11" fill="#334155">- JSON ↔ 자바 객체 변환</text>
-    <text x="20" y="261" font-size="11" fill="#334155">- 너의 메서드 호출</text>
+    <text x="20" y="243" font-size="11" fill="#334155">- JSON ↔ Mono/Flux 변환</text>
+    <text x="20" y="261" font-size="11" fill="#334155">- 너의 메서드 호출 (non-blocking)</text>
 
-    <text x="175" y="278" text-anchor="middle" font-size="10" font-style="italic" fill="#a16207">스스로 실행 안 됨</text>
+    <text x="175" y="278" text-anchor="middle" font-size="10" font-style="italic" fill="#1d4ed8">스스로 실행 안 됨</text>
   </g>
 
-  <!-- Card 2: Tomcat (REVISED — callout right next to highlighted code) -->
+  <!-- Card 2: Reactor Netty -->
   <g transform="translate(410, 120)">
-    <rect width="350" height="280" fill="#fee2e2" stroke="#dc2626" stroke-width="2.5" rx="8"/>
-    <rect width="350" height="36" fill="#dc2626" rx="8"/>
-    <rect y="28" width="350" height="8" fill="#dc2626"/>
-    <text x="175" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="white">Tomcat</text>
+    <rect width="350" height="280" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" rx="8"/>
+    <rect width="350" height="36" fill="#16a34a" rx="8"/>
+    <rect y="28" width="350" height="8" fill="#16a34a"/>
+    <text x="175" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="white">Reactor Netty</text>
 
     <g transform="translate(20, 55)">
-      <path d="M0,0 L70,0 L88,18 L88,90 L0,90 Z" fill="white" stroke="#dc2626" stroke-width="1.5"/>
-      <path d="M70,0 L70,18 L88,18 Z" fill="#fecaca" stroke="#dc2626" stroke-width="1.5"/>
-      <text x="44" y="55" text-anchor="middle" font-size="9" fill="#7f1d1d" font-weight="700">.jar</text>
-      <text x="44" y="73" text-anchor="middle" font-size="7" fill="#991b1b">tomcat-embed</text>
-      <text x="44" y="82" text-anchor="middle" font-size="7" fill="#991b1b">-core</text>
+      <path d="M0,0 L70,0 L88,18 L88,90 L0,90 Z" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+      <path d="M70,0 L70,18 L88,18 Z" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="44" y="55" text-anchor="middle" font-size="9" fill="#14532d" font-weight="700">.jar</text>
+      <text x="44" y="73" text-anchor="middle" font-size="7" fill="#15803d">reactor-netty</text>
+      <text x="44" y="82" text-anchor="middle" font-size="7" fill="#15803d">-http</text>
     </g>
 
-    <text x="125" y="80" font-size="11" font-weight="700" fill="#7f1d1d">= 똑같이 자바 코드</text>
+    <text x="125" y="80" font-size="11" font-weight="700" fill="#14532d">= 똑같이 자바 코드</text>
     <text x="125" y="98" font-size="10" fill="#475569">(클래스 수백 개의 묶음)</text>
 
     <!-- Highlighted code box -->
-    <rect x="120" y="108" width="220" height="22" fill="#fee2e2" stroke="#dc2626" stroke-width="2" rx="3"/>
-    <text x="130" y="123" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#7f1d1d">★ new Thread().start() ★</text>
+    <rect x="120" y="108" width="220" height="22" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="3"/>
+    <text x="124" y="123" font-family="ui-monospace, monospace" font-size="10" font-weight="700" fill="#14532d">★ new Thread().start() × N ★</text>
 
     <!-- Direct callout pointing UP to the highlighted box -->
-    <text x="125" y="146" font-size="10" font-weight="700" fill="#dc2626">↑ ★ 이 한 줄 ★ 때문에</text>
-    <text x="125" y="160" font-size="10" font-weight="700" fill="#dc2626">"실행 중"인 것처럼 보임</text>
+    <text x="125" y="146" font-size="10" font-weight="700" fill="#16a34a">↑ N = CPU 코어 수 (예: 8~16)</text>
+    <text x="125" y="160" font-size="10" font-weight="700" fill="#16a34a">Tomcat의 200개와 정반대!</text>
 
     <g font-family="ui-monospace, monospace" font-size="10">
-      <text x="125" y="178" fill="#475569">- Connector, Endpoint, ...</text>
+      <text x="125" y="178" fill="#475569">- NioEventLoopGroup, ...</text>
     </g>
 
-    <line x1="20" y1="195" x2="330" y2="195" stroke="#fca5a5" stroke-dasharray="3,2"/>
+    <line x1="20" y1="195" x2="330" y2="195" stroke="#86efac" stroke-dasharray="3,2"/>
 
-    <text x="20" y="215" font-size="12" font-weight="700" fill="#7f1d1d">역할:</text>
+    <text x="20" y="215" font-size="12" font-weight="700" fill="#14532d">역할:</text>
     <text x="20" y="235" font-size="11" fill="#334155">- 8080 포트 listen</text>
-    <text x="20" y="253" font-size="11" fill="#334155">- HTTP 바이트 ↔ 자바 객체 변환</text>
-    <text x="20" y="271" font-size="11" fill="#334155">- Spring MVC 호출</text>
+    <text x="20" y="253" font-size="11" fill="#334155">- NIO selector로 많은 연결 감시</text>
+    <text x="20" y="271" font-size="11" fill="#334155">- 이벤트 발생 시 WebFlux 호출</text>
   </g>
 
   <!-- Vertical divider -->
@@ -169,8 +169,8 @@
       <text x="18" y="168">public class App {</text>
       <text x="18" y="181">  public static void</text>
       <text x="18" y="194">  main(String[] args) {</text>
-      <text x="18" y="207" fill="#dc2626" font-weight="700">    SpringApplication</text>
-      <text x="18" y="218" fill="#dc2626" font-weight="700">      .run(...)</text>
+      <text x="18" y="207" fill="#16a34a" font-weight="700">    SpringApplication</text>
+      <text x="18" y="218" fill="#16a34a" font-weight="700">      .run(...)</text>
     </g>
 
     <text x="14" y="240" font-size="10" font-weight="700" fill="#7c2d12">→ main 스레드가</text>
@@ -179,47 +179,47 @@
 
   <line x1="257" y1="615" x2="285" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
 
-  <!-- Step 2: main thread runs Tomcat init code -->
+  <!-- Step 2: main thread runs Reactor Netty init code -->
   <g transform="translate(287, 480)">
-    <rect width="215" height="270" fill="#fee2e2" stroke="#dc2626" stroke-width="2" rx="6"/>
-    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <rect width="215" height="270" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#16a34a"/>
     <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">2</text>
-    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">main 스레드 → Tomcat 코드</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#14532d">main → Reactor Netty 코드</text>
 
     <text x="14" y="62" font-size="10" fill="#334155">main 스레드가 계속 실행:</text>
     <text x="14" y="78" font-size="10" fill="#334155">SpringApplication.run() →</text>
-    <text x="14" y="94" font-size="10" fill="#334155">Spring Boot이 Tomcat</text>
-    <text x="14" y="110" font-size="10" fill="#334155">초기화 코드까지 호출.</text>
+    <text x="14" y="94" font-size="10" fill="#334155">Spring Boot이 Reactor</text>
+    <text x="14" y="110" font-size="10" fill="#334155">Netty 초기화 코드까지 호출.</text>
 
-    <text x="14" y="135" font-size="10" font-weight="700" fill="#7f1d1d">그 Tomcat 코드 안에:</text>
+    <text x="14" y="135" font-size="10" font-weight="700" fill="#14532d">그 Netty 코드 안에:</text>
 
-    <rect x="14" y="143" width="187" height="36" fill="white" stroke="#dc2626" stroke-width="2" rx="3"/>
-    <text x="20" y="158" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#7f1d1d">★ new Thread()</text>
-    <text x="20" y="172" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#7f1d1d">      .start()  × 200 ★</text>
+    <rect x="14" y="143" width="187" height="36" fill="white" stroke="#16a34a" stroke-width="2" rx="3"/>
+    <text x="20" y="158" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#14532d">★ new Thread()</text>
+    <text x="20" y="172" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#14532d">      .start() × N (≈코어) ★</text>
 
-    <text x="14" y="200" font-size="10" font-weight="700" fill="#7f1d1d">= main 스레드가 OS에게</text>
-    <text x="14" y="216" font-size="10" font-weight="700" fill="#7f1d1d">  "자식 스레드 200개</text>
-    <text x="14" y="232" font-size="10" font-weight="700" fill="#7f1d1d">   만들어줘"라고 요청</text>
+    <text x="14" y="200" font-size="10" font-weight="700" fill="#14532d">= main 스레드가 OS에게</text>
+    <text x="14" y="216" font-size="10" font-weight="700" fill="#14532d">  "event loop 스레드 N개</text>
+    <text x="14" y="232" font-size="10" font-weight="700" fill="#14532d">   만들어줘"라고 요청</text>
 
-    <text x="107" y="258" text-anchor="middle" font-size="10" font-style="italic" fill="#991b1b">main 스레드의 임무</text>
+    <text x="107" y="258" text-anchor="middle" font-size="10" font-style="italic" fill="#15803d">main 스레드의 임무</text>
   </g>
 
   <line x1="502" y1="615" x2="530" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
 
-  <!-- Step 3: OS creates child threads -->
+  <!-- Step 3: OS creates child threads (few!) -->
   <g transform="translate(532, 480)">
     <rect width="215" height="270" fill="#f1f5f9" stroke="#475569" stroke-width="2" rx="6"/>
     <circle cx="25" cy="28" r="14" fill="#475569"/>
     <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">3</text>
-    <text x="48" y="32" font-size="11" font-weight="700" fill="#334155">OS가 자식 스레드 200개 생성</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#334155">OS가 event loop 스레드 N개</text>
 
     <text x="14" y="62" font-size="10" fill="#334155">OS(Windows/Linux 커널)가</text>
     <text x="14" y="78" font-size="10" fill="#334155">main 스레드의 요청 받음.</text>
 
-    <text x="14" y="100" font-size="10" fill="#334155">→ 자식 스레드 200개를</text>
+    <text x="14" y="100" font-size="10" fill="#334155">→ event loop 스레드 N개를</text>
     <text x="14" y="115" font-size="10" fill="#334155">  메모리에 만들어 띄움.</text>
 
-    <!-- Hand icons - more of them -->
+    <!-- Hand icons - only a few (event loop = small number) -->
     <g transform="translate(14, 130)">
       <g transform="translate(15, 25)">
         <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
@@ -239,88 +239,84 @@
         <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
         <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
       </g>
-      <g transform="translate(120, 25)">
-        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
-        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
-        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
-        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
-      </g>
-      <text x="160" y="30" font-size="11" fill="#ea580c" font-weight="700">×200</text>
+      <text x="115" y="30" font-size="11" fill="#ea580c" font-weight="700">×N(≈8)</text>
     </g>
 
-    <text x="14" y="200" font-size="10" fill="#475569" font-style="italic">손 200개가 메모리에 생김</text>
+    <text x="14" y="200" font-size="10" fill="#475569" font-style="italic">손 몇 개만 (Tomcat 200개 vs)</text>
 
-    <text x="14" y="225" font-size="10" font-weight="700" fill="#334155">★ 핵심: main 스레드와는</text>
-    <text x="14" y="240" font-size="10" font-weight="700" fill="#334155">    별개의 새 스레드들 ★</text>
-    <text x="14" y="258" font-size="9" fill="#64748b" font-style="italic">main은 자식을 만들어달라고만 요청</text>
+    <text x="14" y="225" font-size="10" font-weight="700" fill="#334155">★ 핵심: 손 1개가</text>
+    <text x="14" y="240" font-size="10" font-weight="700" fill="#334155">   연결 수천 개를 돌봄 ★</text>
+    <text x="14" y="258" font-size="9" fill="#64748b" font-style="italic">NIO selector로 "준비된 것만" 처리</text>
   </g>
 
   <line x1="747" y1="615" x2="775" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
 
-  <!-- Step 4: child threads run Tomcat code -->
+  <!-- Step 4: event loop threads run Netty selector code -->
   <g transform="translate(777, 480)">
-    <rect width="215" height="270" fill="#fee2e2" stroke="#dc2626" stroke-width="2" rx="6"/>
-    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <rect width="215" height="270" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#16a34a"/>
     <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">4</text>
-    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">자식들이 Tomcat 코드 실행</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#14532d">event loop이 Netty 코드 실행</text>
 
-    <text x="14" y="62" font-size="10" fill="#334155">자식 스레드 200개가</text>
-    <text x="14" y="78" font-size="10" fill="#334155">각자 Tomcat 책을 펴서</text>
-    <text x="14" y="94" font-size="10" fill="#334155">무한 루프 시작.</text>
+    <text x="14" y="62" font-size="10" fill="#334155">event loop 스레드 N개가</text>
+    <text x="14" y="78" font-size="10" fill="#334155">각자 selector 루프 시작.</text>
+    <text x="14" y="94" font-size="10" fill="#334155">("뭐 도착했나?" 무한 체크)</text>
 
-    <text x="14" y="120" font-size="10" font-weight="700" fill="#7f1d1d">하는 일:</text>
-    <text x="22" y="140" font-size="10" fill="#334155">- 8080에서 요청 대기</text>
-    <text x="22" y="158" font-size="10" fill="#334155">- HTTP 바이트 받기</text>
-    <text x="22" y="176" font-size="10" fill="#334155">- 자바 객체로 변환</text>
-    <text x="22" y="194" font-size="10" fill="#334155">- Spring MVC 메서드 호출</text>
+    <text x="14" y="120" font-size="10" font-weight="700" fill="#14532d">하는 일:</text>
+    <text x="22" y="140" font-size="10" fill="#334155">- 8080 + 수많은 연결 감시</text>
+    <text x="22" y="158" font-size="10" fill="#334155">- 준비된 소켓만 골라 읽기</text>
+    <text x="22" y="176" font-size="10" fill="#334155">- HTTP 바이트 파싱</text>
+    <text x="22" y="194" font-size="10" fill="#334155">- WebFlux 핸들러 호출</text>
 
-    <line x1="14" y1="210" x2="200" y2="210" stroke="#fca5a5" stroke-dasharray="2,2"/>
+    <line x1="14" y1="210" x2="200" y2="210" stroke="#86efac" stroke-dasharray="2,2"/>
 
-    <text x="14" y="228" font-size="10" font-style="italic" fill="#991b1b">한편 main 스레드는:</text>
-    <text x="14" y="245" font-size="10" font-style="italic" fill="#991b1b">"띄우는 일 끝났다" 하고</text>
-    <text x="14" y="262" font-size="10" font-style="italic" fill="#991b1b">한쪽에서 대기.</text>
+    <text x="14" y="228" font-size="10" font-style="italic" fill="#15803d">한편 main 스레드는:</text>
+    <text x="14" y="245" font-size="10" font-style="italic" fill="#15803d">"띄우는 일 끝났다" 하고</text>
+    <text x="14" y="262" font-size="10" font-style="italic" fill="#15803d">한쪽에서 대기.</text>
   </g>
 
   <line x1="992" y1="615" x2="1020" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
 
-  <!-- Step 5: Spring MVC -->
+  <!-- Step 5: Spring WebFlux -->
   <g transform="translate(1022, 480)">
-    <rect width="158" height="270" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
-    <circle cx="25" cy="28" r="14" fill="#d97706"/>
+    <rect width="158" height="270" fill="#dbeafe" stroke="#2563eb" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#2563eb"/>
     <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">5</text>
-    <text x="48" y="32" font-size="11" font-weight="700" fill="#78350f">Spring MVC</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#1e3a8a">Spring WebFlux</text>
 
-    <text x="14" y="58" font-size="10" fill="#334155">요청 1개 들어오면</text>
-    <text x="14" y="74" font-size="10" fill="#334155">자식 스레드 중 1개가</text>
-    <text x="14" y="90" font-size="10" fill="#334155">Tomcat 코드 → Spring</text>
-    <text x="14" y="106" font-size="10" fill="#334155">MVC 책으로 점프.</text>
+    <text x="14" y="58" font-size="10" fill="#334155">이벤트 1개 떨어지면</text>
+    <text x="14" y="74" font-size="10" fill="#334155">event loop 스레드가</text>
+    <text x="14" y="90" font-size="10" fill="#334155">Netty 코드 → WebFlux</text>
+    <text x="14" y="106" font-size="10" fill="#334155">책으로 점프.</text>
 
-    <text x="14" y="135" font-size="10" font-weight="700" fill="#78350f">하는 일:</text>
+    <text x="14" y="135" font-size="10" font-weight="700" fill="#1e3a8a">하는 일:</text>
     <text x="22" y="153" font-size="10" fill="#334155">- 라우팅</text>
     <text x="22" y="170" font-size="10" fill="#334155">- 너의 @Controller</text>
-    <text x="22" y="184" font-size="10" fill="#334155">  호출</text>
-    <text x="22" y="201" font-size="10" fill="#334155">- 응답 만들기</text>
+    <text x="22" y="184" font-size="10" fill="#334155">  (Mono/Flux 반환)</text>
+    <text x="22" y="201" font-size="10" fill="#334155">- 결과를 publisher로</text>
 
-    <line x1="14" y1="217" x2="144" y2="217" stroke="#fcd34d" stroke-dasharray="2,2"/>
+    <line x1="14" y1="217" x2="144" y2="217" stroke="#93c5fd" stroke-dasharray="2,2"/>
 
-    <text x="14" y="232" font-size="9" font-style="italic" fill="#a16207">자식 스레드 1개가</text>
-    <text x="14" y="244" font-size="9" font-style="italic" fill="#a16207">Tomcat → Spring MVC</text>
-    <text x="14" y="256" font-size="9" font-style="italic" fill="#a16207">→ 너의 코드까지</text>
-    <text x="14" y="267" font-size="9" font-style="italic" fill="#a16207">요청 1개 끝까지 처리</text>
+    <text x="14" y="234" font-size="10" font-style="italic" fill="#1d4ed8">막히지 않는 단계만</text>
+    <text x="14" y="250" font-size="10" font-style="italic" fill="#1d4ed8">실행하고 즉시 반환 →</text>
+    <text x="14" y="262" font-size="10" font-style="italic" fill="#1d4ed8">손이 다음 이벤트로</text>
   </g>
 
   <!-- Bottom summary -->
-  <rect x="30" y="775" width="1140" height="125" fill="#fef9c3" stroke="#ca8a04" stroke-width="2" rx="8"/>
-  <text x="600" y="803" text-anchor="middle" font-size="14" font-weight="700" fill="#713f12">★ 한 문장으로 ★</text>
+  <rect x="30" y="775" width="1140" height="125" fill="#ecfeff" stroke="#0891b2" stroke-width="2" rx="8"/>
+  <text x="600" y="803" text-anchor="middle" font-size="14" font-weight="700" fill="#155e75">★ 한 문장으로 ★</text>
   <text x="600" y="828" text-anchor="middle" font-size="13" fill="#334155">
-    <tspan font-weight="700" fill="#78350f">Spring MVC</tspan>와 <tspan font-weight="700" fill="#7f1d1d">Tomcat</tspan>은 둘 다 JAR 파일(코드 덩어리).
+    <tspan font-weight="700" fill="#1e3a8a">Spring WebFlux</tspan>와 <tspan font-weight="700" fill="#14532d">Reactor Netty</tspan>는 둘 다 JAR 파일(코드 덩어리).
     <tspan font-weight="700" fill="#7c2d12">OS 스레드</tspan>는 코드가 아니라 그 코드를 실제로 실행하는 손.
   </text>
-  <text x="600" y="853" text-anchor="middle" font-size="13" fill="#334155">
-    JVM 시작 시 OS가 만들어준 <tspan font-weight="700" fill="#ea580c">main 스레드</tspan>가 → Tomcat 코드 안의 <tspan font-family="ui-monospace, monospace" font-weight="700" fill="#7f1d1d">new Thread().start()</tspan>를 실행 →
+  <text x="600" y="850" text-anchor="middle" font-size="13" fill="#334155">
+    JVM 시작 시 OS가 만들어준 <tspan font-weight="700" fill="#ea580c">main 스레드</tspan>가 → Netty 코드 안의 <tspan font-family="ui-monospace, monospace" font-weight="700" fill="#14532d">new Thread().start() × N</tspan>을 실행 →
   </text>
-  <text x="600" y="878" text-anchor="middle" font-size="13" fill="#334155">
-    OS가 <tspan font-weight="700" fill="#ea580c">자식 스레드 200개</tspan>를 만들어줌 → 요청 1개는 그중 요청 처리용 자식 스레드 하나가 Tomcat + Spring MVC + 너의 코드까지 끝까지 처리.
+  <text x="600" y="873" text-anchor="middle" font-size="12.5" fill="#334155">
+    OS가 <tspan font-weight="700" fill="#ea580c">event loop 스레드 N개(≈코어 수)</tspan>를 만들어줌 → 요청 1개를 한 스레드가 끝까지 붙잡지 않고,
+  </text>
+  <text x="600" y="891" text-anchor="middle" font-size="12.5" fill="#334155">
+    event loop들이 Netty + WebFlux + 너의 코드를 이벤트 단위로 빠르게 실행하고 다음 이벤트로 넘어감.
   </text>
 
 </svg>

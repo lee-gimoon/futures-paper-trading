@@ -94,7 +94,7 @@ Reactor Netty는 보통 CPU 코어 수만큼(8코어면 8개) 이벤트 루프 =
 | 메서드 반환 타입 | `User`, `List<User>` 등 일반 객체 | `Mono<User>`, `Flux<User>` |
 | API 호출 | `RestTemplate` (deprecated 권고), `WebClient` 도 가능 | `WebClient` (전용) |
 | DB 접근 | JPA, JDBC (대부분 blocking) | R2DBC, MongoDB Reactive 등 reactive 드라이버 |
-| 컨트롤러 스타일 | `@RestController` + `@GetMapping` | 같은 어노테이션 + 함수형 라우팅도 가능 |
+| 컨트롤러 스타일 | `@RestController`  • `@GetMapping` | 같은 어노테이션 + 함수형 라우팅도 가능 |
 | 등장 시기 | Spring 1.0부터 (전통의 기본) | Spring 5 (2017)부터 |
 | 학습 난이도 | 낮음 (자바답게 흘러간다) | 높음 (Reactor 사고방식 필요) |
 | 디버깅 | 스택 트레이스가 직관적 | 스택 트레이스가 길고 끊긴 듯 보임 |
@@ -437,13 +437,13 @@ WebFlux는 `.map().filter().flatMap()`이 **나중에 다른 스레드에서 실
 ## 머릿속에 남길 그림 한 장
 
 ```text
-            요청이 짧고 끝이 명확한가?
-                    │
-        ┌───────────┴───────────┐
-       YES                      NO (스트림/장시간 연결/대량 동시성)
-        │                       │
-   Spring MVC              Spring WebFlux
-   (대부분의 웹앱)          (이 프로젝트)
+         요청이 짧고 끝이 명확한가?
+                 │
+     ┌───────────┴───────────┐
+    YES                      NO (스트림/장시간 연결/대량 동시성)
+     │                       │
+Spring MVC              Spring WebFlux
+(대부분의 웹앱)          (이 프로젝트)
 ```
 
 이 두 갈래만 기억해두면 충분하다.

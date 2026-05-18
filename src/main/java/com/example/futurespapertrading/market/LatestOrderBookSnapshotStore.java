@@ -32,3 +32,44 @@ public class LatestOrderBookSnapshotStore {
 		return Optional.ofNullable(latest.get());
 	}
 }
+//		List<String>       = [ "a", "b", "c", "d", ... ]   ← 대괄호 [] = 진짜 List, 슬롯 N개
+//		Map<K,V>           = { k1→v1, k2→v2, ... }         ← 중괄호 {} = 진짜 Map
+//		AtomicReference<T> = ┃ ➡ ┃                          ← 통 모양, 슬롯 1개 안에 참조 1개. List 아님 (별개 클래스)
+//
+//		※ "참조(➡)"의 정체 = 객체가 메모리의 어디에 있는지를 가리키는 주소 숫자(64비트).
+//		   예: 0x00007F8A2B3C4D5E 같은 16진수. set/get은 이 주소를 통째로 갈아끼우고/읽는 연산.
+
+//		AtomicReference<OrderBookSnapshot> latest
+//		┌─────────────────────────────────────────────────┐
+//		│  ➡ 메모리 주소 (예: 0x00007F8A2B3C4D5E, 64비트)    │
+//		└─────────────────────────────────────────────────┘
+//		                       │
+//		                       ▼ (그 주소가 가리키는 메모리 위치)
+//		┌──────────────────────────────────┐
+//		│ OrderBookSnapshot (record, 불변)  │
+//		│   symbol: "BTCUSDT"               │
+//		│   eventTime: 1715900000000        │
+//		│   bids: [Level, Level, ...]       │
+//		│   asks: [Level, Level, ...]       │
+//		└──────────────────────────────────┘
+//
+//		메서드 매핑:
+//		  update(snapshot) → latest.set(snapshot)  : 슬롯에 든 메모리 주소 1개를 새 주소로 통째 교체
+//		  latest()         → latest.get()          : 슬롯에 든 현재 메모리 주소 1개를 통째로 읽음
+//
+//		참고로 "통째 교체/읽기"가 가능한 이유는 AtomicReference 안쪽 값이 volatile 필드이기 때문이다.
+//		volatile(여러 스레드가 공유하는 값에 대해, 쓰기는 다른 스레드가 볼 수 있게 공개하고
+//		읽기는 최신 공개 값을 다시 읽도록 강제하는 JVM 메모리 규칙)이 붙어 있어서
+//		visibility(다른 스레드가 최신 값을 볼 수 있음) + ordering(앞뒤 명령 재정렬 제한)이 묶여있다.
+//		일반 필드의 `=` 대입은 참조 자체는 원자적이지만 이 두 보장이 빠져, Reader가 오래된 주소를
+//		계속 보거나 아직 안전하게 공개되지 않은 객체를 볼 수 있다. 그래서 일반 필드 대신
+//		AtomicReference(또는 volatile)를 쓴다.
+//
+//		만약 일반 필드로 쓰면 모양이 이렇게 바뀐다 (껍데기 AtomicReference<T>가 빠지면 타입은 그냥 T):
+//		  private volatile OrderBookSnapshot latest;   // ← final 빠지고, 안전 위해 volatile 권장
+//		  public void update(OrderBookSnapshot snapshot) { this.latest = snapshot; }
+//		  public Optional<OrderBookSnapshot> latest()   { return Optional.ofNullable(this.latest); }
+//
+//		final이 빠지는 이유: 일반 필드는 필드 자체가 새 snapshot을 가리키도록 매번 재할당돼야 하기 때문.
+//		(AtomicReference 버전은 박스 객체 자체는 평생 같은 박스라 final이 살아있고, 박스 안의
+//		메모리 주소만 set으로 바뀌는 구조 — 불변성과 가변성을 한 단계 간접으로 분리한 셈이다.)

@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 //     타입(설계도)이 못 바뀐다는 뜻이 아니라, 그 설계도로 만든 객체 한 개의 price/quantity가 굳는다는 뜻.
 //     값을 바꾸려면 기존 객체를 수정하는 게 아니라, new로 새 객체를 만들어 교체한다.
 // record를 쓰는 이유: 값 객체(불변 데이터 묶음)는 record 한 줄이면 생성자/접근자/equals/hashCode/toString이 자동 생성된다.
+// 스키마 = "데이터가 항상 가질 모양·필드들을 미리 적어둔 약속". 자바 record/class는 그 약속을 코드로 적은 것.
 public record OrderBookLevel(BigDecimal price, BigDecimal quantity) {
 }
 

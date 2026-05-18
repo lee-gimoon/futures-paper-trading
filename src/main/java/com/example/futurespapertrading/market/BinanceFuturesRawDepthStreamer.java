@@ -27,8 +27,15 @@ public class BinanceFuturesRawDepthStreamer {
 	// 2단계: raw JSON에서 bids/asks를 뽑아 OrderBookSnapshot으로 만드는 파서.
 	private final OrderBookSnapshotParser snapshotParser;
 
-	public BinanceFuturesRawDepthStreamer(OrderBookSnapshotParser snapshotParser) {
+	// 3단계: 파싱한 snapshot을 메모리에 붙잡아두는 양동이. 흐름 직후 여기에 박아둬야
+	// HTTP 쪽에서 "지금 호가창 어때?"에 답할 수 있다 (그 외엔 GC가 즉시 회수).
+	private final LatestOrderBookSnapshotStore latestStore;
+
+	public BinanceFuturesRawDepthStreamer(
+			OrderBookSnapshotParser snapshotParser,
+			LatestOrderBookSnapshotStore latestStore) {
 		this.snapshotParser = snapshotParser;
+		this.latestStore = latestStore;
 	}
 
 	// Binance WebSocket에 연결하고, 들어오는 메시지를 그대로 로그에 남긴다.
@@ -63,6 +70,11 @@ public class BinanceFuturesRawDepthStreamer {
 	private void logParsedSnapshot(String message) {
 		try {
 			OrderBookSnapshot snapshot = snapshotParser.parse(message);
+			// 3단계: snapshot이 메모리에 존재하는 "이 순간"에 store에 박아둔다.
+			// 이 try 블록이 끝나면 지역변수 참조가 끊겨 GC 대상이 되므로, 여기서 안 잡아두면 영원히 사라진다.
+			latestStore.update(snapshot);
+			// {} 자리에 SLF4J가 snapshot.toString()을 자동 호출해 끼워 넣는다.
+			// record가 toString을 자동 생성하므로 안의 List/OrderBookLevel까지 재귀적으로 펼쳐져 한 줄로 찍힌다.
 			log.info("Parsed OrderBookSnapshot: {}", snapshot);
 		} catch (Exception e) {
 			log.warn("Failed to parse depth JSON: {}", message, e);

@@ -1,0 +1,30 @@
+package com.example.futurespapertrading.market;
+
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.springframework.stereotype.Component;
+
+// 3단계의 핵심 — 흘러가는 push 스트림을 "지금 상태"로 붙잡아두는 양동이.
+// 메시지가 도착할 때마다 통째로 교체되고(매번 새 양동이), HTTP 요청은 양동이를 그 순간 들여다본다.
+//
+// 동시성: Writer = WebSocket event loop 1개, Reader = HTTP 요청 N개.
+// AtomicReference.set/get은 단일 참조 교체/조회를 락 없이 원자적으로 처리하므로
+// 락(synchronized) 없이 안전하다. 우리는 한 snapshot 안의 필드를 부분 갱신하지 않고
+// 매번 새 OrderBookSnapshot으로 통째 교체하기 때문에 이걸로 충분하다.
+//   (6단계에서 diff 적용으로 갈 때는 별도 자료구조가 필요해질 수 있다.)
+@Component
+public class LatestOrderBookSnapshotStore {
+
+	private final AtomicReference<OrderBookSnapshot> latest = new AtomicReference<>();
+
+	// 새 메시지가 파싱되어 도착할 때마다 호출된다. 통째로 교체 — 6단계에서 diff로 발전.
+	public void update(OrderBookSnapshot snapshot) {
+		latest.set(snapshot);
+	}
+
+	// 현재 보관 중인 최신 snapshot. 스트림이 안 켜졌거나 첫 메시지 전이면 Optional.empty().
+	public Optional<OrderBookSnapshot> latest() {
+		return Optional.ofNullable(latest.get());
+	}
+}

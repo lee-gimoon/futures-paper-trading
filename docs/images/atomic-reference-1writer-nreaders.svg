@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">
+
+  <defs>
+    <marker id="arr-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+    <marker id="arr-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <!-- ===== TITLE ===== -->
+  <rect x="0" y="0" width="1200" height="52" fill="#1e293b"/>
+  <text x="600" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="white">
+    왜 "1 Writer + N Readers"는 AtomicReference만으로 락 없이 안전한가
+  </text>
+
+  <!-- ===== Left: 안전 구조 시각화 ===== -->
+
+  <!-- Writer (top) -->
+  <g transform="translate(180, 90)">
+    <rect width="280" height="100" fill="#dcfce7" stroke="#16a34a" stroke-width="3" rx="8"/>
+    <text x="140" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#14532d">Writer (★ 단 1명)</text>
+    <text x="140" y="50" text-anchor="middle" font-size="11" fill="#334155">Streamer의 WebSocket event loop</text>
+    <text x="140" y="68" text-anchor="middle" font-size="11" fill="#334155">100ms마다 한 번씩</text>
+    <text x="140" y="88" text-anchor="middle" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#16a34a">store.update(snapshot)</text>
+  </g>
+
+  <!-- Arrow Writer → AtomicReference -->
+  <line x1="320" y1="195" x2="320" y2="245" stroke="#16a34a" stroke-width="3" marker-end="url(#arr-green)"/>
+  <text x="335" y="222" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#15803d">.set(new)</text>
+
+  <!-- AtomicReference (center) -->
+  <g transform="translate(140, 250)">
+    <rect width="360" height="160" fill="#ede9fe" stroke="#7c3aed" stroke-width="4" rx="10"/>
+    <text x="180" y="32" text-anchor="middle" font-size="14" font-weight="700" fill="#5b21b6">AtomicReference&lt;OrderBookSnapshot&gt;</text>
+    <text x="180" y="50" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">메모리상 단 1개의 객체 (Store 빈 안에 들어있음)</text>
+
+    <rect x="60" y="68" width="240" height="48" fill="white" stroke="#7c3aed" stroke-width="2" rx="6"/>
+    <text x="180" y="87" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6">현재 보관 중인 참조:</text>
+    <text x="180" y="105" text-anchor="middle" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#334155">snapshot v7 (BTCUSDT, eventTime=...)</text>
+
+    <text x="180" y="137" text-anchor="middle" font-size="11" font-weight="700" fill="#7c3aed">★ JVM이 원자적으로 set/get을 보장 ★</text>
+    <text x="180" y="153" text-anchor="middle" font-size="10" fill="#475569">"참조 1개의 교체" = 분할 불가능한 1회 작업</text>
+  </g>
+
+  <!-- Arrows AtomicReference → Readers (5개로 표시) -->
+  <line x1="190" y1="410" x2="120" y2="475" stroke="#dc2626" stroke-width="2" marker-end="url(#arr-red)"/>
+  <line x1="240" y1="410" x2="220" y2="475" stroke="#dc2626" stroke-width="2" marker-end="url(#arr-red)"/>
+  <line x1="320" y1="410" x2="320" y2="475" stroke="#dc2626" stroke-width="2" marker-end="url(#arr-red)"/>
+  <line x1="400" y1="410" x2="420" y2="475" stroke="#dc2626" stroke-width="2" marker-end="url(#arr-red)"/>
+  <line x1="450" y1="410" x2="520" y2="475" stroke="#dc2626" stroke-width="2" marker-end="url(#arr-red)"/>
+  <text x="320" y="448" text-anchor="middle" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#dc2626">.get() × N</text>
+
+  <!-- Readers (bottom) -->
+  <g transform="translate(60, 480)">
+    <g transform="translate(0, 0)">
+      <rect width="120" height="70" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+      <text x="60" y="22" text-anchor="middle" font-size="11" font-weight="700" fill="#7f1d1d">Reader #1</text>
+      <text x="60" y="40" text-anchor="middle" font-size="9" fill="#334155">HTTP GET</text>
+      <text x="60" y="58" text-anchor="middle" font-size="9" font-family="ui-monospace, monospace" fill="#dc2626">store.latest()</text>
+    </g>
+    <g transform="translate(140, 0)">
+      <rect width="120" height="70" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+      <text x="60" y="22" text-anchor="middle" font-size="11" font-weight="700" fill="#7f1d1d">Reader #2</text>
+      <text x="60" y="40" text-anchor="middle" font-size="9" fill="#334155">HTTP GET</text>
+      <text x="60" y="58" text-anchor="middle" font-size="9" font-family="ui-monospace, monospace" fill="#dc2626">store.latest()</text>
+    </g>
+    <g transform="translate(280, 0)">
+      <rect width="120" height="70" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+      <text x="60" y="22" text-anchor="middle" font-size="11" font-weight="700" fill="#7f1d1d">Reader #3</text>
+      <text x="60" y="40" text-anchor="middle" font-size="9" fill="#334155">HTTP GET</text>
+      <text x="60" y="58" text-anchor="middle" font-size="9" font-family="ui-monospace, monospace" fill="#dc2626">store.latest()</text>
+    </g>
+    <g transform="translate(420, 0)">
+      <rect width="120" height="70" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+      <text x="60" y="22" text-anchor="middle" font-size="11" font-weight="700" fill="#7f1d1d">... #N</text>
+      <text x="60" y="40" text-anchor="middle" font-size="9" fill="#334155">동시에 여러 개</text>
+      <text x="60" y="58" text-anchor="middle" font-size="9" font-family="ui-monospace, monospace" fill="#dc2626">store.latest()</text>
+    </g>
+  </g>
+
+  <!-- ===== Right: 3 safety axes ===== -->
+
+  <!-- Axis A: 쓰기끼리 안전 -->
+  <g transform="translate(640, 80)">
+    <rect width="540" height="170" fill="#f0fdf4" stroke="#16a34a" stroke-width="2" rx="8"/>
+    <circle cx="28" cy="30" r="16" fill="#16a34a"/>
+    <text x="28" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="white">A</text>
+    <text x="55" y="35" font-size="13" font-weight="700" fill="#14532d">쓰기 ↔ 쓰기: 충돌 자체가 없음</text>
+
+    <text x="20" y="65" font-size="11" fill="#334155">Writer가 단 1명(WebSocket event loop 1개)이라</text>
+    <text x="20" y="82" font-size="11" fill="#334155">"동시에 두 사람이 같은 자리에 쓰는" 일이 발생할 수 없다.</text>
+
+    <rect x="20" y="92" width="500" height="60" fill="white" stroke="#86efac" rx="4"/>
+    <text x="30" y="108" font-size="10" font-weight="700" fill="#15803d">🎓 비유</text>
+    <text x="30" y="124" font-size="10" fill="#334155">교실 칠판에 글씨를 쓰는 사람이 한 명이면,</text>
+    <text x="30" y="140" font-size="10" fill="#334155">같은 자리에 두 사람이 다른 글자를 적으려는 사고가 안 난다.</text>
+  </g>
+
+  <!-- Axis B: 읽기끼리 안전 -->
+  <g transform="translate(640, 260)">
+    <rect width="540" height="170" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="8"/>
+    <circle cx="28" cy="30" r="16" fill="#dc2626"/>
+    <text x="28" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="white">B</text>
+    <text x="55" y="35" font-size="13" font-weight="700" fill="#7f1d1d">읽기 ↔ 읽기: 같은 값 봐도 무방</text>
+
+    <text x="20" y="65" font-size="11" fill="#334155">Reader가 N명이어도 모두 똑같은 참조를 가져가는 것뿐 —</text>
+    <text x="20" y="82" font-size="11" fill="#334155">읽기는 값을 바꾸지 않으니 서로 영향 줄 수가 없다.</text>
+
+    <rect x="20" y="92" width="500" height="60" fill="white" stroke="#fca5a5" rx="4"/>
+    <text x="30" y="108" font-size="10" font-weight="700" fill="#dc2626">🎓 비유</text>
+    <text x="30" y="124" font-size="10" fill="#334155">칠판 글씨를 학생 30명이 동시에 베껴 적어도</text>
+    <text x="30" y="140" font-size="10" fill="#334155">칠판이 닳지 않는다. 모두 같은 글자를 그대로 가져가니까.</text>
+  </g>
+
+  <!-- Axis C: 쓰기↔읽기 = AtomicReference -->
+  <g transform="translate(640, 440)">
+    <rect width="540" height="200" fill="#ede9fe" stroke="#7c3aed" stroke-width="3" rx="8"/>
+    <circle cx="28" cy="30" r="16" fill="#7c3aed"/>
+    <text x="28" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="white">C</text>
+    <text x="55" y="35" font-size="13" font-weight="700" fill="#5b21b6">쓰기 ↔ 읽기: AtomicReference가 처리</text>
+
+    <text x="20" y="65" font-size="11" fill="#334155">진짜 위험한 경계 = Writer가 새 참조로 바꾸는 그 순간에</text>
+    <text x="20" y="82" font-size="11" fill="#334155">Reader가 "절반쯤 바뀐 참조" 같은 깨진 값을 볼 위험.</text>
+    <text x="20" y="100" font-size="11" font-weight="700" fill="#5b21b6">→ AtomicReference.set/get이 이걸 원자적으로 처리.</text>
+    <text x="20" y="116" font-size="10" fill="#475569">set은 새 참조를 메모리에 즉시 publish, get은 새 참조를 즉시 본다.</text>
+
+    <rect x="20" y="125" width="500" height="65" fill="white" stroke="#c4b5fd" rx="4"/>
+    <text x="30" y="142" font-size="10" font-weight="700" fill="#7c3aed">🎓 비유</text>
+    <text x="30" y="158" font-size="10" fill="#334155">교사가 칠판 글씨를 바꿀 때 — "지우고 새로 쓰는 도중에"가 없도록</text>
+    <text x="30" y="173" font-size="10" fill="#334155">완성된 카드를 통째로 교체하는 방식. 학생은 항상 "이전 카드 전체"</text>
+    <text x="30" y="187" font-size="10" fill="#334155">아니면 "새 카드 전체"만 본다. 반쯤 지운 글자 같은 건 절대 못 봄.</text>
+  </g>
+
+  <!-- ===== BAD case (bottom) ===== -->
+  <line x1="20" y1="690" x2="1180" y2="690" stroke="#dc2626" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="600" y="710" text-anchor="middle" font-size="12" font-weight="700" fill="#dc2626">
+    ⬇ 만약 가정이 깨지면 (예: Writer가 2명) — AtomicReference만으론 부족, 락 필요
+  </text>
+
+  <g transform="translate(60, 730)">
+    <rect width="540" height="150" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="8"/>
+    <text x="270" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="#7f1d1d">❌ Writer 2명일 때: "마지막 set이 이김"</text>
+
+    <text x="20" y="55" font-size="11" fill="#334155">- Writer A: set(snapshot v100) ─┐</text>
+    <text x="20" y="73" font-size="11" fill="#334155">- Writer B: set(snapshot v101) ─┴→ B의 set이 나중이면 v100은 영원히 유실</text>
+    <text x="20" y="97" font-size="11" fill="#334155">참조 교체 자체는 깨지지 않지만(원자성), v100이 묻혀버리는 "분실"이 생긴다.</text>
+
+    <text x="20" y="120" font-size="11" font-weight="700" fill="#dc2626">→ 이런 경우엔 synchronized 또는 더 정교한 자료구조 필요.</text>
+    <text x="20" y="138" font-size="10" font-style="italic" fill="#64748b">3단계 우리 코드는 Writer가 1명이라 이 함정에 안 빠짐.</text>
+  </g>
+
+  <g transform="translate(620, 730)">
+    <rect width="540" height="150" fill="#f0fdf4" stroke="#16a34a" stroke-width="2" rx="8"/>
+    <text x="270" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="#14532d">✅ 우리 3단계: Writer 1명 + Readers N명</text>
+
+    <text x="20" y="55" font-size="11" fill="#334155">- Writer: Streamer의 WebSocket event loop **단 1개**</text>
+    <text x="20" y="73" font-size="11" fill="#334155">- Readers: HTTP 요청을 받는 event loop들 **N개**</text>
+    <text x="20" y="97" font-size="11" fill="#334155">- 둘 사이의 만남은 AtomicReference의 set/get 한 번씩.</text>
+
+    <text x="20" y="120" font-size="11" font-weight="700" fill="#16a34a">→ 락 없이 안전. JVM 메모리 모델이 visibility 보장.</text>
+    <text x="20" y="138" font-size="10" font-style="italic" fill="#64748b">코드가 깔끔하고, 락 경합으로 인한 성능 저하도 없음.</text>
+  </g>
+
+</svg>

@@ -207,6 +207,31 @@ SSE를 먼저 쓴다.
 양방향 통신이 정말 필요해지면 그때 WebSocket으로 바꾼다.
 ```
 
+백엔드 SSE 구현 방식:
+
+```text
+4단계는 폴링(A) 방식으로 짠다.
+  Flux.interval(100ms)로 LatestOrderBookSnapshotStore의 latest()를 들여다보고,
+  값이 바뀌었으면 SSE 이벤트로 내보낸다 (distinctUntilChanged로 중복 제거).
+  이유:
+    - Streamer/Store에 손을 안 댄다. 새 코드는 Controller 안 한 메서드뿐.
+    - 사용자 눈에는 최대 100ms 지연이 보이지 않으므로 정확성 이득이 없다.
+    - 로드맵 원칙 "단순한 코드부터, 필요해질 때 도입"과 맞다.
+
+6/7단계에서 푸시(B) 방식으로 갈아끼운다.
+  LatestOrderBookSnapshotStore 안에 Sinks.Many를 박고,
+  update() 시점에 tryEmitNext로 새 snapshot을 즉시 발사한다.
+  Controller는 store.stream()을 그대로 SSE에 연결한다.
+  이유:
+    - 6단계 sequence 검증(U/u/pu)은 중간 이벤트를 폴링으로 빠뜨리면 깨진다.
+    - 7단계 체결은 매 snapshot마다 대기 지정가 주문을 재평가해야 한다.
+      폴링이 호가창 update보다 느리면 잠깐 best bid에 닿았다가 빠진 tick을 놓쳐
+      지정가 주문이 영원히 체결되지 않는다.
+
+A → B로 갈아끼울 때 Controller 시그니처, SSE 와이어 포맷, 프론트 코드는 그대로다.
+바뀌는 건 "Store 안의 시계"뿐 (interval 째깍 → update 시점 발사).
+```
+
 초기 UI:
 
 ```text
@@ -325,12 +350,32 @@ wss://fstream.binance.com/ws/btcusdt@depth@100ms    (diff depth stream)
    quantity == 0 이면 해당 가격레벨을 제거한다.
 ```
 
+SSE 전달 방식 갈아끼우기 (4단계 폴링 → 6단계 푸시):
+
+```text
+이 단계에서 SSE 백엔드를 폴링(A)에서 푸시(B)로 갈아끼운다.
+  방법:
+    - LatestOrderBookSnapshotStore에 Sinks.Many<OrderBookSnapshot>를 박는다.
+    - update() 호출 마지막 줄에 sink.tryEmitNext(snapshot)를 추가한다.
+    - store.stream() (= sink.asFlux())을 노출한다.
+    - Controller의 SSE 메서드를 Flux.interval(...) → latestStore.stream()으로 한 줄 교체.
+  이유 (이 단계에서 갈아끼우는 까닭):
+    - 위 5번 규칙(매 이벤트의 pu == 직전 u)은 "모든 이벤트를 1개도 빠짐없이"
+      봐야 동작한다. 폴링은 100ms 째깍 사이에 들어온 이벤트를 덮어쓸 수 있어
+      sequence 검증과 본질적으로 충돌한다.
+    - Streamer가 raw partial depth가 아니라 diff depth를 받아 update()하는
+      흐름으로 바뀌므로, 어차피 Store 주변 코드를 한 번 손대는 단계다.
+      이때 sink도 같이 박는 게 자연스럽다.
+  Controller 시그니처, SSE 와이어 포맷, 프론트 코드는 그대로다.
+```
+
 완료 기준:
 
 ```text
 sequence mismatch 발생 시 snapshot 재조회가 자동으로 일어난다 (로그로 확인).
 GET /api/binance-futures/btcusdt/depth/latest 응답의 상위 20레벨이
 Binance 웹사이트 호가창과 시각적으로 일치한다.
+SSE 스트림이 Store의 update() 시점과 1:1로 흐른다 (간격이 째깍 100ms가 아님).
 ```
 
 나중에 보충해야 할 것:
@@ -368,6 +413,23 @@ MVP 가정:
 부분체결은 한 tick 안에서만 다룬다.
 체결 후 호가창 자체에서 우리 주문량을 차감하지 않는다 (paper trading).
 취소 기능은 지정가 대기가 정상 동작하는 것을 확인한 뒤 같은 단계 안에 추가한다.
+```
+
+전제 — SSE는 이미 푸시(B)로 갈아끼워져 있어야 한다:
+
+```text
+6단계에서 이미 푸시(B)로 갈아끼웠으므로, 7단계는 그 위에서 동작한다.
+혹시 6단계를 건너뛰고 7단계로 왔다면 여기서라도 반드시 갈아끼운다.
+  이유:
+    - 위 "지정가 주문은 호가창 update마다 재평가" 규칙은 매 snapshot을
+      1개도 빠짐없이 매칭 엔진이 봐야 성립한다.
+    - 폴링은 100ms 째깍 사이에 best bid에 잠깐 닿았다가 빠진 tick을 덮어쓴다.
+      그 결과 지정가 SELL이 영원히 체결되지 않는 버그가 난다 (사용자 입장에선
+      "차트는 분명히 내 가격을 찍었는데 왜 안 잡히지?").
+  매칭 엔진 연결:
+    - Store의 stream() (= Sinks.Many.asFlux())을 매칭 엔진이 직접 구독한다.
+    - SSE도 같은 stream()을 구독한다.
+    - 즉 매칭과 화면이 같은 푸시 흐름을 공유한다.
 ```
 
 완료 기준:

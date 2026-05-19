@@ -47,7 +47,7 @@ public class OrderBookSnapshotParser {
 		return new OrderBookSnapshot(symbol, eventTime, bids, asks);
 	}
 
-	// ["price", "quantity"] 형태의 문자열 2개짜리 배열들을 OrderBookLevel 리스트로 바꾼다.
+	// 거래소가 준 원시 JSON 배열을 내 코드에서 안전하고 읽기 좋게 쓸 수 있는 호가 객체 리스트(도메인 객체)로 변환한다.
 	private List<OrderBookLevel> readLevels(JsonNode arrayNode) {
 		List<OrderBookLevel> levels = new ArrayList<>(arrayNode.size());
 		for (JsonNode levelNode : arrayNode) {

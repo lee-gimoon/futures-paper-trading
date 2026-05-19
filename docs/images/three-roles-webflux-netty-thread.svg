@@ -297,9 +297,9 @@
 
     <line x1="14" y1="217" x2="144" y2="217" stroke="#93c5fd" stroke-dasharray="2,2"/>
 
-    <text x="14" y="234" font-size="10" font-style="italic" fill="#1d4ed8">막히지 않는 단계만</text>
-    <text x="14" y="250" font-size="10" font-style="italic" fill="#1d4ed8">실행하고 즉시 반환 →</text>
-    <text x="14" y="262" font-size="10" font-style="italic" fill="#1d4ed8">손이 다음 이벤트로</text>
+    <text x="14" y="234" font-size="10" font-style="italic" fill="#1d4ed8">동기 연산자를 순서대로</text>
+    <text x="14" y="250" font-size="10" font-style="italic" fill="#1d4ed8">실행. blocking이면 멈춤</text>
+    <text x="14" y="262" font-size="10" font-style="italic" fill="#1d4ed8">짧게 끝나면 다음 이벤트로</text>
   </g>
 
   <!-- Bottom summary -->

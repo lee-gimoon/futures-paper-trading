@@ -1,13 +1,13 @@
 package com.example.futurespapertrading.market;
 
-import java.net.URI;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
+
+import java.net.URI;
 
 // Binance Futures BTCUSDT partial depth WebSocket에 연결하고 받은 raw JSON을 로그로 출력한다.
 @Component
@@ -86,3 +86,80 @@ public class BinanceFuturesRawDepthStreamer {
 //   목적(왜): 나중에 실행할 동작을 값처럼 넘기기 위해.
 //   자바의 우회(어떻게): 함수가 1급 시민이 아니라서, "동작 1개짜리 인터페이스의 1회용 구현체 객체"를
 //                      즉석에서 만들어 넘기는 방식으로 실현. 람다(->)는 그 우회를 한 줄로 적는 문법.
+
+// Flux를 쓰는 이유 (간단 정리):
+//   ★ 큰 그림: Flux는 "스트림 처리 라이브러리"다. 안 쓰면 그 안에 들어있는 도구들
+//             (.map, .filter, .buffer, .retry, .merge 등)을 하나하나 직접 만들어 써야 한다.
+//   ★ 비유:   자바에서 String.split(), List.sort()를 직접 안 짜듯이, 스트림 처리도 Reactor가
+//             검증된 구현을 제공한다. 그걸 안 쓰면 그 일을 내가 다시 발명하는 셈.
+//
+//   .map(), .doOnNext(), .doOnError(), .subscribe() — 이 메서드들은 모두 Flux 클래스에 정의돼 있다.
+//   그래서 쓰려면 Flux 객체가 있어야 한다. session.receive()가 Flux<WebSocketMessage>를 돌려주는 이유 =
+//   이 메서드들을 점(.) 찍어 부르라고.
+//
+//   IDE에서 flux. 까지 치면 자동완성에 뜨는 게 전부 Flux 클래스의 메서드들이다:
+//     map(), flatMap(), filter(),
+//     doOnNext(), doOnError(), doOnComplete(),
+//     buffer(), window(), retry(),
+//     merge(), zip(),
+//     subscribe(),
+//     ... (수백 개)
+//   전부 Reactor가 미리 만들어둔 Flux 클래스의 메서드.
+//
+// 메서드 체이닝의 비밀:
+//   각 연산자 메서드는 "새 Flux"를 반환해서 또 점(.) 찍을 수 있다.
+//     flux.map(...)        // Flux 반환
+//         .doOnNext(...)   // 또 Flux 반환
+//         .doOnError(...)  // 또 Flux 반환
+//         .subscribe();    // 종착 (Subscription 반환)
+//   이걸 fluent API / 메서드 체이닝이라고 한다. 그래서 한 줄로 길게 이어 쓸 수 있는 것.
+//
+// 한 줄 요약:
+//   사용자 입장에선 "Flux 클래스에 정의된 편리한 메서드들(.map / .doOnNext / .doOnError 등)을
+//   점 찍어 쓰기 위해" Flux를 받는 것.
+//   (뒤에서 백프레셔, 스레드 안전, 에러 전파 같은 일도 일어나지만, 표면적으로 우리가 쓰는 건
+//    Flux 클래스의 메서드들이다.)
+//
+// Mono<User> 예시:
+//   Mono<User> userMono = userRepository.findById(1L);
+//
+//   이 코드는 User 객체를 바로 꺼낸 것이 아니라,
+//   나중에 누군가 구독하면 1번 유저를 조회하고,
+//   결과가 있으면 User 하나를 흘려보내고,
+//   없으면 값 없이 완료하고,
+//   실패하면 에러를 흘려보내는 실행 가능한 작업 설명서를 만든 것이다.
+//
+//   즉, User 하나가 나올 수 있는 비동기 흐름이다.
+//   단, 여기서 "하나"는 0개 또는 1개라는 뜻이다.
+//   유저가 없으면 null을 흘려보내는 게 아니라, 값 없이 완료된다.
+//
+// Flux<WebSocketMessage> 예시:
+//   Flux<String> messages = session.receive()
+//       .map(WebSocketMessage::getPayloadAsText)
+//       .doOnNext(message -> log.info("received: {}", message));
+//
+//   session.receive()는 WebSocketMessage 목록을 바로 꺼내는 것이 아니라,
+//   나중에 누군가 구독하면 WebSocket 서버에서 들어오는 메시지들을 기다리고,
+//   메시지가 들어올 때마다 WebSocketMessage를 하나씩 흘려보내는 Flux 흐름을 만든다.
+//
+//   .map(WebSocketMessage::getPayloadAsText)는
+//   흘러오는 WebSocketMessage를 String payload로 바꾸는 새 Flux를 만든다.
+//
+//   .doOnNext(message -> log.info(...))는
+//   String 메시지가 흘러올 때마다 로그를 찍는 부수효과를 끼워 넣은 새 Flux를 만든다.
+//
+//   즉, 위 코드는 메시지를 지금 당장 읽어서 List처럼 저장하는 코드가 아니라,
+//   "나중에 구독되면 WebSocket 메시지를 받고,
+//   각 메시지를 String으로 바꾸고,
+//   각 String이 지나갈 때 로그를 찍어라"라는 실행 가능한 스트림 설명서를 조립하는 코드다.
+//
+//   Flux는 여러 값이 시간에 따라 나올 수 있는 비동기 흐름이다.
+//   여기서 "여러 값"은 0개부터 N개까지라는 뜻이다.
+//   메시지가 하나도 안 올 수도 있고, 1개만 올 수도 있고, 계속 올 수도 있다.
+//
+//   실제로 값이 흘러가기 시작하는 대표적인 순간은 subscribe()다.
+//   WebFlux/WebSocket 코드에서는 보통 이 Flux를 반환하거나 then()으로 Mono<Void>로 바꿔서
+//   Spring/Reactor 쪽이 적절한 시점에 구독하게 만든다.
+
+
+

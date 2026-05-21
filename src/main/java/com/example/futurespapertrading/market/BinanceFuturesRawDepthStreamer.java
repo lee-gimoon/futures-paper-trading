@@ -309,19 +309,30 @@ public class BinanceFuturesRawDepthStreamer {
 // [우리] observablePublisher.subscribe()         ← subscribe #1 (우리가 호출)
 //    │
 //    │ subscribe #1 이 외부 사슬 안에서 downstream → upstream 으로 거꾸로 전파:
+//    │ (각 단계는 자기 wrapper subscriber 만들고 source 필드의 .subscribe() 호출)
 //    │   observablePublisher (MonoPeek, doOnError 결과)
-//    │       │
+//    │       │  .source = connectionPublisher
 //    │       ▼
 //    │   connectionPublisher (MonoNext, webSocketClient.execute(...) 가 반환한 것)
-//    │       │
+//    │       │  .source = reactor-netty 내부 객체
 //    │       ▼
 //    │   reactor-netty 내부 사슬 (HttpClient + WebSocketUpgrade + ...)
-//    │       │
+//    │       │  .source 필드 따라 몇 단계 더
 //    │       ▼
-//    │   가장 안쪽 (HttpClientConnect 같은 곳) — 실제 네트워크 작업 시작점
+//    │   가장 안쪽 (HttpClientConnect 같은 곳)
+//    │       └ ※ subscribe #1 의 종착역.
+//    │         더 이상 .source 필드가 없는 source-level Publisher 라서 더 거슬러 갈 곳이 없음.
+//    │         여기서 진짜 네트워크 작업 시작:
+//    │           - Netty 채널 생성 → 이벤트 루프(손 5)에 등록
+//    │           - TCP connect 시도 → WebSocket upgrade 요청
+//    │         이 작업은 비동기로 시작만 시키고 .subscribe() 메서드는 곧장 return.
+//    │         return 이 한 단계씩 위로 올라가 우리의 observablePublisher.subscribe() 줄이 return.
+//    │         (이 시점에 핸드셰이크는 아직 진행 중. 우리 코드는 다음 줄로 넘어감)
+//    │
+//    │ ※ subscribe #1 은 외부 사슬만 깨운다. 내부 사슬은 아직 존재조차 안 함 (람다 미실행).
 //    │
 //    ▼
-// [reactor-netty] TCP/WebSocket 핸드셰이크
+// [reactor-netty] TCP/WebSocket 핸드셰이크 (비동기, 손 5 가 처리)
 //    │
 //    │ 핸드셰이크 성공 → session 생성
 //    │
@@ -335,7 +346,16 @@ public class BinanceFuturesRawDepthStreamer {
 //    ▼
 // [reactor-netty] sessionDone 받음
 //    │
-//    │ 내부에서 sessionDone.subscribe(...)        ← subscribe #2 (reactor-netty 가 호출)
+//    │ ※ 받은 sessionDone 은 cold. 누군가 .subscribe() 안 해주면 영원히 멈춰 있음
+//    │   (= 내부 사슬이 자고 있는 상태, 메시지 한 건도 안 흐름).
+//    │   reactor-netty 는 이 Mono 가 onComplete/onError 되는 시점을 알아야 채널을 닫을 수 있음
+//    │   → 그래서 자기가 직접 subscribe.
+//    │   우리는 sessionDone 참조가 없고 (람다 안 지역변수) 끼어들 시점도 없어서 못 한다.
+//    │
+//    │ 내부에서 sessionDone.subscribe(internalSub)   ← subscribe #2 (reactor-netty 가 자동 호출)
+//    │   - WebSocketHandler 계약상 reactor-netty 가 자기 책임으로 수행
+//    │   - internalSub = 외부 사슬과 내부 사슬을 잇는 다리 subscriber
+//    │     (내부 사슬에서 올라온 onComplete/onError 를 외부 사슬로 전달 + 채널 close)
 //    │
 //    ▼
 // [sessionDone 사슬 활성화]

@@ -18,7 +18,6 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	// Jackson은 spring-boot-starter-webflux가 spring-boot-starter-jackson을 통해 이미 끌어온다.
 	// (Spring Boot 4 / Jackson 3은 패키지가 tools.jackson.*로 바뀌었다.)

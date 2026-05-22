@@ -49,6 +49,10 @@ public class BinanceFuturesRawDepthStreamer {
 		WebSocketHandler sessionHandler = session -> {
 
 			// 어댑터: Binance WebSocket 프레임 → Flux<WebSocketMessage>
+			//   역할: Netty의 저수준 WebSocket 프레임(바이트)을 Spring의 reactive 타입(WebSocketMessage)으로 감싸는 변환층.
+			//   - 이 줄(receive() 호출) 시점: cold Flux 객체 하나만 만들어 리턴. 네트워크에서 아무것도 끌어오지 않음.
+			//   - 나중에 subscribe 신호가 이 Flux까지 거슬러 올라오면: 그 신호가 reactor-netty의 inbound 채널로 전파되어
+			//     Netty가 WebSocket 프레임을 읽기 시작 → 각 프레임을 WebSocketMessage 객체로 래핑해서 downstream으로 push.
 			Flux<WebSocketMessage> incomingMessages = session.receive();
 
 			// 변환: WebSocketMessage → JSON 문자열
@@ -63,13 +67,14 @@ public class BinanceFuturesRawDepthStreamer {
 			Flux<String> withParsedLog = withRawLog
 					.doOnNext(this::logParsedSnapshot);
 
-			// Flux<String> → Mono<Void>: 값은 버리고 완료/에러 신호만 전달 (handle() 반환 타입 맞춤용)
+			// Flux<String> → Mono<Void>: 값은 버리고 완료/에러 신호만 전달 (handle() 반환 타입 맞춤용).
+			// 그 신호가 오기 전까지는 메시지가 도착할 때마다 위쪽 파이프(map → doOnNext → doOnNext)가 한 번씩 흘러간다.
 			Mono<Void> sessionDone = withParsedLog.then();
 
 			return sessionDone;
 		};
 
-		// [2] 연결 Publisher: subscribe 시 URI 접속 → 세션 생성 → sessionHandler 호출
+		// [2] 연결 Publisher: subscribe 시 URI 접속 → 세션(session) 생성 → sessionHandler 호출
 		Mono<Void> connectionPublisher =
 				webSocketClient.execute(BTCUSDT_DEPTH_STREAM_URI, sessionHandler);
 
@@ -102,4 +107,8 @@ public class BinanceFuturesRawDepthStreamer {
 //   목적(왜): 나중에 실행할 동작을 값처럼 넘기기 위해.
 //   자바의 우회(어떻게): 함수가 1급 시민이 아니라서, "동작 1개짜리 인터페이스의 1회용 구현체 객체"를
 //                      즉석에서 만들어 넘기는 방식으로 실현. 람다(->)는 그 우회를 한 줄로 적는 문법.
+//
+// 이 파일의 sessionHandler 람다 핵심 두 줄:
+// ✅ sessionHandler 변수 = 그 WebSocketHandler 람다 객체에 대한 참조를 들고 있다.
+// ✅ 람다 바디 {...} 안의 코드는 session이 매개변수로 들어와야 실행된다.
 

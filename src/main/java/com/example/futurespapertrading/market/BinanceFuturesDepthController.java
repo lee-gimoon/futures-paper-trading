@@ -62,6 +62,9 @@ public class BinanceFuturesDepthController {
 	//   record의 자동 생성된 접근자(symbol(), eventTime(), bids(), asks())를 Jackson이 리플렉션으로 찾아내
 	//   메서드 이름을 그대로 JSON 키로 쓴다 → {"symbol":"BTCUSDT","eventTime":...,"bids":[...],"asks":[...]}.
 	//   우리가 JSON 변환 코드를 한 줄도 안 적은 이유 = @RestController + 객체 반환 = Spring의 컨벤션.
+	//
+	// 현재 React 홈페이지는 이 엔드포인트를 자동 호출하지 않는다.
+	// 화면은 /depth/stream SSE를 구독하고, latest()는 curl/브라우저 직접 호출로 최신 snapshot 1개를 확인하는 디버깅용 단발 조회 API다.
 	@GetMapping("/api/binance-futures/btcusdt/depth/latest")
 	public ResponseEntity<OrderBookSnapshot> latest() {
 		return latestStore.latest()
@@ -81,6 +84,7 @@ public class BinanceFuturesDepthController {
 	//   - ServerSentEvent<T> = SSE의 한 이벤트 한 덩어리 (data, id, event 이름 등을 담는 봉투).
 	//
 	// curl -N http://localhost:8080/api/binance-futures/btcusdt/depth/stream
+	// 홈페이지 접속 시 React가 EventSource('/api/.../depth/stream')를 생성해서 이 메서드가 자동 호출된다.
 	@GetMapping(path = "/api/binance-futures/btcusdt/depth/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<OrderBookSnapshot>> stream() {
 		return Flux.interval(Duration.ofMillis(100))                                  // 100ms마다 째깍 (0,1,2,...)

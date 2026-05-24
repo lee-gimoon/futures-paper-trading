@@ -68,7 +68,7 @@ public class BinanceFuturesRawDepthStreamer {
 			Flux<String> withRawLog = payloadTexts
 					.doOnNext(message -> log.info("Binance Futures raw depth JSON: {}", message));
 
-			// 엿보기: 파싱 결과 로그
+			// 엿보기 + 저장: raw JSON을 파싱해 latestStore에 저장하고, 파싱 결과 로그도 남긴다.
 			Flux<String> withParsedLog = withRawLog
 					.doOnNext(this::logParsedSnapshot);
 
@@ -91,7 +91,7 @@ public class BinanceFuturesRawDepthStreamer {
 		observablePublisher.subscribe();
 	}
 
-	// raw JSON을 파싱해서 OrderBookSnapshot을 로그로 찍는다.
+	// raw JSON을 파싱해서 latestStore에 저장하고 OrderBookSnapshot을 로그로 찍는다.
 	// 파싱이 실패해도 raw 스트림 전체를 죽이지 않도록 여기서 예외를 잡아 로그만 남긴다.
 	private void logParsedSnapshot(String message) {
 		try {
@@ -116,4 +116,3 @@ public class BinanceFuturesRawDepthStreamer {
 // 이 파일의 sessionHandler 람다 핵심 두 줄:
 // ✅ sessionHandler 변수 = 그 WebSocketHandler 람다 객체에 대한 참조를 들고 있다.
 // ✅ 람다 바디 {...} 안의 코드는 session이 매개변수로 들어와야 실행된다.
-

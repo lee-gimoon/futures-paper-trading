@@ -30,13 +30,25 @@ public class BinanceFuturesDepthController {
 		this.latestStore = latestStore;
 	}
 
-	// 클라이언트가 이 POST 주소로 요청하면 BTCUSDT raw depth stream 연결을 시작한다.
+	// ⚠️ 학습용으로 남겨둔 옛 엔드포인트 — 실제로는 호출되지 않도록 주석 처리.
+	// BinanceFuturesRawDepthStreamer.connect()에 @PostConstruct를 붙여 부팅 시 1회 자동 호출하도록 옮겼다.
+	//
+	// 이 코드가 살아있던 시절의 문제점:
+	//   1) connect()가 호출될 때마다 내부에서 observablePublisher.subscribe()가 발사됨.
+	//      execute Mono가 cold라서 구독마다 새 Binance WebSocket을 맺는다 (재연결이 아니라 같은 시간대에 나란히 살아있음).
+	//   2) 이 POST에 가드가 전혀 없음 → 두 번 호출되면 동시에 살아있는 Binance WebSocket이 2개,
+	//      100번 호출되면 100개. Binance가 같은 BTCUSDT depth 스트림을 그만큼 N번 보내 트래픽·로그·CPU가 N배.
+	//   3) 프론트엔드 "스트림 시작" 버튼에 묶여있어, 사용자가 페이지를 새로고침하거나 새 탭에서 또 누르면
+	//      서버 쪽 React state(disabled)는 그 사실을 모르므로 또 발사됨.
+	//   4) 근본 원인: upstream(서버↔Binance, 단 1개여야 함)을 downstream(사용자↔서버, N개 OK)과
+	//      같은 트리거(사용자 행동)에 묶은 것. → connect()를 사용자 행동에서 떼어내는 게 정답.
+	//
 	// curl -X POST http://localhost:8080/api/binance-futures/btcusdt/depth/raw/start
-	@PostMapping("/api/binance-futures/btcusdt/depth/raw/start")
-	public String start() {
-		rawDepthStreamer.connect();
-		return "Binance Futures BTCUSDT raw depth stream started.";
-	}
+	// @PostMapping("/api/binance-futures/btcusdt/depth/raw/start")
+	// public String start() {
+	// 	rawDepthStreamer.connect();
+	// 	return "Binance Futures BTCUSDT raw depth stream started.";
+	// }
 
 	// Jackson이 record를 자동 직렬화 — 필드 이름이 그대로 JSON 키가 됨.
 	// 스트림이 아직 안 켜졌거나 첫 메시지 전이면 store가 비어있으므로 404를 돌려준다.

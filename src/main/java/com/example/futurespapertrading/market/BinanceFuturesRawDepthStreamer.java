@@ -1,5 +1,6 @@
 package com.example.futurespapertrading.market;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -42,6 +43,10 @@ public class BinanceFuturesRawDepthStreamer {
 	}
 
 	// Binance WebSocket에 연결하고, 들어오는 메시지를 그대로 로그에 남긴다.
+	// @PostConstruct: Spring이 빈 생성 + 의존성 주입 직후 1회만 자동 호출.
+	// → Binance WebSocket 1개를 부팅 시점에 확정한다.
+	// → 사용자 요청 수와 무관하게 Binance WebSocket을 정확히 1개만 유지하기 위함.
+	@PostConstruct
 	public void connect() {
 		log.info("Connecting to Binance Futures depth stream: {}", BTCUSDT_DEPTH_STREAM_URI);
 

@@ -87,10 +87,10 @@ public class BinanceFuturesDepthController {
 	// 홈페이지 접속 시 React가 EventSource('/api/.../depth/stream')를 생성해서 이 메서드가 자동 호출된다.
 	@GetMapping(path = "/api/binance-futures/btcusdt/depth/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<OrderBookSnapshot>> stream() {
-		return Flux.interval(Duration.ofMillis(100))                                  // 100ms마다 째깍 (0,1,2,...)
-				.concatMap(tick -> Mono.justOrEmpty(latestStore.latest()))            // 양동이가 비었으면 그 tick을 통째로 건너뛴다
-				.distinctUntilChanged(OrderBookSnapshot::eventTime)                   // 직전과 같은 snapshot이면 보내지 않는다 (시계 어긋남 보정)
-				.map(snap -> ServerSentEvent.builder(snap).build());                  // SSE 봉투로 감싼다 (data: {...json...})
+		return Flux.interval(Duration.ofMillis(100)) // 100ms마다 째깍 (0,1,2,...)
+				.concatMap(tick -> Mono.justOrEmpty(latestStore.latest())) // 양동이가 비었으면 그 tick을 통째로 건너뛴다
+				.distinctUntilChanged(OrderBookSnapshot::eventTime) // 직전과 같은 snapshot이면 보내지 않는다 (시계 어긋남 보정)
+				.map(snap -> ServerSentEvent.builder(snap).build()); // SSE 봉투로 감싼다 (data: {...json...})
 	}
 
 	// 왜 map + filter 대신 concatMap(Mono.justOrEmpty)인가:

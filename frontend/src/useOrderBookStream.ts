@@ -11,6 +11,7 @@ export function useOrderBookStream(): OrderBookSnapshot | null {
 
   useEffect(() => {
     // Vite proxy 덕분에 '/api/...'가 그대로 localhost:8080으로 전달된다.
+    // vite.config.ts의 proxy.configure에서 SSE buffer를 끄도록 설정되어 있다.
     const eventSource = new EventSource('/api/binance-futures/btcusdt/depth/stream');
 
     eventSource.onmessage = (event) => {

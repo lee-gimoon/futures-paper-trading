@@ -116,3 +116,4 @@ public class BinanceFuturesRawDepthStreamer {
 // 이 파일의 sessionHandler 람다 핵심 두 줄:
 // ✅ sessionHandler 변수 = 그 WebSocketHandler 람다 객체에 대한 참조를 들고 있다.
 // ✅ 람다 바디 {...} 안의 코드는 session이 매개변수로 들어와야 실행된다.
+//d

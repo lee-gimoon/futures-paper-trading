@@ -1,6 +1,8 @@
 package com.example.futurespapertrading.market;
 
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -20,16 +22,30 @@ public class LatestOrderBookSnapshotStore {
 	//   위 @Component로 Spring이 Store 객체를 부팅 시 1개만 만들기 때문에, 그 객체에 속한 이 필드도 자연히 1개.
 	//   Streamer와 Controller가 같은 Store 빈을 주입받아 같은 latest를
 	//   가리키게 된다 (Writer/Reader가 같은 양동이를 보는 핵심).
+	//   현재 SSE stream() 컨트롤러는 아래 sink/asFlux()를 쓰므로 이 값을 직접 읽지 않는다.
+	//   이 latest는 /depth/latest 단발 조회 API에서 "지금 최신 snapshot 1개"를 꺼내기 위한 보관함이다.
 	private final AtomicReference<OrderBookSnapshot> latest = new AtomicReference<>();
+
+	// ✨ 추가: 변화 알리미 (Hot Flux + multicast + replay(1))
+	// replay().limit(1) = 멀티캐스트 + 최근 1건 캐싱
+	private final Sinks.Many<OrderBookSnapshot> sink =
+			Sinks.many().replay().limit(1);
 
 	// 새 메시지가 파싱되어 도착할 때마다 호출된다. 통째로 교체 — 6단계에서 diff로 발전.
 	public void update(OrderBookSnapshot snapshot) {
-		latest.set(snapshot);
+		latest.set(snapshot); // /depth/latest 단발 조회 API가 꺼내볼 최신 snapshot 1개를 저장
+		sink.tryEmitNext(snapshot); // ✨ 추가: 모든 구독자에게 push
 	}
 
-	// 현재 보관 중인 최신 snapshot. 스트림이 안 켜졌거나 첫 메시지 전이면 Optional.empty().
+	// 현재 보관 중인 최신 snapshot. SSE stream()용이 아니라 /depth/latest 단발 조회용이다.
+	// 스트림이 안 켜졌거나 첫 메시지 전이면 Optional.empty().
 	public Optional<OrderBookSnapshot> latest() {
 		return Optional.ofNullable(latest.get());
+	}
+
+	// ✨ 추가: 변화 흐름 구독 진입점. 컨트롤러가 이걸 받아 SSE로 흘려보낸다.
+	public Flux<OrderBookSnapshot> stream() {
+		return sink.asFlux();
 	}
 }
 //		List<String>       = [ "a", "b", "c", "d", ... ]   ← 대괄호 [] = 진짜 List, 슬롯 N개

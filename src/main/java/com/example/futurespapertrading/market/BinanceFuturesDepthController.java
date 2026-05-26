@@ -4,12 +4,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.time.Duration;
 
 // HTTP로 Binance Futures BTCUSDT 호가 스트림을 시작하거나, 메모리에 보관된 최신 snapshot을 조회한다.
 // 2단계까지: POST로 raw 스트림 시작 (메시지는 로그로 흘려보내고 사라짐).
@@ -18,15 +14,16 @@ import java.time.Duration;
 public class BinanceFuturesDepthController {
 
 	// 실제 Binance WebSocket 연결과 raw JSON 로그 출력을 담당하는 객체다.
-	private final BinanceFuturesRawDepthStreamer rawDepthStreamer;
+	// 옛 start() 엔드포인트(아래 주석)와 함께만 쓰이던 필드. 주석을 풀면 같이 복구한다.
+	// private final BinanceFuturesRawDepthStreamer rawDepthStreamer;
 
 	// 3단계: 파서가 만든 최신 snapshot이 담겨있는 메모리 양동이.
 	private final LatestOrderBookSnapshotStore latestStore;
 
 	public BinanceFuturesDepthController(
-			BinanceFuturesRawDepthStreamer rawDepthStreamer,
+			// BinanceFuturesRawDepthStreamer rawDepthStreamer,
 			LatestOrderBookSnapshotStore latestStore) {
-		this.rawDepthStreamer = rawDepthStreamer;
+		// this.rawDepthStreamer = rawDepthStreamer;
 		this.latestStore = latestStore;
 	}
 
@@ -85,17 +82,20 @@ public class BinanceFuturesDepthController {
 	//
 	// curl -N http://localhost:8080/api/binance-futures/btcusdt/depth/stream
 	// 홈페이지 접속 시 React가 EventSource('/api/.../depth/stream')를 생성해서 이 메서드가 자동 호출된다.
+	// 변경 전 ─ Cold Flux + 폴링 (비교용으로 남겨둠)
+	// @GetMapping(path = "/api/binance-futures/btcusdt/depth/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	// public Flux<ServerSentEvent<OrderBookSnapshot>> stream() {
+	// 	return Flux.interval(Duration.ofMillis(100)) // 100ms마다 째깍 (0,1,2,...)
+	// 			.concatMap(tick -> Mono.justOrEmpty(latestStore.latest())) // 양동이가 비었으면 그 tick을 통째로 건너뛴다
+	// 			.distinctUntilChanged(OrderBookSnapshot::eventTime) // 직전과 같은 snapshot이면 보내지 않는다 (시계 어긋남 보정)
+	// 			.map(snap -> ServerSentEvent.builder(snap).build()); // SSE 봉투로 감싼다 (data: {...json...})
+	// }
+
+	// 변경 후 ─ Hot Flux + multicast + replay(1)
 	@GetMapping(path = "/api/binance-futures/btcusdt/depth/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<OrderBookSnapshot>> stream() {
-		return Flux.interval(Duration.ofMillis(100)) // 100ms마다 째깍 (0,1,2,...)
-				.concatMap(tick -> Mono.justOrEmpty(latestStore.latest())) // 양동이가 비었으면 그 tick을 통째로 건너뛴다
-				.distinctUntilChanged(OrderBookSnapshot::eventTime) // 직전과 같은 snapshot이면 보내지 않는다 (시계 어긋남 보정)
-				.map(snap -> ServerSentEvent.builder(snap).build()); // SSE 봉투로 감싼다 (data: {...json...})
+		return latestStore.stream()
+				.map(snap -> ServerSentEvent.builder(snap).build());
 	}
 
-	// 왜 map + filter 대신 concatMap(Mono.justOrEmpty)인가:
-	//   Reactor는 onNext에 null이 흐르는 것을 금지한다 (Reactive Streams 명세).
-	//   .map(...)이 null을 반환하면 NPE를 즉시 던진다 — filter가 거르기 전에.
-	//   Mono.justOrEmpty(Optional)는 값이 있으면 그 값을 흘리고, 없으면 "빈 Mono"가 된다.
-	//   concatMap이 빈 Mono를 만나면 그 tick은 자연스럽게 사라진다 (null이 흐르지 않음).
 }

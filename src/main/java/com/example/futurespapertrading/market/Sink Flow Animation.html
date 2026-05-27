@@ -41,18 +41,24 @@
     font-feature-settings: "cv11", "ss01";
   }
   .app {
-    display: grid;
-    grid-template-columns: 940px 1fr;
+    display: flex;
     min-height: 100vh;
+    --stage-width: 940px;
   }
   /* ---------- STAGE ---------- */
   .stage {
     position: relative;
-    width: 940px;
+    width: var(--stage-width);
+    flex-shrink: 0;
     height: 1080px;
     background: var(--canvas);
-    border-right: 1px solid var(--rule);
-    overflow: hidden;
+    overflow: auto;
+  }
+  .stage-inner {
+    position: relative;
+    width: 940px;
+    height: 1080px;
+    margin: 0 auto;
   }
   .stage svg.paths {
     position: absolute;
@@ -61,6 +67,30 @@
     height: 1080px;
     pointer-events: none;
   }
+
+  /* draggable divider */
+  .divider {
+    width: 6px;
+    flex-shrink: 0;
+    background: var(--rule);
+    cursor: col-resize;
+    position: relative;
+    transition: background 140ms ease;
+  }
+  .divider:hover, .divider.dragging { background: #94a3b8; }
+  .divider::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px; height: 60px;
+    border-radius: 2px;
+    background: #94a3b8;
+    opacity: 0.7;
+  }
+  .divider:hover::before, .divider.dragging::before { background: #475569; opacity: 1; }
+  body.resizing { cursor: col-resize !important; user-select: none; }
+  body.resizing * { user-select: none !important; }
   .node {
     position: absolute;
     border-radius: 8px;
@@ -512,8 +542,9 @@
   }
 
   @media (max-width: 1350px) {
-    .app { grid-template-columns: 940px 1fr; }
+    .app { --stage-width: 940px; }
   }
+  .sidebar { flex: 1; min-width: 360px; }
 </style>
 </head>
 <body>
@@ -521,6 +552,7 @@
 
   <!-- =================== STAGE =================== -->
   <div class="stage" id="stage">
+    <div class="stage-inner">
 
     <!-- SVG layer: paths + arrow markers + particles -->
     <svg class="paths" viewBox="0 0 940 1080">
@@ -684,7 +716,11 @@
       <div class="hint">@PostConstruct → Streamer.connect() → Flux #A~#D assembly → subscribe() → 데이터 흐름</div>
     </div>
 
+    </div><!-- /.stage-inner -->
   </div><!-- /.stage -->
+
+  <!-- draggable divider -->
+  <div class="divider" id="divider" title="드래그해서 너비 조절"></div>
 
   <!-- =================== SIDEBAR =================== -->
   <aside class="sidebar">
@@ -700,6 +736,7 @@
     <div class="controls">
       <div class="row" style="gap:6px;">
         <button id="btn-boot">🚀 Spring Boot 실행</button>
+        <button id="btn-pause" class="ghost" disabled>⏸ 일시정지</button>
         <button id="btn-reset" class="ghost">↺ 초기화</button>
       </div>
       <div class="row" style="gap:6px;">
@@ -862,6 +899,7 @@ let speed = 1.0;
 let spawnInterval = 850;
 let timeSinceSpawn = 0;
 let lastSinkSnap = null; // most recent snapshot the sink has (= replay(1) buffer)
+let paused = false;
 
 let frameCount = 0;
 const MAX_LOG_LINES = 80;
@@ -870,6 +908,7 @@ const MAX_LOG_LINES = 80;
 const $particles = document.getElementById('particles');
 const $log = document.getElementById('log');
 const $btnBoot = document.getElementById('btn-boot');
+const $btnPause = document.getElementById('btn-pause');
 const $btnReset = document.getElementById('btn-reset');
 const $btnTabA = document.getElementById('btn-tab-a');
 const $btnTabB = document.getElementById('btn-tab-b');
@@ -1230,6 +1269,7 @@ async function bootSpring() {
   $btnBoot.textContent = '✓ Spring 부팅 완료';
   $btnBoot.style.opacity = '0.5';
   $btnBoot.style.cursor = 'default';
+  $btnPause.disabled = false;
   updateButtonsForTab('A');
   updateButtonsForTab('B');
 }
@@ -1338,8 +1378,8 @@ function tick(ts) {
   lastTs = ts;
   const dt = dtRaw * speed;
 
-  // spawn from source only when stage is running
-  if (stageState === 'running') {
+  // spawn from source only when stage is running and not paused
+  if (stageState === 'running' && !paused) {
     timeSinceSpawn += dtRaw;
     while (timeSinceSpawn >= spawnInterval) {
       spawnSource();
@@ -1349,8 +1389,8 @@ function tick(ts) {
     timeSinceSpawn = 0;
   }
 
-  // advance particles
-  for (let i = particles.length - 1; i >= 0; i--) {
+  // advance particles (only when not paused)
+  if (!paused) for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     const info = pathInfo[p.edgeId];
     const dur = (info.length / PX_PER_SEC) * 1000;
@@ -1410,6 +1450,15 @@ requestAnimationFrame(tick);
 
 // ---------- Controls ----------
 $btnBoot.addEventListener('click', () => { if (stageState === 'idle') bootSpring(); });
+$btnPause.addEventListener('click', () => {
+  if (stageState !== 'running') return;
+  paused = !paused;
+  $btnPause.textContent = paused ? '▶ 재생' : '⏸ 일시정지';
+  $btnPause.classList.toggle('ghost', !paused); // highlight when paused
+  log(paused
+    ? '<span style="color:#fdba74">[⏸ PAUSED]</span> 애니메이션 일시정지 — 패킷과 spawn 제외 상태는 그대로'
+    : '<span style="color:#86efac">[▶ RESUMED]</span> 재개');
+});
 $btnTabA.addEventListener('click', () => {
   if (stageState !== 'running') return;
   if (tabAState === 'closed') openTab('A');
@@ -1434,6 +1483,10 @@ $btnReset.addEventListener('click', () => {
   stageState = 'idle';
   tabAState = 'closed';
   tabBState = 'closed';
+  paused = false;
+  $btnPause.textContent = '⏸ 일시정지';
+  $btnPause.classList.add('ghost');
+  $btnPause.disabled = true;
 
   Object.keys(lifecycle).forEach(id => setNodeLifecycle(id, 'idle'));
   Object.keys(edgeActive).forEach(eid => setEdgeActive(eid, false));
@@ -1481,6 +1534,35 @@ $rate.addEventListener('input', () => {
 renderThreadsPanel();
 updateSinkSubscribers();
 log('<span style="color:#cbd5e1">초기 상태 — Spring 아직 부팅 전. 우측 "🚀 Spring Boot 실행"을 누르면 시작합니다.</span>');
+
+// ---------- Divider drag-to-resize ----------
+(function () {
+  const divider = document.getElementById('divider');
+  const app = document.querySelector('.app');
+  let dragging = false;
+
+  divider.addEventListener('mousedown', (e) => {
+    dragging = true;
+    divider.classList.add('dragging');
+    document.body.classList.add('resizing');
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const min = 600;
+    const max = Math.max(min + 200, window.innerWidth - 380);
+    let w = e.clientX;
+    if (w < min) w = min;
+    if (w > max) w = max;
+    app.style.setProperty('--stage-width', w + 'px');
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    divider.classList.remove('dragging');
+    document.body.classList.remove('resizing');
+  });
+})();
 
 </script>
 </body>

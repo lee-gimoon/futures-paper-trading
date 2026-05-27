@@ -1,0 +1,501 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1380" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">
+
+  <defs>
+    <marker id="arr-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+    <marker id="arr-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0891b2"/>
+    </marker>
+  </defs>
+
+  <!-- ===== TITLE ===== -->
+  <rect x="0" y="0" width="1200" height="52" fill="#1e293b"/>
+  <text x="600" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="white">
+    현재 코드 실행 흐름 — 부팅 → Binance 100ms 프레임 → 브라우저 SSE 응답 (스레드 명시)
+  </text>
+
+  <!-- ===== Thread legend (top strip) ===== -->
+  <g transform="translate(20, 60)">
+    <text x="0" y="10" font-size="11" font-weight="700" fill="#475569">스레드 범례:</text>
+    <g transform="translate(90, 0)">
+      <rect x="0" y="0" width="14" height="12" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+      <text x="20" y="10" font-size="11" fill="#7c2d12" font-weight="600">main</text>
+    </g>
+    <g transform="translate(170, 0)">
+      <rect x="0" y="0" width="14" height="12" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+      <text x="20" y="10" font-size="11" fill="#7f1d1d" font-weight="600">reactor-http-nio-1 (Binance 채널 owner)</text>
+    </g>
+    <g transform="translate(450, 0)">
+      <rect x="0" y="0" width="14" height="12" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+      <text x="20" y="10" font-size="11" fill="#155e75" font-weight="600">reactor-http-nio-2 (브라우저 응답 채널 owner)</text>
+    </g>
+    <g transform="translate(770, 0)">
+      <rect x="0" y="0" width="14" height="12" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="20" y="10" font-size="11" fill="#14532d" font-weight="600">라이브러리/외부 (Netty 내부 · Binance · 브라우저)</text>
+    </g>
+  </g>
+
+  <!-- ============== Phase A ============== -->
+  <text x="20" y="100" font-size="14" font-weight="700" fill="#475569">
+    Phase A — 부팅 (./gradlew bootRun): JVM 시작 → Netty 스레드 풀 → @Component 빈 → @PostConstruct connect()
+  </text>
+
+  <!-- Step 1: JVM + main thread -->
+  <g transform="translate(55, 113)">
+    <rect width="250" height="295" fill="#ffedd5" stroke="#ea580c" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#ea580c"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">1</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7c2d12">JVM 시작 + main 스레드</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#ea580c" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">main</text>
+
+    <text x="14" y="58" font-size="10" font-weight="700" fill="#7c2d12">트리거:</text>
+    <text x="14" y="74" font-size="10" fill="#334155">./gradlew.bat bootRun</text>
+
+    <text x="14" y="98" font-size="10" font-weight="700" fill="#7c2d12">언제 생성:</text>
+    <text x="14" y="114" font-size="10" fill="#334155">JVM 시작 시 OS가 main</text>
+    <text x="14" y="128" font-size="10" fill="#334155">스레드 1개 자동 생성</text>
+
+    <rect x="14" y="142" width="222" height="92" fill="white" stroke="#fdba74" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="156">@SpringBootApplication</text>
+      <text x="18" y="170">public class App {</text>
+      <text x="18" y="184">  public static void</text>
+      <text x="18" y="198">  main(String[] args) {</text>
+      <text x="18" y="212" fill="#16a34a" font-weight="700">    SpringApplication</text>
+      <text x="18" y="224" fill="#16a34a" font-weight="700">      .run(...);</text>
+    </g>
+
+    <text x="14" y="256" font-size="10" font-weight="700" fill="#7c2d12">→ main 스레드가</text>
+    <text x="14" y="270" font-size="10" font-weight="700" fill="#7c2d12">  main() 메서드</text>
+    <text x="14" y="284" font-size="10" font-weight="700" fill="#7c2d12">  실행 시작</text>
+  </g>
+
+  <line x1="305" y1="260" x2="335" y2="260" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 2: main runs Netty init -->
+  <g transform="translate(335, 113)">
+    <rect width="250" height="295" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#16a34a"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">2</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#14532d">main → Reactor Netty 초기화</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#ea580c" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">main</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">main이 SpringApplication.run()</text>
+    <text x="14" y="74" font-size="10" fill="#334155">실행 → Spring Boot이 내장</text>
+    <text x="14" y="90" font-size="10" fill="#334155">WebFlux 서버(Netty) 초기화</text>
+    <text x="14" y="106" font-size="10" fill="#334155">코드를 호출.</text>
+
+    <text x="14" y="130" font-size="10" font-weight="700" fill="#14532d">Netty 코드 안에:</text>
+    <rect x="14" y="138" width="222" height="36" fill="white" stroke="#16a34a" stroke-width="2" rx="3"/>
+    <text x="20" y="153" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#14532d">★ new Thread()</text>
+    <text x="20" y="167" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#14532d">     .start() × N ★</text>
+
+    <text x="14" y="194" font-size="10" font-weight="700" fill="#14532d">= main이 OS에게 "event</text>
+    <text x="14" y="208" font-size="10" font-weight="700" fill="#14532d">loop 스레드 N개" 만들라고 요청</text>
+
+    <line x1="14" y1="220" x2="236" y2="220" stroke="#86efac" stroke-dasharray="3,2"/>
+
+    <text x="14" y="238" font-size="10" fill="#334155">OS가 생성한 스레드:</text>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#7f1d1d">
+      <text x="14" y="254">reactor-http-nio-1</text>
+      <text x="14" y="267">reactor-http-nio-2  ...</text>
+    </g>
+    <text x="125" y="287" text-anchor="middle" font-size="10" font-style="italic" fill="#15803d">8080 listen 시작</text>
+  </g>
+
+  <line x1="585" y1="260" x2="615" y2="260" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 3: @Component beans -->
+  <g transform="translate(615, 113)">
+    <rect width="250" height="295" fill="#f3e8ff" stroke="#9333ea" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#9333ea"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">3</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#581c87">@Component 빈 생성</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#ea580c" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">main</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">Spring이 @Component 클래스를</text>
+    <text x="14" y="74" font-size="10" fill="#334155">스캔 → 생성자 호출로 인스턴스</text>
+    <text x="14" y="90" font-size="10" fill="#334155">1개씩 만들어 ApplicationContext에</text>
+    <text x="14" y="106" font-size="10" fill="#334155">박아둠 (main이 이 작업 다 함).</text>
+
+    <rect x="14" y="118" width="222" height="120" fill="white" stroke="#d8b4fe" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="131">OrderBookSnapshotParser</text>
+      <text x="18" y="146" fill="#c2410c" font-weight="700">LatestOrderBookSnapshot</text>
+      <text x="18" y="158" fill="#c2410c" font-weight="700">Store</text>
+      <text x="20" y="170" fill="#a16207">  ├ AtomicReference latest</text>
+      <text x="20" y="182" fill="#c2410c">  └ Sinks.Many sink</text>
+      <text x="20" y="194" fill="#94a3b8">    .replay().limit(1)</text>
+      <text x="18" y="210">BinanceFuturesRaw</text>
+      <text x="18" y="222">DepthStreamer</text>
+      <text x="18" y="234">BinanceFuturesDepthCtrl</text>
+    </g>
+
+    <text x="14" y="258" font-size="10" font-weight="700" fill="#581c87">★ Store는 빈 1개 → AR도 1개,</text>
+    <text x="14" y="272" font-size="10" font-weight="700" fill="#581c87">  Sink도 1개. 이후 모두가</text>
+    <text x="14" y="286" font-size="10" font-weight="700" fill="#581c87">  같은 객체를 공유함.</text>
+  </g>
+
+  <line x1="865" y1="260" x2="895" y2="260" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 4: @PostConstruct connect() -->
+  <g transform="translate(895, 113)">
+    <rect width="250" height="295" fill="#ffedd5" stroke="#ea580c" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#ea580c"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">4</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7c2d12">@PostConstruct connect()</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#ea580c" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">main</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">Streamer 빈 생성 직후 Spring이</text>
+    <text x="14" y="74" font-size="10" fill="#334155">@PostConstruct를 발견 →</text>
+    <text x="14" y="90" font-size="10" font-weight="700" fill="#7c2d12">main이 connect() 본문 동기 실행:</text>
+
+    <rect x="14" y="100" width="222" height="135" fill="white" stroke="#fdba74" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="113" fill="#94a3b8">// 람다/Flux 객체만 생성 (cold)</text>
+      <text x="18" y="126">WebSocketHandler h =</text>
+      <text x="18" y="138">  session -&gt; { session</text>
+      <text x="18" y="150">    .receive().map(...)</text>
+      <text x="18" y="162">    .doOnNext(...) ... };</text>
+      <text x="18" y="176">Mono&lt;Void&gt; pub =</text>
+      <text x="18" y="188">  client.execute(URI, h);</text>
+      <text x="18" y="200">pub.doOnError(...)</text>
+      <text x="18" y="214" fill="#dc2626" font-weight="700">   .subscribe();</text>
+      <text x="18" y="228" fill="#9333ea">// → 즉시 리턴, main 빠짐</text>
+    </g>
+
+    <text x="14" y="254" font-size="10" font-weight="700" fill="#dc2626">★ .subscribe() 안에서 reactor-</text>
+    <text x="14" y="268" font-size="10" font-weight="700" fill="#dc2626">netty가 Netty에 "connect 작업"</text>
+    <text x="14" y="282" font-size="10" font-weight="700" fill="#dc2626">등록 → main은 그냥 리턴</text>
+  </g>
+
+  <!-- ============== Phase A → B divider ============== -->
+  <line x1="20" y1="430" x2="1180" y2="430" stroke="#dc2626" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="600" y="450" text-anchor="middle" font-size="12" font-weight="700" fill="#dc2626">
+    ⬇ 여기서 스레드가 main → nio-1 으로 핸드오프됨 (사용자가 안 적은 코드, reactor-netty 내부가 함)
+  </text>
+
+  <!-- ============== Phase B ============== -->
+  <text x="20" y="475" font-size="14" font-weight="700" fill="#475569">
+    Phase B — Binance 연결 후 raw JSON 100ms마다: nio-1 한 스레드가 모든 파이프라인을 동기 실행 (구독자 0명)
+  </text>
+
+  <!-- Step 5: nio-1 handshake + sessionHandler -->
+  <g transform="translate(55, 490)">
+    <rect width="250" height="295" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">5</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">nio-1 handshake + 람다 실행</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#dc2626" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">nio-1</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">Netty가 "connect" 작업을 풀에서</text>
+    <text x="14" y="74" font-size="10" fill="#334155">꺼내 nio-1 스레드에 할당.</text>
+
+    <text x="14" y="98" font-size="10" font-weight="700" fill="#7f1d1d">nio-1이 비동기로 수행:</text>
+    <text x="22" y="115" font-size="10" fill="#334155">① wss://fstream.binance.com</text>
+    <text x="22" y="131" font-size="10" fill="#334155">② TCP/TLS 핸드셰이크</text>
+    <text x="22" y="147" font-size="10" fill="#334155">③ WebSocket upgrade</text>
+    <text x="22" y="163" font-size="10" fill="#334155">④ 채널을 nio-1에 영구 바인딩</text>
+
+    <line x1="14" y1="176" x2="236" y2="176" stroke="#fca5a5" stroke-dasharray="3,2"/>
+
+    <text x="14" y="194" font-size="10" font-weight="700" fill="#dc2626">연결 완료 후:</text>
+    <text x="14" y="210" font-size="10" fill="#334155">reactor-netty 내부가</text>
+    <text x="14" y="226" font-size="10" font-family="ui-monospace, monospace" fill="#7f1d1d">sessionHandler.apply(session)</text>
+    <text x="14" y="240" font-size="10" fill="#334155">호출 → 사용자가 짠 람다 본문이</text>
+    <text x="14" y="256" font-size="10" font-weight="700" fill="#dc2626">nio-1 위에서 실행 시작.</text>
+
+    <text x="14" y="278" font-size="10" font-style="italic" fill="#7f1d1d">→ session.receive() Flux 구독</text>
+  </g>
+
+  <line x1="305" y1="637" x2="335" y2="637" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 6: nio-1 reads frame, runs pipeline -->
+  <g transform="translate(335, 490)">
+    <rect width="250" height="295" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">6</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">100ms마다 프레임 → 파이프라인</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#dc2626" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">nio-1</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">Binance가 100ms마다 depth 프레임</text>
+    <text x="14" y="74" font-size="10" fill="#334155">push → nio-1이 read.</text>
+
+    <text x="14" y="98" font-size="10" font-weight="700" fill="#7f1d1d">nio-1의 한 콜스택에서 동기 실행:</text>
+
+    <rect x="14" y="108" width="222" height="138" fill="white" stroke="#fca5a5" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="121" fill="#1d4ed8" font-weight="700">#A</text><text x="38" y="121">session.receive() onNext</text>
+      <text x="20" y="133" fill="#94a3b8">  WebSocketMessage</text>
+      <text x="18" y="148" fill="#1d4ed8" font-weight="700">#B</text><text x="38" y="148">.map(getPayloadAsText)</text>
+      <text x="20" y="160" fill="#94a3b8">  String (JSON)</text>
+      <text x="18" y="175" fill="#1d4ed8" font-weight="700">#C</text><text x="38" y="175">.doOnNext(raw 로그)</text>
+      <text x="18" y="190" fill="#1d4ed8" font-weight="700">#D</text><text x="38" y="190">.doOnNext(logParsed</text>
+      <text x="38" y="202">    Snapshot)</text>
+      <text x="20" y="215" fill="#94a3b8">  └ parser.parse(json)</text>
+      <text x="20" y="227" fill="#94a3b8">  └ OrderBookSnapshot</text>
+      <text x="20" y="240" fill="#c2410c" font-weight="700">  └ latestStore.update(snap)</text>
+    </g>
+
+    <text x="14" y="266" font-size="10" font-weight="700" fill="#dc2626">★ publishOn / subscribeOn 없음</text>
+    <text x="14" y="282" font-size="10" font-weight="700" fill="#dc2626">→ 스레드 안 바뀜. 전부 nio-1.</text>
+  </g>
+
+  <line x1="585" y1="637" x2="615" y2="637" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 7: latestStore.update — AR + Sink fork -->
+  <g transform="translate(615, 490)">
+    <rect width="250" height="295" fill="#fef3c7" stroke="#a16207" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#a16207"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">7</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#713f12">store.update() — 두 갈래 fork</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#dc2626" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">nio-1</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">#D 안의 logParsedSnapshot이</text>
+    <text x="14" y="74" font-size="10" font-family="ui-monospace, monospace" fill="#c2410c">latestStore.update(snap)</text>
+    <text x="14" y="90" font-size="10" fill="#334155">호출. update() 본문:</text>
+
+    <rect x="14" y="100" width="222" height="60" fill="white" stroke="#fcd34d" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="10" fill="#475569">
+      <text x="18" y="116" fill="#a16207" font-weight="700">latest.set(snapshot);</text>
+      <text x="18" y="131" fill="#94a3b8">  // AtomicReference</text>
+      <text x="18" y="146" fill="#c2410c" font-weight="700">sink.tryEmitNext(snapshot);</text>
+    </g>
+
+    <text x="14" y="180" font-size="10" font-weight="700" fill="#713f12">갈래 ① AR.set:</text>
+    <text x="22" y="196" font-size="10" fill="#334155">최신 1건 박스에 저장</text>
+    <text x="22" y="210" font-size="10" fill="#334155">(/depth/latest 단발 조회용)</text>
+
+    <text x="14" y="232" font-size="10" font-weight="700" fill="#7c2d12">갈래 ② sink.tryEmitNext:</text>
+    <text x="22" y="248" font-size="10" fill="#334155">replay(1) 버퍼 갱신 +</text>
+    <text x="22" y="262" font-size="10" fill="#334155">현재 subscribers 순회하며</text>
+    <text x="22" y="276" font-size="10" fill="#334155">각자의 onNext 직접 호출</text>
+  </g>
+
+  <line x1="865" y1="637" x2="895" y2="637" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 8: Browser none yet — buffer only -->
+  <g transform="translate(895, 490)">
+    <rect width="250" height="295" fill="#f1f5f9" stroke="#475569" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#475569"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">8</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#334155">아직 브라우저 0명 — 버퍼만</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#dc2626" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">nio-1</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">아직 EventSource로 접속한</text>
+    <text x="14" y="74" font-size="10" fill="#334155">브라우저 없음 →</text>
+    <text x="14" y="92" font-size="10" font-family="ui-monospace, monospace" fill="#c2410c" font-weight="700">sink.subscribers</text>
+    <text x="14" y="106" font-size="10" fill="#334155">리스트는 비어있음.</text>
+
+    <text x="14" y="130" font-size="10" font-weight="700" fill="#334155">tryEmitNext가 하는 일:</text>
+    <text x="22" y="148" font-size="10" fill="#334155">- replay(1) 버퍼에 마지막</text>
+    <text x="22" y="162" font-size="10" fill="#334155">  snapshot 1건만 보관</text>
+    <text x="22" y="178" font-size="10" fill="#334155">- 순회할 구독자가 없으니</text>
+    <text x="22" y="192" font-size="10" fill="#334155">  onNext 호출도 없음</text>
+
+    <line x1="14" y1="206" x2="236" y2="206" stroke="#cbd5e1" stroke-dasharray="3,2"/>
+
+    <text x="14" y="225" font-size="10" fill="#334155">이 사이클이 100ms마다 반복:</text>
+    <text x="22" y="241" font-size="10" fill="#334155">프레임 read → #A→#D →</text>
+    <text x="22" y="255" font-size="10" fill="#334155">AR 덮어쓰기 + Sink 버퍼 덮어쓰기</text>
+
+    <text x="125" y="282" text-anchor="middle" font-size="10" font-style="italic" fill="#475569">main 스레드는 다른 일 함 / 대기</text>
+  </g>
+
+  <!-- ============== Phase B → C divider ============== -->
+  <line x1="20" y1="810" x2="1180" y2="810" stroke="#0891b2" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="600" y="830" text-anchor="middle" font-size="12" font-weight="700" fill="#0891b2">
+    ⬇ 브라우저가 페이지를 열어 EventSource로 /depth/stream에 접속 — 새로운 스레드(nio-2)가 무대에 등장
+  </text>
+
+  <!-- ============== Phase C ============== -->
+  <text x="20" y="855" font-size="14" font-weight="700" fill="#475569">
+    Phase C — 브라우저 접속 후 SSE 흐름: nio-2(브라우저 채널 owner) 등장, Sink가 두 스레드를 잇는 다리
+  </text>
+
+  <!-- Step 9: Browser GET, nio-2 binds channel -->
+  <g transform="translate(55, 870)">
+    <rect width="250" height="295" fill="#ecfeff" stroke="#0891b2" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#0891b2"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">9</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#155e75">브라우저 GET → nio-2 바인딩</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#0891b2" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">nio-2</text>
+
+    <text x="14" y="58" font-size="10" font-weight="700" fill="#155e75">브라우저:</text>
+    <rect x="14" y="66" width="222" height="48" fill="white" stroke="#67e8f9" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="79">new EventSource(</text>
+      <text x="18" y="91">  '/api/binance-futures/</text>
+      <text x="18" y="103">  btcusdt/depth/stream')</text>
+    </g>
+
+    <text x="14" y="135" font-size="10" fill="#334155">8080을 듣던 event loop 중</text>
+    <text x="14" y="151" font-size="10" fill="#334155">하나(여기선 nio-2)가</text>
+    <text x="14" y="165" font-size="10" fill="#334155">selector에서 "준비됨" 감지.</text>
+
+    <text x="14" y="189" font-size="10" font-weight="700" fill="#155e75">nio-2가 하는 일:</text>
+    <text x="22" y="205" font-size="10" fill="#334155">- HTTP 요청 바이트 read</text>
+    <text x="22" y="221" font-size="10" fill="#334155">- 응답 채널을 nio-2에 영구 바인딩</text>
+    <text x="22" y="237" font-size="10" fill="#334155">- 헤더/URL 파싱</text>
+
+    <line x1="14" y1="250" x2="236" y2="250" stroke="#a5f3fc" stroke-dasharray="3,2"/>
+
+    <text x="14" y="270" font-size="10" font-style="italic" fill="#155e75">→ Netty에서 WebFlux로 점프</text>
+    <text x="14" y="285" font-size="10" font-style="italic" fill="#155e75">  (같은 nio-2 콜스택)</text>
+  </g>
+
+  <line x1="305" y1="1017" x2="335" y2="1017" stroke="#0891b2" stroke-width="3" marker-end="url(#arr-cyan)"/>
+
+  <!-- Step 10: WebFlux → Controller.stream() -->
+  <g transform="translate(335, 870)">
+    <rect width="250" height="295" fill="#dbeafe" stroke="#2563eb" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#2563eb"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">10</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#1e3a8a">WebFlux → Controller.stream()</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#0891b2" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">nio-2</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">WebFlux가 URL → @GetMapping</text>
+    <text x="14" y="74" font-size="10" fill="#334155">매칭 → stream() 메서드 호출.</text>
+    <text x="14" y="90" font-size="10" font-weight="700" fill="#1e3a8a">stream() 본문이 nio-2에서 실행:</text>
+
+    <rect x="14" y="100" width="222" height="90" fill="white" stroke="#93c5fd" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="113" fill="#9333ea" font-weight="700">@GetMapping("/depth/stream"</text>
+      <text x="18" y="124" fill="#9333ea" font-weight="700">  produces=TEXT_EVENT_STREAM)</text>
+      <text x="18" y="137">public Flux&lt;ServerSentEvent</text>
+      <text x="18" y="149">  &lt;OrderBookSnapshot&gt;&gt; stream()</text>
+      <text x="18" y="161">  return latestStore.stream()</text>
+      <text x="18" y="173" fill="#94a3b8">    // = sink.asFlux()</text>
+      <text x="18" y="185">    .map(SSE.builder(...));</text>
+    </g>
+
+    <text x="14" y="207" font-size="10" font-weight="700" fill="#1e3a8a">★ 본문이 하는 일:</text>
+    <text x="22" y="223" font-size="10" fill="#334155">Flux 객체 2개만 만들고 return</text>
+    <text x="22" y="237" font-size="10" fill="#334155">(데이터는 아직 안 흐름)</text>
+
+    <text x="14" y="259" font-size="10" font-weight="700" fill="#1d4ed8">→ WebFlux가 그 Flux를 받아</text>
+    <text x="14" y="273" font-size="10" font-weight="700" fill="#1d4ed8">  .subscribe() 호출 (nio-2에서)</text>
+    <text x="14" y="287" font-size="10" font-style="italic" fill="#475569">구독 신호가 거슬러 올라감 →</text>
+  </g>
+
+  <line x1="585" y1="1017" x2="615" y2="1017" stroke="#0891b2" stroke-width="3" marker-end="url(#arr-cyan)"/>
+
+  <!-- Step 11: Sink.subscribers.add + replay(1) -->
+  <g transform="translate(615, 870)">
+    <rect width="250" height="295" fill="#ffedd5" stroke="#c2410c" stroke-width="3" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#c2410c"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">11</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7c2d12">Sink 구독자 등록 + replay(1)</text>
+
+    <rect x="172" y="4" width="66" height="16" fill="#0891b2" rx="3"/>
+    <text x="205" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="white">nio-2</text>
+
+    <text x="14" y="58" font-size="10" fill="#334155">구독 신호가 .map(SSE) →</text>
+    <text x="14" y="74" font-size="10" fill="#334155">sink.asFlux() → sink 본체에 도달.</text>
+
+    <text x="14" y="98" font-size="10" font-weight="700" fill="#7c2d12">Sinks.Many 내부:</text>
+    <text x="22" y="114" font-size="10" font-family="ui-monospace, monospace" fill="#c2410c" font-weight="700">subscribers.add(이 구독자)</text>
+
+    <line x1="14" y1="128" x2="236" y2="128" stroke="#fdba74" stroke-dasharray="3,2"/>
+
+    <text x="14" y="148" font-size="10" font-weight="700" fill="#7c2d12">replay(1) 즉시 push:</text>
+    <text x="14" y="164" font-size="10" fill="#334155">버퍼에 보관된 최신 snapshot</text>
+    <text x="14" y="178" font-size="10" fill="#334155">1건을 새 구독자에게 즉시 onNext.</text>
+
+    <text x="14" y="200" font-size="10" font-weight="700" fill="#7c2d12">그걸 호출하는 스레드는?</text>
+    <text x="14" y="216" font-size="10" font-weight="700" fill="#0891b2">→ subscribe를 호출한 nio-2</text>
+    <text x="14" y="230" font-size="10" fill="#334155">  (Sink가 별도 스레드 풀 없음)</text>
+
+    <text x="14" y="252" font-size="10" fill="#334155">nio-2가 onNext → .map(SSE) →</text>
+    <text x="14" y="266" font-size="10" font-family="ui-monospace, monospace" fill="#0891b2">channel.write(SSE)</text>
+    <text x="14" y="282" font-size="10" font-style="italic" fill="#7c2d12">→ 브라우저에 첫 호가창 1건 전송</text>
+  </g>
+
+  <line x1="865" y1="1017" x2="895" y2="1017" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 12: Steady state — full fan-out -->
+  <g transform="translate(895, 870)">
+    <rect width="250" height="295" fill="#dcfce7" stroke="#16a34a" stroke-width="3" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#16a34a"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">12</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#14532d">정상 동작 — 100ms마다 fan-out</text>
+
+    <g transform="translate(150, 4)">
+      <rect x="0" y="0" width="38" height="16" fill="#dc2626" rx="3"/>
+      <text x="19" y="12" text-anchor="middle" font-size="9" font-weight="700" fill="white">nio-1</text>
+      <text x="42" y="13" font-size="11" font-weight="700" fill="#334155">→</text>
+      <rect x="54" y="0" width="38" height="16" fill="#0891b2" rx="3"/>
+      <text x="73" y="12" text-anchor="middle" font-size="9" font-weight="700" fill="white">nio-2</text>
+    </g>
+
+    <text x="14" y="58" font-size="10" font-weight="700" fill="#dc2626">새 Binance 프레임 도착:</text>
+
+    <rect x="14" y="66" width="222" height="160" fill="white" stroke="#86efac" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="80" fill="#dc2626" font-weight="700">[nio-1 한 콜스택]</text>
+      <text x="18" y="93">#A onNext → #B .map →</text>
+      <text x="18" y="106">#C .doOnNext → #D .doOnNext</text>
+      <text x="18" y="119">  └ store.update(snap)</text>
+      <text x="20" y="132" fill="#a16207">    AR.set(snap)</text>
+      <text x="20" y="145" fill="#c2410c" font-weight="700">    sink.tryEmitNext(snap)</text>
+      <text x="20" y="158" fill="#94a3b8">     ├ subscribers 순회</text>
+      <text x="20" y="171">     └ sub.onNext(snap)</text>
+      <text x="20" y="184">         #E onNext (asFlux)</text>
+      <text x="20" y="197">         #F .map(SSE.builder)</text>
+      <text x="18" y="213" fill="#0891b2" font-weight="700">[채널 경계 → nio-2로 dispatch]</text>
+      <text x="20" y="225">channel.write(SSE) → socket</text>
+    </g>
+
+    <text x="14" y="248" font-size="10" font-weight="700" fill="#14532d">★ 핵심:</text>
+    <text x="14" y="263" font-size="10" fill="#334155">.map(SSE.builder) 까지도 nio-1.</text>
+    <text x="14" y="277" font-size="10" fill="#334155">실제 소켓 write에서만 nio-2로</text>
+    <text x="14" y="290" font-size="10" fill="#334155">바뀜 (Netty channel.write 동작).</text>
+  </g>
+
+  <!-- ===== Bottom summary ===== -->
+  <rect x="30" y="1185" width="1140" height="180" fill="#ecfeff" stroke="#0891b2" stroke-width="2" rx="8"/>
+  <text x="600" y="1210" text-anchor="middle" font-size="14" font-weight="700" fill="#155e75">★ 현재 코드 한 문장으로 ★</text>
+
+  <text x="600" y="1238" text-anchor="middle" font-size="13" fill="#334155">
+    부팅 시 <tspan font-weight="700" fill="#ea580c">main</tspan>이 Netty 스레드 풀(<tspan font-family="ui-monospace, monospace" font-weight="700" fill="#14532d">new Thread().start() × N</tspan>)을 만들고 @Component 빈을 다 생성한 뒤
+    <tspan font-weight="700" fill="#7c2d12">@PostConstruct connect()</tspan>의 본문(람다·Flux 조립·<tspan font-family="ui-monospace, monospace" font-weight="700" fill="#dc2626">.subscribe()</tspan>)까지 실행.
+  </text>
+  <text x="600" y="1262" text-anchor="middle" font-size="13" fill="#334155">
+    .subscribe() 안에서 reactor-netty가 Netty의 connect 작업을 <tspan font-weight="700" fill="#dc2626">nio-1</tspan>에 dispatch → main은 즉시 리턴 (사용자 코드에 핸드오프 코드 없음).
+  </text>
+  <text x="600" y="1286" text-anchor="middle" font-size="13" fill="#334155">
+    <tspan font-weight="700" fill="#dc2626">nio-1</tspan>이 Binance 채널 owner가 되어 100ms마다 프레임 read → <tspan font-weight="700" fill="#dc2626">#A→#D + store.update(AR.set + sink.tryEmitNext)</tspan>를 한 콜스택에서 전부 실행.
+  </text>
+  <text x="600" y="1310" text-anchor="middle" font-size="13" fill="#334155">
+    브라우저가 SSE로 접속하면 <tspan font-weight="700" fill="#0891b2">nio-2</tspan>가 응답 채널 owner가 되고 <tspan font-weight="700" fill="#1e3a8a">stream() 본문(#E·#F 조립 + WebFlux subscribe)</tspan>까지 실행.
+  </text>
+  <text x="600" y="1334" text-anchor="middle" font-size="13" fill="#334155">
+    <tspan font-weight="700" fill="#c2410c">Sink</tspan>가 두 스레드를 잇는 다리: 이후 모든 프레임의 .map(SSE.builder)는 <tspan font-weight="700" fill="#dc2626">nio-1</tspan>이 실행하고,
+    <tspan font-family="ui-monospace, monospace" font-weight="700" fill="#0891b2">channel.write</tspan>에서만 <tspan font-weight="700" fill="#0891b2">nio-2</tspan>로 dispatch되어 브라우저로 송신.
+  </text>
+
+</svg>

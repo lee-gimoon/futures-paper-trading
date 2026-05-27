@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 2020" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 2450" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">
 
   <defs>
     <marker id="arr-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
@@ -21,246 +21,283 @@
     </marker>
   </defs>
 
+  <!-- ===== WHITE BACKGROUND ===== -->
+  <rect x="0" y="0" width="1300" height="2450" fill="#ffffff"/>
+
   <!-- ===== TITLE ===== -->
-  <rect x="0" y="0" width="1300" height="56" fill="#1e293b"/>
-  <text x="650" y="35" text-anchor="middle" font-size="19" font-weight="700" fill="white">
-    내 코드의 객체 모두 — 각 operator가 새 Flux를 만든다 (Flux = Publisher)
+  <rect x="0" y="0" width="1300" height="60" fill="#1e293b"/>
+  <text x="650" y="38" text-anchor="middle" font-size="20" font-weight="700" fill="white">
+    내 코드의 객체 전체 지도 — 각 Flux의 두 역할 (받는 쪽 / 주는 쪽)
   </text>
 
   <!-- ===== LEGEND ===== -->
-  <g transform="translate(30, 75)">
-    <rect width="1240" height="64" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" rx="6"/>
-    <rect x="20" y="12" width="22" height="16" fill="#bfdbfe" stroke="#2563eb" stroke-width="2"/>
-    <text x="50" y="25" font-size="12" fill="#1e3a8a"><tspan font-weight="700">Flux&lt;T&gt;</tspan> 객체 (= Publisher)</text>
-    <rect x="320" y="12" width="22" height="16" fill="#fed7aa" stroke="#ea580c" stroke-width="2.5"/>
-    <text x="350" y="25" font-size="12" fill="#7c2d12"><tspan font-weight="700">Sinks.Many</tspan> 객체 (Publisher 아님, 별개)</text>
-    <rect x="700" y="12" width="22" height="16" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
-    <text x="730" y="25" font-size="12" fill="#14532d">외부 (Binance / 브라우저)</text>
-    <rect x="980" y="12" width="22" height="16" fill="#e2e8f0" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
-    <text x="1010" y="25" font-size="12" fill="#334155">프레임워크 내부 (못 봄)</text>
-    <text x="20" y="50" font-size="11.5" fill="#475569">
-      ※ operator(<tspan font-family="ui-monospace, monospace">.map</tspan>, <tspan font-family="ui-monospace, monospace">.doOnNext</tspan>)를 부르면 매번 <tspan font-weight="700">새 Flux 객체</tspan>가 만들어진다. 새 Flux는 이전 Flux를 <tspan font-weight="700">upstream으로 참조</tspan>한다.
-    </text>
-    <text x="20" y="64" font-size="11.5" fill="#475569">
-      ※ 데이터는 위→아래 (onNext 흐름). subscribe 신호는 그 반대 방향(아래→위)으로 거슬러 올라간다.
+  <g transform="translate(30, 80)">
+    <rect width="1240" height="84" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" rx="6"/>
+    <rect x="20" y="14" width="24" height="18" fill="#bfdbfe" stroke="#2563eb" stroke-width="2"/>
+    <text x="54" y="29" font-size="13" fill="#1e3a8a"><tspan font-weight="700">Flux&lt;T&gt;</tspan> (= Publisher)</text>
+    <rect x="280" y="14" width="24" height="18" fill="#fed7aa" stroke="#ea580c" stroke-width="2.5"/>
+    <text x="314" y="29" font-size="13" fill="#7c2d12"><tspan font-weight="700">Sinks.Many</tspan> (Publisher 아님)</text>
+    <rect x="600" y="14" width="24" height="18" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="634" y="29" font-size="13" fill="#14532d">외부 (Binance / 브라우저)</text>
+    <rect x="890" y="14" width="24" height="18" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/>
+    <text x="924" y="29" font-size="13" fill="#713f12">역할 (받는 쪽 / 주는 쪽)</text>
+    <text x="20" y="56" font-size="13" font-weight="700" fill="#0f172a">각 Flux는 두 역할을 동시에 한다 (소스 Flux 제외):</text>
+    <text x="20" y="74" font-size="12.5" fill="#475569">
+      ① <tspan font-weight="700" fill="#2563eb">Publisher 역할</tspan> = 다음 Flux에 값을 줌  ·  ② <tspan font-weight="700" fill="#16a34a">내부 Subscriber 역할</tspan> = 이전 Flux에서 값을 받음 (.map/.doOnNext 같은 operator 결과 Flux는 다 그렇다)
     </text>
   </g>
 
   <!-- ===== [1] BINANCE ===== -->
-  <g transform="translate(490, 160)">
-    <rect width="320" height="60" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" rx="8"/>
-    <text x="160" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#14532d">[외부 객체] Binance Futures 서버</text>
-    <text x="160" y="44" text-anchor="middle" font-size="11" fill="#334155">TCP로 WebSocket 프레임 바이트 푸시</text>
+  <g transform="translate(490, 184)">
+    <rect width="320" height="66" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" rx="8"/>
+    <text x="160" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#14532d">[외부 객체] Binance Futures 서버</text>
+    <text x="160" y="50" text-anchor="middle" font-size="12" fill="#334155">TCP로 WebSocket 프레임 바이트 푸시</text>
   </g>
-  <line x1="650" y1="220" x2="650" y2="245" stroke="#16a34a" stroke-width="3" marker-end="url(#arr-green)"/>
+  <line x1="650" y1="250" x2="650" y2="280" stroke="#16a34a" stroke-width="3.5" marker-end="url(#arr-green)"/>
 
   <!-- ===== [2] Netty internal ===== -->
-  <g transform="translate(420, 250)">
-    <rect width="460" height="60" fill="#e2e8f0" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" rx="8"/>
-    <text x="230" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">[프레임워크 내부] Reactor Netty 채널 핸들러</text>
-    <text x="230" y="44" text-anchor="middle" font-size="11" fill="#475569">TCP 바이트 → WSMessage 객체로 wrap → Flux #A의 onNext 발행</text>
+  <g transform="translate(420, 285)">
+    <rect width="460" height="66" fill="#e2e8f0" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" rx="8"/>
+    <text x="230" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#334155">[프레임워크 내부] Reactor Netty 채널 핸들러</text>
+    <text x="230" y="50" text-anchor="middle" font-size="12" fill="#475569">TCP 바이트 → WSMessage 객체로 wrap → Flux #A에 data 흘려보냄</text>
   </g>
-  <line x1="650" y1="310" x2="650" y2="335" stroke="#334155" stroke-width="3" stroke-dasharray="4 3" marker-end="url(#arr-dark)"/>
-  <text x="660" y="328" font-size="11" font-family="ui-monospace, monospace" fill="#334155">onNext(WSMsg)</text>
+  <line x1="650" y1="351" x2="650" y2="385" stroke="#334155" stroke-width="3" stroke-dasharray="4 3" marker-end="url(#arr-dark)"/>
+  <rect x="675" y="362" width="280" height="22" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="3"/>
+  <text x="815" y="378" text-anchor="middle" font-size="12" font-weight="700" fill="#713f12">Netty가 Flux #A에 data 공급</text>
 
-  <!-- ===== [3] Flux #A: session.receive() ===== -->
-  <g transform="translate(300, 340)">
-    <rect width="700" height="110" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
-    <text x="350" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Flux #A = Flux&lt;WebSocketMessage&gt; (Publisher)</text>
-    <line x1="20" y1="38" x2="680" y2="38" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
-    <text x="20" y="60" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">Flux&lt;WebSocketMessage&gt; incomingMessages = session.receive();</text>
-    <text x="20" y="80" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">출처:</tspan> session.receive() 호출이 만들어 반환한 객체</text>
-    <text x="20" y="98" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">값 공급원:</tspan> 위쪽 Netty 핸들러 (외부에 별도 Sink 객체는 없음 — Flux 내부 구현에 박혀 있음)</text>
+  <!-- ===== [3] Flux #A ===== -->
+  <g transform="translate(280, 390)">
+    <rect width="740" height="160" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
+    <text x="370" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#1e3a8a">Flux #A = Flux&lt;WebSocketMessage&gt; (Publisher)</text>
+    <line x1="20" y1="40" x2="720" y2="40" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="64" font-size="12" font-family="ui-monospace, monospace" fill="#1e40af">Flux&lt;WebSocketMessage&gt; incomingMessages = session.receive();</text>
+    <text x="20" y="86" font-size="12" fill="#1e3a8a">• <tspan font-weight="700">출처:</tspan> session.receive() 호출이 만들어 반환한 객체 (소스 Flux)</text>
+    <rect x="14" y="98" width="712" height="54" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="22" y="116" font-size="12" font-weight="700" fill="#713f12">★ 역할 (이 Flux는 소스 Flux라 한 쪽 역할만):</text>
+    <text x="36" y="134" font-size="12" fill="#713f12">받는 쪽: <tspan font-weight="700" fill="#dc2626">Reactor Subscriber 역할 없음</tspan> — 외부 Netty가 직접 값 공급</text>
+    <text x="36" y="148" font-size="12" fill="#713f12">주는 쪽: <tspan font-weight="700" fill="#2563eb">Publisher 역할</tspan> — Flux #B에 값 전달</text>
   </g>
 
-  <!-- arrow Flux #A → Flux #B -->
-  <line x1="650" y1="450" x2="650" y2="490" stroke="#2563eb" stroke-width="3" marker-end="url(#arr-blue)"/>
-  <text x="660" y="475" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.map(WSMsg::getPayloadAsText) → 새 Flux 생성</text>
+  <line x1="650" y1="550" x2="650" y2="595" stroke="#2563eb" stroke-width="3.5" marker-end="url(#arr-blue)"/>
+  <rect x="380" y="560" width="520" height="22" fill="#dbeafe" stroke="#2563eb" stroke-width="1" rx="3"/>
+  <text x="640" y="576" text-anchor="middle" font-size="12" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.map(WSMsg::getPayloadAsText) → 새 Flux 생성, runtime: data 전달</text>
 
   <!-- ===== [4] Flux #B ===== -->
-  <g transform="translate(300, 495)">
-    <rect width="700" height="100" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
-    <text x="350" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Flux #B = Flux&lt;String&gt; (Publisher)</text>
-    <line x1="20" y1="38" x2="680" y2="38" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
-    <text x="20" y="60" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">Flux&lt;String&gt; payloadTexts = incomingMessages.map(WSMsg::getPayloadAsText);</text>
-    <text x="20" y="80" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">upstream 참조:</tspan> Flux #A를 자기 안에 들고 있음</text>
-    <text x="20" y="96" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">변환:</tspan> WSMessage → String (1:1)</text>
+  <g transform="translate(280, 600)">
+    <rect width="740" height="150" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
+    <text x="370" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#1e3a8a">Flux #B = Flux&lt;String&gt; (Publisher)</text>
+    <line x1="20" y1="40" x2="720" y2="40" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="64" font-size="12" font-family="ui-monospace, monospace" fill="#1e40af">Flux&lt;String&gt; payloadTexts = incomingMessages.map(WSMsg::getPayloadAsText);</text>
+    <text x="20" y="86" font-size="12" fill="#1e3a8a">• <tspan font-weight="700">변환:</tspan> WSMessage → String (1:1) — 새 Flux 객체, #A를 upstream으로 참조</text>
+    <rect x="14" y="98" width="712" height="44" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="22" y="116" font-size="12" font-weight="700" fill="#713f12">★ 역할 (두 역할 동시 수행):</text>
+    <text x="36" y="132" font-size="12" fill="#713f12">받는 쪽: <tspan font-weight="700" fill="#16a34a">내부 Subscriber 역할</tspan> — 위쪽 Flux #A에서 값 받음  ·  주는 쪽: <tspan font-weight="700" fill="#2563eb">Publisher 역할</tspan> — Flux #C에 값 전달</text>
   </g>
 
-  <line x1="650" y1="595" x2="650" y2="635" stroke="#2563eb" stroke-width="3" marker-end="url(#arr-blue)"/>
-  <text x="660" y="620" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.doOnNext(raw 로그) → 새 Flux 생성</text>
+  <line x1="650" y1="750" x2="650" y2="795" stroke="#2563eb" stroke-width="3.5" marker-end="url(#arr-blue)"/>
+  <rect x="380" y="760" width="520" height="22" fill="#dbeafe" stroke="#2563eb" stroke-width="1" rx="3"/>
+  <text x="640" y="776" text-anchor="middle" font-size="12" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.doOnNext(raw 로그) → 새 Flux 생성, runtime: data 전달</text>
 
   <!-- ===== [5] Flux #C ===== -->
-  <g transform="translate(300, 640)">
-    <rect width="700" height="100" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
-    <text x="350" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Flux #C = Flux&lt;String&gt; (Publisher)</text>
-    <line x1="20" y1="38" x2="680" y2="38" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
-    <text x="20" y="60" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">Flux&lt;String&gt; withRawLog = payloadTexts.doOnNext(msg → log.info(...));</text>
-    <text x="20" y="80" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">upstream 참조:</tspan> Flux #B</text>
-    <text x="20" y="96" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">동작:</tspan> 값은 그대로 통과 (Flux&lt;String&gt;), 옆구리로 raw 로그만 찍음</text>
+  <g transform="translate(280, 800)">
+    <rect width="740" height="150" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
+    <text x="370" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#1e3a8a">Flux #C = Flux&lt;String&gt; (Publisher)</text>
+    <line x1="20" y1="40" x2="720" y2="40" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="64" font-size="12" font-family="ui-monospace, monospace" fill="#1e40af">Flux&lt;String&gt; withRawLog = payloadTexts.doOnNext(msg → log.info(...));</text>
+    <text x="20" y="86" font-size="12" fill="#1e3a8a">• <tspan font-weight="700">동작:</tspan> 값 그대로 통과 (Flux&lt;String&gt;), 옆구리로 raw 로그만 찍음</text>
+    <rect x="14" y="98" width="712" height="44" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="22" y="116" font-size="12" font-weight="700" fill="#713f12">★ 역할 (두 역할 동시 수행):</text>
+    <text x="36" y="132" font-size="12" fill="#713f12">받는 쪽: <tspan font-weight="700" fill="#16a34a">내부 Subscriber 역할</tspan> — 위쪽 Flux #B에서 값 받음  ·  주는 쪽: <tspan font-weight="700" fill="#2563eb">Publisher 역할</tspan> — Flux #D에 값 전달</text>
   </g>
 
-  <line x1="650" y1="740" x2="650" y2="780" stroke="#2563eb" stroke-width="3" marker-end="url(#arr-blue)"/>
-  <text x="660" y="765" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.doOnNext(::logParsedSnapshot) → 새 Flux 생성</text>
+  <line x1="650" y1="950" x2="650" y2="995" stroke="#2563eb" stroke-width="3.5" marker-end="url(#arr-blue)"/>
+  <rect x="380" y="960" width="520" height="22" fill="#dbeafe" stroke="#2563eb" stroke-width="1" rx="3"/>
+  <text x="640" y="976" text-anchor="middle" font-size="12" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.doOnNext(::logParsedSnapshot) → 새 Flux 생성, runtime: data 전달</text>
 
-  <!-- ===== [6] Flux #D — biggest box with internals ===== -->
-  <g transform="translate(300, 785)">
-    <rect width="700" height="280" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
-    <text x="350" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Flux #D = Flux&lt;String&gt; (Publisher)</text>
-    <line x1="20" y1="38" x2="680" y2="38" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
-    <text x="20" y="60" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">Flux&lt;String&gt; withParsedLog = withRawLog.doOnNext(this::logParsedSnapshot);</text>
-    <text x="20" y="80" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">upstream 참조:</tspan> Flux #C • <tspan font-weight="700">출력:</tspan> Flux&lt;String&gt; (그대로 통과)</text>
-    <text x="20" y="100" font-size="11" font-weight="700" fill="#1e3a8a">• <tspan fill="#dc2626">람다 안에서 일어나는 side-effect (★ 두 파이프라인을 잇는 다리):</tspan></text>
+  <!-- ===== [6] Flux #D ===== -->
+  <g transform="translate(280, 1000)">
+    <rect width="740" height="350" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
+    <text x="370" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#1e3a8a">Flux #D = Flux&lt;String&gt; (Publisher)</text>
+    <line x1="20" y1="40" x2="720" y2="40" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="64" font-size="12" font-family="ui-monospace, monospace" fill="#1e40af">Flux&lt;String&gt; withParsedLog = withRawLog.doOnNext(this::logParsedSnapshot);</text>
+    <text x="20" y="86" font-size="12" fill="#1e3a8a">• <tspan font-weight="700">출력:</tspan> Flux&lt;String&gt; (그대로 통과)</text>
+    <rect x="14" y="98" width="712" height="44" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="22" y="116" font-size="12" font-weight="700" fill="#713f12">★ 역할 (두 역할 동시 수행):</text>
+    <text x="36" y="132" font-size="12" fill="#713f12">받는 쪽: <tspan font-weight="700" fill="#16a34a">내부 Subscriber 역할</tspan> — 위쪽 Flux #C에서 값 받음  ·  주는 쪽: <tspan font-weight="700" fill="#2563eb">Publisher 역할</tspan> — 마지막 subscriber에 값 전달</text>
+    <text x="20" y="162" font-size="12" font-weight="700" fill="#dc2626">• 람다 안 side-effect (★ 두 파이프라인을 잇는 다리):</text>
 
-    <!-- step 1 inside lambda -->
-    <g transform="translate(130, 115)">
-      <rect width="440" height="40" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" rx="4"/>
-      <text x="220" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">① OrderBookSnapshot snap = snapshotParser.parse(json);</text>
-      <text x="220" y="33" text-anchor="middle" font-size="10" fill="#475569">평범한 메서드 호출 — Reactor와 무관한 자바 객체 생성</text>
+    <g transform="translate(130, 174)">
+      <rect width="480" height="42" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" rx="4"/>
+      <text x="240" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">① OrderBookSnapshot snap = snapshotParser.parse(json);</text>
+      <text x="240" y="35" text-anchor="middle" font-size="11" fill="#475569">평범한 메서드 호출 — Reactor와 무관한 자바 객체 생성</text>
     </g>
 
-    <line x1="350" y1="155" x2="350" y2="175" stroke="#334155" stroke-width="2" marker-end="url(#arr-dark)"/>
+    <line x1="370" y1="216" x2="370" y2="238" stroke="#334155" stroke-width="2" marker-end="url(#arr-dark)"/>
 
-    <!-- step 2 -->
-    <g transform="translate(130, 178)">
-      <rect width="440" height="40" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" rx="4"/>
-      <text x="220" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">② latestStore.update(snap);</text>
-      <text x="220" y="33" text-anchor="middle" font-size="10" fill="#475569">store 객체의 메서드 호출 → 안에서 두 갈래로 갈라짐</text>
+    <g transform="translate(130, 240)">
+      <rect width="480" height="42" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" rx="4"/>
+      <text x="240" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">② latestStore.update(snap);</text>
+      <text x="240" y="35" text-anchor="middle" font-size="11" fill="#475569">store 객체의 메서드 호출 → 안에서 두 갈래로 갈라짐</text>
     </g>
 
-    <!-- branches -->
-    <line x1="350" y1="218" x2="350" y2="232" stroke="#334155" stroke-width="2"/>
-    <line x1="180" y1="232" x2="540" y2="232" stroke="#334155" stroke-width="2"/>
-    <line x1="180" y1="232" x2="180" y2="250" stroke="#ca8a04" stroke-width="2" marker-end="url(#arr-yellow)"/>
-    <line x1="540" y1="232" x2="540" y2="250" stroke="#ea580c" stroke-width="3" marker-end="url(#arr-orange)"/>
+    <line x1="370" y1="282" x2="370" y2="298" stroke="#334155" stroke-width="2"/>
+    <line x1="180" y1="298" x2="560" y2="298" stroke="#334155" stroke-width="2"/>
+    <line x1="180" y1="298" x2="180" y2="316" stroke="#ca8a04" stroke-width="2" marker-end="url(#arr-yellow)"/>
+    <line x1="560" y1="298" x2="560" y2="316" stroke="#ea580c" stroke-width="3" marker-end="url(#arr-orange)"/>
 
-    <g transform="translate(50, 252)">
-      <rect width="260" height="22" fill="#fef9c3" stroke="#ca8a04" stroke-width="2" rx="3"/>
-      <text x="130" y="16" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" font-weight="700" fill="#713f12">latest.set(snap)</text>
+    <g transform="translate(50, 318)">
+      <rect width="260" height="24" fill="#fef9c3" stroke="#ca8a04" stroke-width="2" rx="3"/>
+      <text x="130" y="17" text-anchor="middle" font-size="11.5" font-family="ui-monospace, monospace" font-weight="700" fill="#713f12">latest.set(snap)</text>
     </g>
-    <g transform="translate(410, 252)">
-      <rect width="260" height="22" fill="#fed7aa" stroke="#ea580c" stroke-width="2.5" rx="3"/>
-      <text x="130" y="16" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" font-weight="700" fill="#7c2d12">sink.tryEmitNext(snap) ★</text>
+    <g transform="translate(430, 318)">
+      <rect width="260" height="24" fill="#fed7aa" stroke="#ea580c" stroke-width="2.5" rx="3"/>
+      <text x="130" y="17" text-anchor="middle" font-size="11.5" font-family="ui-monospace, monospace" font-weight="700" fill="#7c2d12">sink.tryEmitNext(snap) ★</text>
     </g>
   </g>
 
   <!-- ===== Side branch: AtomicReference latest ===== -->
-  <g transform="translate(30, 850)">
-    <rect width="240" height="100" fill="#fef9c3" stroke="#ca8a04" stroke-width="2" rx="8"/>
-    <text x="120" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#713f12">[자바 객체] AtomicReference</text>
-    <text x="120" y="42" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" fill="#854d0e">latest = new AtomicReference&lt;&gt;()</text>
-    <text x="120" y="62" text-anchor="middle" font-size="10.5" fill="#713f12">Reactor와 무관 — 그냥 통 1개</text>
-    <text x="120" y="80" text-anchor="middle" font-size="10.5" fill="#713f12">GET /depth/latest 응답용</text>
-    <text x="120" y="95" text-anchor="middle" font-size="10.5" fill="#854d0e">(곁가지, Flux 흐름과 분리)</text>
+  <g transform="translate(30, 1080)">
+    <rect width="220" height="110" fill="#fef9c3" stroke="#ca8a04" stroke-width="2" rx="8"/>
+    <text x="110" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#713f12">[자바 객체] AtomicReference</text>
+    <text x="110" y="46" text-anchor="middle" font-size="11" font-family="ui-monospace, monospace" fill="#854d0e">latest = new AtomicReference&lt;&gt;()</text>
+    <text x="110" y="68" text-anchor="middle" font-size="11.5" fill="#713f12">Reactor와 무관</text>
+    <text x="110" y="84" text-anchor="middle" font-size="11.2" fill="#713f12">GET /api/.../depth/latest</text>
+    <text x="110" y="102" text-anchor="middle" font-size="11" fill="#854d0e">단발 조회용 (Flux 흐름과 분리)</text>
   </g>
-  <line x1="350" y1="1037" x2="270" y2="900" stroke="#ca8a04" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr-yellow)"/>
+  <line x1="370" y1="1328" x2="250" y2="1130" stroke="#ca8a04" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr-yellow)"/>
 
-  <!-- arrow from sink.tryEmitNext crossing over to Sinks.Many object -->
-  <path d="M 840 1037 L 840 1100 L 650 1100 L 650 1115" fill="none" stroke="#ea580c" stroke-width="3" marker-end="url(#arr-orange)"/>
-  <text x="850" y="1075" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#9a3412">평범한 자바 메서드 호출</text>
-  <text x="850" y="1090" font-size="10.5" fill="#9a3412">(Reactor subscribe 체인 X)</text>
+  <!-- ===== bridge arrow from sink.tryEmitNext crossing to Sinks.Many ===== -->
+  <path d="M 860 1328 L 860 1380 L 650 1380 L 650 1405" fill="none" stroke="#ea580c" stroke-width="3.5" marker-end="url(#arr-orange)"/>
+  <rect x="870" y="1345" width="280" height="42" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5" rx="4"/>
+  <text x="1010" y="1364" text-anchor="middle" font-size="12" font-family="ui-monospace, monospace" font-weight="700" fill="#9a3412">평범한 자바 메서드 호출</text>
+  <text x="1010" y="1380" text-anchor="middle" font-size="11" fill="#9a3412">(Reactor subscribe 체인 X)</text>
 
-  <!-- ===== [7] Sinks.Many SEPARATE object ===== -->
-  <g transform="translate(300, 1120)">
-    <rect width="700" height="140" fill="#fed7aa" stroke="#ea580c" stroke-width="4" rx="10"/>
-    <text x="350" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#7c2d12">★ Sinks.Many&lt;OrderBookSnapshot&gt; (별개 객체 — Publisher 아님!)</text>
-    <line x1="20" y1="38" x2="680" y2="38" stroke="#ea580c" stroke-width="1" stroke-dasharray="3 3"/>
-    <text x="20" y="60" font-size="11" font-family="ui-monospace, monospace" fill="#9a3412">private final Sinks.Many&lt;OrderBookSnapshot&gt; sink = Sinks.many().replay().limit(1);</text>
-    <text x="20" y="80" font-size="11" fill="#7c2d12">• <tspan font-weight="700">위치:</tspan> LatestOrderBookSnapshotStore의 필드 (실제 자바 객체로 메모리에 존재)</text>
-    <text x="20" y="98" font-size="11" fill="#7c2d12">• <tspan font-weight="700">메서드:</tspan> <tspan font-family="ui-monospace, monospace">tryEmitNext(x)</tspan> 로 값 push, <tspan font-family="ui-monospace, monospace">asFlux()</tspan> 로 Flux 얼굴 꺼냄</text>
-    <text x="20" y="116" font-size="11" fill="#7c2d12">• <tspan font-weight="700">내부 상태:</tspan> replay(1) 버퍼 (최신 1건 캐시) + 현재 구독자 목록</text>
-    <text x="20" y="134" font-size="11" font-weight="700" fill="#dc2626">⚠ 이 객체 자체는 Publisher 인터페이스 구현 X. Publisher 얼굴이 필요하면 asFlux()로 별개 Flux 객체를 꺼내야 함.</text>
-  </g>
+  <!-- ===== [7] Sinks.Many — EXPANDED with hub role details ===== -->
+  <g transform="translate(280, 1410)">
+    <rect width="740" height="220" fill="#fed7aa" stroke="#ea580c" stroke-width="4" rx="10"/>
+    <text x="370" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#7c2d12">★ Sinks.Many&lt;OrderBookSnapshot&gt; (별개 객체 — Publisher 아님!)</text>
+    <line x1="20" y1="40" x2="720" y2="40" stroke="#ea580c" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="62" font-size="12" font-family="ui-monospace, monospace" fill="#9a3412">private final Sinks.Many&lt;OrderBookSnapshot&gt; sink = Sinks.many().replay().limit(1);</text>
+    <text x="20" y="84" font-size="12" fill="#7c2d12">• <tspan font-weight="700">위치:</tspan> LatestOrderBookSnapshotStore의 필드 (실제 자바 객체로 메모리에 존재)</text>
 
-  <line x1="650" y1="1260" x2="650" y2="1305" stroke="#ea580c" stroke-width="3" marker-end="url(#arr-orange)"/>
-  <text x="660" y="1290" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#9a3412">sink.asFlux() → 새 Flux 객체 반환</text>
+    <!-- 허브 역할 박스 -->
+    <rect x="14" y="96" width="712" height="80" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="22" y="114" font-size="12" font-weight="700" fill="#713f12">★ Sink에는 두 출입구가 있음 + 내부 broadcast 담당:</text>
+    <text x="36" y="132" font-size="11.5" fill="#713f12">① 쓰기 입구: <tspan font-weight="700">sink.tryEmitNext(snapshot)</tspan> — 값을 push하고 내부에 보관</text>
+    <text x="36" y="148" font-size="11.5" fill="#713f12">② 읽기/구독 입구: <tspan font-weight="700">sink.asFlux().subscribe(...)</tspan> — 구독자를 Sink에 붙임</text>
+    <text x="36" y="164" font-size="11.5" fill="#713f12">③ 붙은 구독자 N명에게 <tspan font-weight="700">broadcast</tspan> + replay(1) 최신 1건 캐시</text>
 
-  <!-- ===== [8] Flux #E ===== -->
-  <g transform="translate(300, 1310)">
-    <rect width="700" height="110" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
-    <text x="350" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Flux #E = Flux&lt;OrderBookSnapshot&gt; (Publisher)</text>
-    <line x1="20" y1="38" x2="680" y2="38" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
-    <text x="20" y="60" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">public Flux&lt;OrderBookSnapshot&gt; stream() { return sink.asFlux(); }</text>
-    <text x="20" y="80" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">출처:</tspan> 위의 Sinks.Many 객체가 만들어 준 Flux 얼굴 (Sinks.Many 자체는 아님!)</text>
-    <text x="20" y="98" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">값 공급원:</tspan> 위쪽 Sinks.Many 객체의 내부 버퍼 + tryEmitNext 호출</text>
+    <text x="20" y="196" font-size="12" fill="#7c2d12">• <tspan font-weight="700">asFlux():</tspan> 그 Sink를 외부에서 subscribe할 수 있게 해주는 Flux view 반환</text>
+    <text x="20" y="212" font-size="11.5" font-weight="700" fill="#dc2626">⚠ 값 변환(Long→String 같은 변환) 아님 — broadcast는 여전히 Sink 내부가 담당.</text>
   </g>
 
-  <line x1="650" y1="1420" x2="650" y2="1460" stroke="#2563eb" stroke-width="3" marker-end="url(#arr-blue)"/>
-  <text x="660" y="1445" font-size="11" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.map(ServerSentEvent.builder) → 새 Flux 생성</text>
+  <!-- asFlux split: request-scoped read pipelines -->
+  <line x1="650" y1="1630" x2="650" y2="1678" stroke="#ea580c" stroke-width="3.5"/>
+  <rect x="340" y="1640" width="620" height="42" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5" rx="3"/>
+  <text x="650" y="1656" text-anchor="middle" font-size="12" font-family="ui-monospace, monospace" font-weight="700" fill="#9a3412">sink.asFlux() → 공유 Sink에 구독자를 붙일 수 있는 Flux view 반환</text>
+  <text x="650" y="1674" text-anchor="middle" font-size="11" fill="#9a3412">값 변환 X. broadcast는 Sink 내부가 담당하고, 요청마다 읽기 파이프라인만 따로 생김.</text>
 
-  <!-- ===== [9] Flux #F ===== -->
-  <g transform="translate(300, 1465)">
-    <rect width="700" height="110" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
-    <text x="350" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Flux #F = Flux&lt;ServerSentEvent&lt;OrderBookSnapshot&gt;&gt; (Publisher)</text>
-    <line x1="20" y1="38" x2="680" y2="38" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
-    <text x="20" y="60" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">return latestStore.stream().map(snap → ServerSentEvent.builder(snap).build());</text>
-    <text x="20" y="80" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">upstream 참조:</tspan> Flux #E • <tspan font-weight="700">변환:</tspan> Snap → SSE 봉투 (1:1)</text>
-    <text x="20" y="98" font-size="11" fill="#1e3a8a">• <tspan font-weight="700">반환:</tspan> 컨트롤러 stream() 메서드가 Spring에게 이 객체를 넘김</text>
+  <path d="M 650 1686 L 650 1710 L 350 1710 L 350 1728" fill="none" stroke="#ea580c" stroke-width="3" marker-end="url(#arr-orange)"/>
+  <path d="M 650 1710 L 950 1710 L 950 1728" fill="none" stroke="#ea580c" stroke-width="3" marker-end="url(#arr-orange)"/>
+
+  <!-- ===== Request A: Flux #E-A ===== -->
+  <g transform="translate(70, 1732)">
+    <rect width="560" height="145" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
+    <text x="280" y="27" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Flux #E-A = Flux&lt;OrderBookSnapshot&gt; (탭 A 요청별 view)</text>
+    <line x1="18" y1="39" x2="542" y2="39" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="61" font-size="11.5" font-family="ui-monospace, monospace" fill="#1e40af">latestStore.stream() → sink.asFlux()</text>
+    <text x="20" y="82" font-size="11.5" fill="#1e3a8a">• 탭 A의 SSE 요청에서 생성. 공유 Sinks.Many 1개를 바라봄.</text>
+    <rect x="14" y="94" width="532" height="42" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="24" y="113" font-size="11.5" fill="#713f12">받는 쪽: 공유 Sink emit/버퍼 읽음</text>
+    <text x="24" y="128" font-size="11.5" fill="#713f12">주는 쪽: 같은 요청의 Flux #F-A에 값 전달</text>
   </g>
 
-  <!-- Spring fanout -->
-  <line x1="650" y1="1575" x2="650" y2="1615" stroke="#2563eb" stroke-width="3" marker-end="url(#arr-blue)"/>
-  <text x="660" y="1600" font-size="11" fill="#1e40af">Spring이 각 브라우저 요청마다 Flux #F를 subscribe</text>
-
-  <!-- branch -->
-  <line x1="650" y1="1620" x2="650" y2="1640" stroke="#9333ea" stroke-width="2.5"/>
-  <line x1="280" y1="1640" x2="1020" y2="1640" stroke="#9333ea" stroke-width="2.5"/>
-  <line x1="280" y1="1640" x2="280" y2="1665" stroke="#9333ea" stroke-width="2.5" marker-end="url(#arr-purple)"/>
-  <line x1="650" y1="1640" x2="650" y2="1665" stroke="#9333ea" stroke-width="2.5" marker-end="url(#arr-purple)"/>
-  <line x1="1020" y1="1640" x2="1020" y2="1665" stroke="#9333ea" stroke-width="2.5" marker-end="url(#arr-purple)"/>
-
-  <g transform="translate(160, 1670)">
-    <rect width="240" height="70" fill="#f3e8ff" stroke="#9333ea" stroke-width="2.5" rx="8"/>
-    <text x="120" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#581c87">[외부 객체] 브라우저 탭 A</text>
-    <text x="120" y="40" text-anchor="middle" font-size="10.5" fill="#6b21a8">EventSource('/depth/stream')</text>
-    <text x="120" y="56" text-anchor="middle" font-size="10.5" fill="#475569">onmessage 콜백</text>
+  <!-- ===== Request B: Flux #E-B ===== -->
+  <g transform="translate(670, 1732)">
+    <rect width="560" height="145" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
+    <text x="280" y="27" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Flux #E-B = Flux&lt;OrderBookSnapshot&gt; (탭 B 요청별 view)</text>
+    <line x1="18" y1="39" x2="542" y2="39" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="61" font-size="11.5" font-family="ui-monospace, monospace" fill="#1e40af">latestStore.stream() → sink.asFlux()</text>
+    <text x="20" y="82" font-size="11.5" fill="#1e3a8a">• 탭 B의 SSE 요청에서 생성. 공유 Sinks.Many 1개를 바라봄.</text>
+    <rect x="14" y="94" width="532" height="42" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="24" y="113" font-size="11.5" fill="#713f12">받는 쪽: 공유 Sink emit/버퍼 읽음</text>
+    <text x="24" y="128" font-size="11.5" fill="#713f12">주는 쪽: 같은 요청의 Flux #F-B에 값 전달</text>
   </g>
 
-  <g transform="translate(530, 1670)">
-    <rect width="240" height="70" fill="#f3e8ff" stroke="#9333ea" stroke-width="2.5" rx="8"/>
-    <text x="120" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#581c87">[외부 객체] 브라우저 탭 B</text>
-    <text x="120" y="40" text-anchor="middle" font-size="10.5" fill="#6b21a8">EventSource('/depth/stream')</text>
-    <text x="120" y="56" text-anchor="middle" font-size="10.5" fill="#475569">같은 Sinks.Many를 구독</text>
+  <line x1="350" y1="1877" x2="350" y2="1918" stroke="#2563eb" stroke-width="3.5" marker-end="url(#arr-blue)"/>
+  <line x1="950" y1="1877" x2="950" y2="1918" stroke="#2563eb" stroke-width="3.5" marker-end="url(#arr-blue)"/>
+  <rect x="170" y="1888" width="360" height="22" fill="#dbeafe" stroke="#2563eb" stroke-width="1" rx="3"/>
+  <text x="350" y="1904" text-anchor="middle" font-size="11.5" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.map(ServerSentEvent.builder) → #F-A</text>
+  <rect x="770" y="1888" width="360" height="22" fill="#dbeafe" stroke="#2563eb" stroke-width="1" rx="3"/>
+  <text x="950" y="1904" text-anchor="middle" font-size="11.5" font-family="ui-monospace, monospace" font-weight="700" fill="#1e40af">.map(ServerSentEvent.builder) → #F-B</text>
+
+  <!-- ===== Request A: Flux #F-A ===== -->
+  <g transform="translate(70, 1923)">
+    <rect width="560" height="145" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
+    <text x="280" y="27" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e3a8a">Flux #F-A = Flux&lt;ServerSentEvent&lt;OrderBookSnapshot&gt;&gt;</text>
+    <line x1="18" y1="39" x2="542" y2="39" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="61" font-size="11.5" font-family="ui-monospace, monospace" fill="#1e40af">#E-A.map(snap → ServerSentEvent.builder(snap).build())</text>
+    <text x="20" y="82" font-size="11.5" fill="#1e3a8a">• 탭 A 요청의 SSE 응답으로 반환되는 요청별 Flux</text>
+    <rect x="14" y="94" width="532" height="42" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="24" y="113" font-size="11.5" fill="#713f12">받는 쪽: Flux #E-A에서 snapshot 받음</text>
+    <text x="24" y="128" font-size="11.5" fill="#713f12">주는 쪽: Spring이 subscribe해서 탭 A SSE 응답에 씀</text>
   </g>
 
-  <g transform="translate(900, 1670)">
-    <rect width="240" height="70" fill="#f3e8ff" stroke="#9333ea" stroke-width="2.5" rx="8"/>
-    <text x="120" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#581c87">[외부 객체] 브라우저 탭 C</text>
-    <text x="120" y="40" text-anchor="middle" font-size="10.5" fill="#6b21a8">EventSource('/depth/stream')</text>
-    <text x="120" y="56" text-anchor="middle" font-size="10.5" fill="#475569">늦게 붙어도 replay(1)로 1건 즉시</text>
+  <!-- ===== Request B: Flux #F-B ===== -->
+  <g transform="translate(670, 1923)">
+    <rect width="560" height="145" fill="#bfdbfe" stroke="#2563eb" stroke-width="3" rx="10"/>
+    <text x="280" y="27" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e3a8a">Flux #F-B = Flux&lt;ServerSentEvent&lt;OrderBookSnapshot&gt;&gt;</text>
+    <line x1="18" y1="39" x2="542" y2="39" stroke="#2563eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="20" y="61" font-size="11.5" font-family="ui-monospace, monospace" fill="#1e40af">#E-B.map(snap → ServerSentEvent.builder(snap).build())</text>
+    <text x="20" y="82" font-size="11.5" fill="#1e3a8a">• 탭 B 요청의 SSE 응답으로 반환되는 요청별 Flux</text>
+    <rect x="14" y="94" width="532" height="42" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5" rx="4"/>
+    <text x="24" y="113" font-size="11.5" fill="#713f12">받는 쪽: Flux #E-B에서 snapshot 받음</text>
+    <text x="24" y="128" font-size="11.5" fill="#713f12">주는 쪽: Spring이 subscribe해서 탭 B SSE 응답에 씀</text>
+  </g>
+
+  <line x1="350" y1="2068" x2="350" y2="2140" stroke="#9333ea" stroke-width="2.5" marker-end="url(#arr-purple)"/>
+  <line x1="950" y1="2068" x2="950" y2="2140" stroke="#9333ea" stroke-width="2.5" marker-end="url(#arr-purple)"/>
+  <rect x="175" y="2083" width="350" height="24" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.3" rx="3"/>
+  <text x="350" y="2099" text-anchor="middle" font-size="11.5" font-weight="700" fill="#581c87">Spring이 #F-A subscribe → 탭 A로 SSE 전송</text>
+  <rect x="775" y="2083" width="350" height="24" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.3" rx="3"/>
+  <text x="950" y="2099" text-anchor="middle" font-size="11.5" font-weight="700" fill="#581c87">Spring이 #F-B subscribe → 탭 B로 SSE 전송</text>
+
+  <g transform="translate(230, 2150)">
+    <rect width="240" height="82" fill="#f3e8ff" stroke="#9333ea" stroke-width="2.5" rx="8"/>
+    <text x="120" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#581c87">[외부 객체] 브라우저 탭 A</text>
+    <text x="120" y="44" text-anchor="middle" font-size="10.5" fill="#6b21a8">EventSource('/api/.../depth/stream')</text>
+    <text x="120" y="64" text-anchor="middle" font-size="11" fill="#475569">onmessage 콜백</text>
+  </g>
+
+  <g transform="translate(830, 2150)">
+    <rect width="240" height="82" fill="#f3e8ff" stroke="#9333ea" stroke-width="2.5" rx="8"/>
+    <text x="120" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#581c87">[외부 객체] 브라우저 탭 B</text>
+    <text x="120" y="44" text-anchor="middle" font-size="10.5" fill="#6b21a8">EventSource('/api/.../depth/stream')</text>
+    <text x="120" y="64" text-anchor="middle" font-size="11" fill="#475569">onmessage 콜백</text>
   </g>
 
   <!-- ===== BOTTOM SUMMARY ===== -->
-  <g transform="translate(30, 1770)">
-    <rect width="1240" height="230" fill="#fafaf9" stroke="#475569" stroke-width="1.5" rx="8"/>
-    <text x="20" y="26" font-size="13" font-weight="700" fill="#0f172a">정리</text>
+  <g transform="translate(30, 2260)">
+    <rect width="1240" height="180" fill="#fafaf9" stroke="#475569" stroke-width="1.5" rx="8"/>
+    <text x="20" y="28" font-size="14" font-weight="700" fill="#0f172a">정리: 각 Flux별 역할표</text>
 
-    <text x="20" y="52" font-size="12" font-weight="700" fill="#2563eb">코드에 실제로 만들어지는 Flux 객체 (= Publisher) — 6개:</text>
-    <text x="40" y="72" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">
-      #A: session.receive()                                       → Flux&lt;WebSocketMessage&gt;
+    <text x="20" y="54" font-size="12" fill="#0f172a">
+      <tspan font-weight="700" fill="#1e3a8a">Flux #A</tspan> (소스 Flux) → 주는 쪽만 (Publisher 역할). 받는 쪽은 외부 Netty가 직접 — Reactor Subscriber 역할 없음.
     </text>
-    <text x="40" y="88" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">
-      #B: incomingMessages.map(getPayloadAsText)                  → Flux&lt;String&gt;
+    <text x="20" y="76" font-size="12" fill="#0f172a">
+      <tspan font-weight="700" fill="#1e3a8a">Flux #B, #C, #D, #F-A/#F-B</tspan> (operator 결과 Flux) → <tspan font-weight="700">두 역할 동시:</tspan> 위쪽 Flux에서 받음 + 아래쪽 Flux/응답에 줌.
     </text>
-    <text x="40" y="104" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">
-      #C: payloadTexts.doOnNext(raw 로그)                          → Flux&lt;String&gt;
+    <text x="20" y="98" font-size="12" fill="#0f172a">
+      <tspan font-weight="700" fill="#1e3a8a">Flux #E-A/#E-B</tspan> (sink.asFlux() 결과) → 탭 요청마다 얻는 Flux view. 공유 Sinks.Many 1개를 바라보고, 같은 요청의 #F-A/#F-B에 줌.
     </text>
-    <text x="40" y="120" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">
-      #D: withRawLog.doOnNext(logParsedSnapshot)                  → Flux&lt;String&gt;   ← 람다 안에서 sink.tryEmitNext 호출
+    <text x="20" y="122" font-size="12.5" fill="#334155">
+      → <tspan font-weight="700">개수 관점:</tspan> AtomicReference와 Sinks.Many는 Store 안에 1개. 그림에서는 탭 A/B 요청별 Flux 체인 2개만 표시.
     </text>
-    <text x="40" y="136" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">
-      #E: sink.asFlux()                                           → Flux&lt;Snapshot&gt;
+    <text x="20" y="146" font-size="12.5" fill="#334155">
+      → <tspan font-weight="700">"Flux는 두 역할 동시"</tspan> 라는 말은 <tspan font-weight="700">operator 결과 Flux에만 해당</tspan>한다. 소스 Flux(#A)는 Publisher 한 쪽뿐.
     </text>
-    <text x="40" y="152" font-size="11" font-family="ui-monospace, monospace" fill="#1e40af">
-      #F: stream().map(ServerSentEvent.builder)                   → Flux&lt;SSE&lt;Snapshot&gt;&gt;
-    </text>
-
-    <text x="20" y="178" font-size="12" font-weight="700" fill="#ea580c">코드에 실제로 만들어지는 Sinks.Many 객체 — 1개 (Publisher 아님!):</text>
-    <text x="40" y="196" font-size="11" font-family="ui-monospace, monospace" fill="#9a3412">
-      Sinks.many().replay().limit(1)  ← LatestOrderBookSnapshotStore의 필드. tryEmitNext/asFlux 메서드 보유.
-    </text>
-    <text x="20" y="218" font-size="11.5" fill="#0f172a">
-      두 파이프라인(#A~#D, #E~#F)을 잇는 다리는 <tspan font-weight="700" font-family="ui-monospace, monospace" fill="#9a3412">sink.tryEmitNext(snap)</tspan> — Reactor의 subscribe 체인이 아니라 <tspan font-weight="700">평범한 자바 메서드 호출</tspan>이다.
+    <text x="20" y="168" font-size="12.5" fill="#334155">
+      → 타입 관점: <tspan font-family="ui-monospace, monospace" font-weight="700">Flux&lt;T&gt;</tspan> 는 <tspan font-family="ui-monospace, monospace" font-weight="700">Publisher&lt;T&gt;</tspan> 만 구현. <tspan font-family="ui-monospace, monospace" font-weight="700">Subscriber&lt;T&gt;</tspan> 인터페이스는 구현 X. 단지 operator Flux는 <tspan font-weight="700">내부 메커니즘으로</tspan> Subscriber 역할을 수행.
     </text>
   </g>
 

@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sink Flow — 동적 시각화</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f4f1;
+    --canvas: #fbfbf8;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --rule: #e6e3dc;
+
+    --flux: #1d4ed8;
+    --flux-bg: #dbeafe;
+    --flux-bg-strong: #bfdbfe;
+    --sink: #c2410c;
+    --sink-bg: #fed7aa;
+    --sink-bg-soft: #fff1e3;
+    --ar: #a16207;
+    --ar-bg: #fef3c7;
+    --ext: #15803d;
+    --ext-bg: #dcfce7;
+    --browser: #7e22ce;
+    --browser-bg: #f3e8ff;
+    --netty: #475569;
+    --netty-bg: #e2e8f0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 940px 1fr;
+    min-height: 100vh;
+  }
+  /* ---------- STAGE ---------- */
+  .stage {
+    position: relative;
+    width: 940px;
+    height: 1080px;
+    background: var(--canvas);
+    border-right: 1px solid var(--rule);
+    overflow: hidden;
+  }
+  .stage svg.paths {
+    position: absolute;
+    inset: 0;
+    width: 940px;
+    height: 1080px;
+    pointer-events: none;
+  }
+  .node {
+    position: absolute;
+    border-radius: 8px;
+    padding: 7px 10px;
+    line-height: 1.3;
+    box-sizing: border-box;
+    transition: box-shadow 140ms ease, transform 140ms ease, background 180ms ease;
+    z-index: 2;
+  }
+  .node .head {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 11.5px; font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .node .head .badge {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(15,23,42,0.08);
+  }
+  .node .sub {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10.5px;
+    margin-top: 2px;
+    opacity: 0.85;
+  }
+  .node .meta {
+    font-size: 10px;
+    margin-top: 4px;
+    color: rgba(15,23,42,0.6);
+  }
+  .node.flux { background: var(--flux-bg-strong); border: 2px solid var(--flux); color: #172554; }
+  .node.flux .head .badge { background: #1e3a8a; color: #fff; }
+  .node.sink { background: var(--sink-bg); border: 3px solid var(--sink); color: #7c2d12; }
+  .node.sink .head .badge { background: #7c2d12; color: #fff; }
+  .node.ar { background: var(--ar-bg); border: 2px solid var(--ar); color: #713f12; }
+  .node.ext { background: var(--ext-bg); border: 2px solid var(--ext); color: #14532d; }
+  .node.netty { background: var(--netty-bg); border: 2px dashed var(--netty); color: #334155; }
+  .node.browser { background: var(--browser-bg); border: 2px solid var(--browser); color: #581c87; }
+
+  .node.glow {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 4px var(--glow-color, rgba(37,99,235,0.25)), 0 6px 22px rgba(15,23,42,0.08);
+  }
+  .node.flux.glow { --glow-color: rgba(29,78,216,0.30); }
+  .node.sink.glow { --glow-color: rgba(194,65,12,0.30); }
+  .node.ar.glow { --glow-color: rgba(161,98,7,0.35); }
+  .node.ext.glow { --glow-color: rgba(21,128,61,0.30); }
+  .node.browser.glow { --glow-color: rgba(126,34,206,0.30); }
+
+  /* Inner content for Flux #D */
+  .d-inner {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px;
+    margin-top: 4px;
+  }
+  .d-inner .stepline {
+    background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(29,78,216,0.30);
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  .d-inner .stepline .num { font-weight: 700; color: #1e3a8a; margin-right: 4px; }
+  .d-inner .stepline.fan-ar { border-color: rgba(161,98,7,0.5); }
+  .d-inner .stepline.fan-sink { border-color: rgba(194,65,12,0.55); }
+
+  /* Sink inner: replay buffer + subscribers list */
+  .sink-inner {
+    display: grid; grid-template-columns: 1fr 1.1fr; gap: 6px;
+    margin-top: 5px;
+  }
+  .sink-card {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(194,65,12,0.4);
+    border-radius: 5px;
+    padding: 5px 7px;
+  }
+  .sink-card .label {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: #9a3412;
+    margin-bottom: 3px;
+  }
+  .sink-card .val {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10.5px;
+    color: #431407;
+    min-height: 14px;
+  }
+  .sink-card.flash { background: #fff5e6; box-shadow: inset 0 0 0 1px rgba(194,65,12,0.6); }
+  .sub-list { display: flex; gap: 4px; flex-wrap: wrap; }
+  .sub-pill {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9.5px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: rgba(194,65,12,0.12);
+    color: #7c2d12;
+    font-weight: 600;
+  }
+
+  /* AtomicReference value card */
+  .ar-val {
+    margin-top: 4px;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(161,98,7,0.4);
+    border-radius: 5px;
+    padding: 4px 6px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: #713f12;
+    min-height: 16px;
+  }
+  .ar-val.flash { background: #fef9c3; box-shadow: inset 0 0 0 1px rgba(161,98,7,0.6); }
+
+  /* Tab order book mini display */
+  .tab-ob {
+    margin-top: 5px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10.5px;
+    border-top: 1px dashed rgba(126,34,206,0.35);
+    padding-top: 5px;
+  }
+  .tab-ob .row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    padding: 1px 0;
+  }
+  .tab-ob .ask { color: #b91c1c; }
+  .tab-ob .bid { color: #15803d; }
+  .tab-ob .spread {
+    color: #581c87; font-size: 9.5px; opacity: 0.7;
+    text-align: center; padding: 2px 0;
+    border-top: 1px dotted rgba(126,34,206,0.25);
+    border-bottom: 1px dotted rgba(126,34,206,0.25);
+    margin: 2px 0;
+  }
+  .tab-ob .seq {
+    font-size: 9px; opacity: 0.55; text-align: right;
+    margin-top: 4px;
+  }
+
+  /* path styles */
+  .paths .seg { fill: none; }
+  .paths .seg-label {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    fill: #475569;
+  }
+  .paths .seg-label .bg { fill: #fbfbf8; }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar {
+    padding: 28px 32px 40px;
+    overflow-y: auto;
+    max-height: 100vh;
+    background: var(--bg);
+    border-left: 1px solid var(--rule);
+  }
+  .sidebar h1 {
+    font-size: 21px; font-weight: 700; margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .sidebar .tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: #1e293b;
+    color: #fff;
+    margin-right: 6px;
+  }
+  .sidebar p.lede {
+    margin: 0 0 18px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+  .sidebar h2 {
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+    margin: 22px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .controls {
+    display: flex; flex-direction: column; gap: 12px;
+    background: var(--canvas);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 14px 14px 16px;
+  }
+  .controls .row {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .controls button {
+    font-family: inherit;
+    background: #0f172a;
+    color: #fff;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+  }
+  .controls button:hover { background: #1e293b; }
+  .controls button.ghost {
+    background: transparent;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+  }
+  .controls label {
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+    flex: 1;
+  }
+  .controls input[type="range"] { flex: 1; accent-color: #0f172a; }
+  .controls .speed-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    min-width: 38px;
+    text-align: right;
+    color: var(--ink);
+  }
+  .controls .toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--muted);
+    cursor: pointer;
+  }
+  .controls .toggle input { accent-color: #0f172a; }
+
+  /* state panel */
+  .state {
+    background: var(--canvas);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    display: grid; gap: 7px;
+  }
+  .state .kv {
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .state .key {
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .state .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink);
+  }
+
+  /* event log */
+  .log {
+    background: #0b1220;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.65;
+    height: 280px;
+    overflow-y: auto;
+    border: 1px solid #1e293b;
+  }
+  .log .line { white-space: pre; }
+  .log .line .t { color: #64748b; margin-right: 8px; }
+  .log .line .l-blue { color: #93c5fd; }
+  .log .line .l-orange { color: #fdba74; }
+  .log .line .l-yellow { color: #fde68a; }
+  .log .line .l-green { color: #86efac; }
+  .log .line .l-purple { color: #d8b4fe; }
+
+  /* legend */
+  .legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    font-size: 11px;
+    color: var(--ink);
+  }
+  .legend .item { display: flex; align-items: center; gap: 7px; }
+  .legend .sw {
+    width: 14px; height: 10px; border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ---------- LIFECYCLE STATES ---------- */
+  .node.idle {
+    opacity: 0.15;
+    filter: saturate(0.35);
+    pointer-events: none;
+    transition: opacity 200ms ease, filter 200ms ease;
+  }
+  .node.idle .head .badge { background: #94a3b8 !important; color: rgba(255,255,255,0.8) !important; }
+  .node.materializing {
+    animation: materialize 0.7s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+  }
+  @keyframes materialize {
+    0%   { opacity: 0; transform: scale(0.86); filter: saturate(0.4); }
+    55%  { opacity: 1; transform: scale(1.05); filter: saturate(1.2);
+           box-shadow: 0 0 0 9px var(--mat-glow, rgba(29,78,216,0.35)), 0 6px 28px rgba(15,23,42,0.10); }
+    100% { opacity: 1; transform: scale(1); filter: saturate(1); box-shadow: none; }
+  }
+  .node.flux.materializing    { --mat-glow: rgba(29,78,216,0.35); }
+  .node.sink.materializing    { --mat-glow: rgba(194,65,12,0.42); }
+  .node.ar.materializing      { --mat-glow: rgba(161,98,7,0.42); }
+  .node.ext.materializing     { --mat-glow: rgba(21,128,61,0.36); }
+  .node.netty.materializing   { --mat-glow: rgba(71,85,105,0.32); }
+  .node.browser.materializing { --mat-glow: rgba(126,34,206,0.38); }
+  .node.disposed {
+    animation: disposeAnim 0.55s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes disposeAnim {
+    0%   { opacity: 1; }
+    100% { opacity: 0.15; filter: saturate(0.3) grayscale(0.6); transform: scale(0.97); }
+  }
+
+  /* SVG edges + labels: dim when idle */
+  .paths .seg.idle { opacity: 0.16; transition: opacity 300ms ease; }
+  .paths .seg-label text.idle { opacity: 0.16; transition: opacity 300ms ease; }
+  .paths .seg, .paths .seg-label text { transition: opacity 300ms ease; }
+
+  /* empty subscribers placeholder */
+  .sub-empty {
+    font-size: 9.5px; color: #7c2d12; opacity: 0.55;
+    font-style: italic;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .sub-pill.fade-in { animation: pillIn 0.4s ease-out both; }
+  @keyframes pillIn {
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* boot banner */
+  .stage-banner {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(15,23,42,0.92);
+    color: #fff;
+    padding: 18px 24px;
+    border-radius: 10px;
+    font-size: 13px;
+    z-index: 10;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    pointer-events: none;
+    transition: opacity 300ms ease, transform 300ms ease;
+  }
+  .stage-banner.hidden { opacity: 0 !important; visibility: hidden; transform: translate(-50%, -60%); }
+  .stage-banner .big { font-size: 16px; font-weight: 700; margin-bottom: 6px; display: block; }
+  .stage-banner .hint { font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: 0.75; margin-top: 6px; }
+
+  /* ---------- THREADS PANEL ---------- */
+  .threads-panel {
+    display: flex; flex-direction: column; gap: 7px;
+    background: var(--canvas);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 10px;
+  }
+  .thread-card {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 7px 9px;
+    background: #fff;
+    border-radius: 5px;
+    border: 1px solid var(--rule);
+    border-left: 4px solid #94a3b8;
+    transition: background 180ms ease, box-shadow 180ms ease;
+  }
+  .thread-card.t-nio1 { border-left-color: #dc2626; }
+  .thread-card.t-nio2 { border-left-color: #0891b2; }
+  .thread-card.t-nio3 { border-left-color: #db2777; }
+  .thread-card.busy { box-shadow: 0 0 0 2px rgba(15,23,42,0.06); }
+  .thread-card.t-nio1.busy { background: #fef2f2; box-shadow: 0 0 0 2px rgba(220,38,38,0.18); }
+  .thread-card.t-nio2.busy { background: #ecfeff; box-shadow: 0 0 0 2px rgba(8,145,178,0.18); }
+  .thread-card.t-nio3.busy { background: #fdf2f8; box-shadow: 0 0 0 2px rgba(219,39,119,0.18); }
+  .thread-head {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    color: #0f172a;
+  }
+  .thread-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .thread-tag {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 4px;
+  }
+  .thread-tag.main { background: #fee2e2; color: #991b1b; }
+  .thread-role {
+    font-size: 10.5px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .thread-current {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    margin-top: 3px;
+    min-height: 14px;
+    transition: color 120ms ease;
+  }
+  .thread-current.idle { color: #cbd5e1; font-style: italic; }
+  .thread-current.busy-text { color: #0f172a; font-weight: 600; }
+
+  /* particle styling */
+  .particle {
+    pointer-events: none;
+  }
+  .particle circle.body {
+    transition: r 120ms ease;
+  }
+  .particle text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7.5px;
+    font-weight: 700;
+    fill: #fff;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  @media (max-width: 1350px) {
+    .app { grid-template-columns: 940px 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- =================== STAGE =================== -->
+  <div class="stage" id="stage">
+
+    <!-- SVG layer: paths + arrow markers + particles -->
+    <svg class="paths" viewBox="0 0 940 1080">
+      <defs>
+        <marker id="a-flux" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"></path>
+        </marker>
+        <marker id="a-sink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#c2410c"></path>
+        </marker>
+        <marker id="a-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#a16207"></path>
+        </marker>
+        <marker id="a-ext" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#15803d"></path>
+        </marker>
+        <marker id="a-netty" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#475569"></path>
+        </marker>
+        <marker id="a-browser" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#7e22ce"></path>
+        </marker>
+      </defs>
+
+      <!-- paths between nodes. each has id="seg-X" for animation lookup. start as .idle -->
+      <path id="seg-binance-netty" class="seg idle" d="M 470 52 L 470 80" stroke="#15803d" stroke-width="2.4" marker-end="url(#a-ext)"></path>
+      <path id="seg-netty-a" class="seg idle" d="M 470 124 L 470 158" stroke="#475569" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#a-netty)"></path>
+      <path id="seg-a-b" class="seg idle" d="M 470 232 L 470 266" stroke="#1d4ed8" stroke-width="2.4" marker-end="url(#a-flux)"></path>
+      <path id="seg-b-c" class="seg idle" d="M 470 320 L 470 354" stroke="#1d4ed8" stroke-width="2.4" marker-end="url(#a-flux)"></path>
+      <path id="seg-c-d" class="seg idle" d="M 470 408 L 470 442" stroke="#1d4ed8" stroke-width="2.4" marker-end="url(#a-flux)"></path>
+
+      <path id="seg-d-ar" class="seg idle" d="M 200 560 C 200 580, 110 568, 110 588" stroke="#a16207" stroke-width="2.2" marker-end="url(#a-ar)"></path>
+      <path id="seg-d-sink" class="seg idle" d="M 740 560 C 740 580, 580 580, 580 600" stroke="#c2410c" stroke-width="2.6" marker-end="url(#a-sink)"></path>
+
+      <path id="seg-sink-ea" class="seg idle" d="M 340 692 C 340 720, 160 712, 160 736" stroke="#c2410c" stroke-width="2.6" marker-end="url(#a-sink)"></path>
+      <path id="seg-sink-eb" class="seg idle" d="M 820 692 C 820 720, 780 712, 780 736" stroke="#c2410c" stroke-width="2.6" marker-end="url(#a-sink)"></path>
+
+      <path id="seg-ea-fa" class="seg idle" d="M 160 786 L 160 810" stroke="#1d4ed8" stroke-width="2.4" marker-end="url(#a-flux)"></path>
+      <path id="seg-eb-fb" class="seg idle" d="M 780 786 L 780 810" stroke="#1d4ed8" stroke-width="2.4" marker-end="url(#a-flux)"></path>
+
+      <path id="seg-fa-taba" class="seg idle" d="M 160 860 L 160 884" stroke="#7e22ce" stroke-width="2.4" marker-end="url(#a-browser)"></path>
+      <path id="seg-fb-tabb" class="seg idle" d="M 780 860 L 780 884" stroke="#7e22ce" stroke-width="2.4" marker-end="url(#a-browser)"></path>
+
+      <!-- operator labels (controlled by edge state) -->
+      <g class="seg-label">
+        <text id="lbl-a-b" class="idle" x="492" y="247">.map(getPayloadAsText)</text>
+        <text id="lbl-b-c" class="idle" x="492" y="338">.doOnNext(raw log)</text>
+        <text id="lbl-c-d" class="idle" x="492" y="425">.doOnNext(parse + update)</text>
+        <text id="lbl-ea-fa" class="idle" x="285" y="800">.map(SSE.builder)</text>
+        <text id="lbl-eb-fb" class="idle" x="600" y="800">.map(SSE.builder)</text>
+        <text id="lbl-fa-taba" class="idle" x="285" y="876">subscribe → SSE</text>
+        <text id="lbl-fb-tabb" class="idle" x="600" y="876">subscribe → SSE</text>
+      </g>
+
+      <!-- particles container (added by JS) -->
+      <g id="particles"></g>
+    </svg>
+
+    <!-- HTML nodes positioned absolutely on top of SVG -->
+
+    <!-- Binance -->
+    <div class="node ext idle" id="n-binance" style="top:14px; left:250px; width:440px; height:38px;">
+      <div class="head"><span class="badge">EXT</span>Binance Futures · WebSocket depth frames</div>
+    </div>
+
+    <!-- Netty -->
+    <div class="node netty idle" id="n-netty" style="top:80px; left:190px; width:560px; height:44px;">
+      <div class="head"><span class="badge">FW</span>Reactor Netty + WebSocketSession</div>
+      <div class="meta">프레임 수신 → WebSocketMessage 객체 → Flux #A로 onNext</div>
+    </div>
+
+    <!-- Flux A -->
+    <div class="node flux idle" id="n-a" style="top:158px; left:120px; width:700px; height:74px;">
+      <div class="head"><span class="badge">#A</span>Flux&lt;WebSocketMessage&gt; · incomingMessages</div>
+      <div class="sub">session.receive()</div>
+      <div class="meta">소스 Flux — 외부 Netty가 직접 값 공급. 받는 쪽 Subscriber 역할 없음.</div>
+    </div>
+
+    <!-- Flux B -->
+    <div class="node flux idle" id="n-b" style="top:266px; left:120px; width:700px; height:54px;">
+      <div class="head"><span class="badge">#B</span>Flux&lt;String&gt; · payloadTexts</div>
+      <div class="meta">받는 쪽: #A의 내부 Subscriber · 주는 쪽: #C로 Publisher</div>
+    </div>
+
+    <!-- Flux C -->
+    <div class="node flux idle" id="n-c" style="top:354px; left:120px; width:700px; height:54px;">
+      <div class="head"><span class="badge">#C</span>Flux&lt;String&gt; · withRawLog</div>
+      <div class="meta">값은 그대로 통과, 옆구리로 raw JSON 로그만 출력</div>
+    </div>
+
+    <!-- Flux D — the bridge -->
+    <div class="node flux idle" id="n-d" style="top:442px; left:80px; width:780px; height:118px;">
+      <div class="head"><span class="badge">#D</span>Flux&lt;String&gt; · withParsedLog &nbsp; <span style="font-weight:500; font-size:10.5px; color:#1e3a8a; opacity:0.85">— side-effect 안에서 두 파이프라인을 잇는 다리 ★</span></div>
+      <div class="d-inner">
+        <div class="stepline"><span class="num">①</span>parser.parse(json) → OrderBookSnapshot</div>
+        <div class="stepline"><span class="num">②</span>latestStore.update(snap)</div>
+        <div class="stepline fan-ar"><span class="num">└→</span>latest.set(snap) <span style="color:#a16207">[AtomicReference]</span></div>
+        <div class="stepline fan-sink"><span class="num">└→</span>sink.tryEmitNext(snap) <span style="color:#c2410c">★ Sink</span></div>
+      </div>
+    </div>
+
+    <!-- AtomicReference -->
+    <div class="node ar idle" id="n-ar" style="top:588px; left:14px; width:192px; height:90px;">
+      <div class="head"><span class="badge">AR</span>AtomicReference</div>
+      <div class="meta" style="font-size:9.5px;">GET /depth/latest 단발 조회용 (Flux와 분리)</div>
+      <div class="ar-val" id="ar-val">—</div>
+    </div>
+
+    <!-- Sinks.Many — the hub -->
+    <div class="node sink idle" id="n-sink" style="top:578px; left:220px; width:620px; height:114px;">
+      <div class="head"><span class="badge">SINK</span>Sinks.Many&lt;OrderBookSnapshot&gt; · replay(1) &nbsp; <span style="font-weight:500; font-size:10px; color:#7c2d12; opacity:0.85">— 공유 허브 (값 입구 + 구독자 목록 + 최신 1건 캐시)</span></div>
+      <div class="sink-inner">
+        <div class="sink-card" id="sink-buf">
+          <div class="label">replay buffer (latest 1)</div>
+          <div class="val" id="sink-buf-val">—</div>
+        </div>
+        <div class="sink-card">
+          <div class="label">subscribers list</div>
+          <div class="sub-list" id="sink-subs">
+            <span class="sub-empty">empty — 구독자 없음</span>
+          </div>
+          <div style="font-size:9.5px; margin-top:4px; color:#7c2d12; opacity:0.75;">tryEmitNext → 각 subscriber.onNext(snap)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flux E-A / E-B -->
+    <div class="node flux idle" id="n-ea" style="top:736px; left:30px; width:260px; height:50px;">
+      <div class="head"><span class="badge">#E-A</span>탭 A · sink.asFlux()</div>
+      <div class="meta" style="font-size:9.5px;">Sink-backed view — 요청별 subscriber</div>
+    </div>
+    <div class="node flux idle" id="n-eb" style="top:736px; left:650px; width:260px; height:50px;">
+      <div class="head"><span class="badge">#E-B</span>탭 B · sink.asFlux()</div>
+      <div class="meta" style="font-size:9.5px;">Sink-backed view — 요청별 subscriber</div>
+    </div>
+
+    <!-- Flux F-A / F-B -->
+    <div class="node flux idle" id="n-fa" style="top:810px; left:30px; width:260px; height:50px;">
+      <div class="head"><span class="badge">#F-A</span>Flux&lt;SSE&lt;Snapshot&gt;&gt;</div>
+      <div class="meta" style="font-size:9.5px;">.map(SSE.builder) — SSE 봉투로 감쌈</div>
+    </div>
+    <div class="node flux idle" id="n-fb" style="top:810px; left:650px; width:260px; height:50px;">
+      <div class="head"><span class="badge">#F-B</span>Flux&lt;SSE&lt;Snapshot&gt;&gt;</div>
+      <div class="meta" style="font-size:9.5px;">.map(SSE.builder) — SSE 봉투로 감쌈</div>
+    </div>
+
+    <!-- Browser Tabs (with mini orderbook) -->
+    <div class="node browser idle" id="n-taba" style="top:884px; left:30px; width:260px; height:50px;">
+      <div class="head"><span class="badge">TAB A</span>EventSource onmessage</div>
+      <div class="meta" style="font-size:9.5px;">React: setSnapshot(data) → 호가창 리렌더</div>
+    </div>
+    <div class="node browser idle" id="n-tabb" style="top:884px; left:650px; width:260px; height:50px;">
+      <div class="head"><span class="badge">TAB B</span>EventSource onmessage</div>
+      <div class="meta" style="font-size:9.5px;">React: setSnapshot(data) → 호가창 리렌더</div>
+    </div>
+
+    <!-- Boot banner (hidden after boot) -->
+    <div class="stage-banner" id="banner">
+      <span class="big">우측 “🚀 Spring Boot 실행” 버튼을 눌러주세요</span>
+      <div>스프링 컨테이너가 시작되고</div>
+      <div class="hint">@PostConstruct → Streamer.connect() → Flux #A~#D assembly → subscribe() → 데이터 흐름</div>
+    </div>
+
+  </div><!-- /.stage -->
+
+  <!-- =================== SIDEBAR =================== -->
+  <aside class="sidebar">
+    <span class="tag">sink-flow-end-to-end</span>
+    <h1>Sink Flow · 동적 시각화</h1>
+    <p class="lede">
+      Binance 호가 프레임 1개가 Reactor 체인을 따라 흘러내려가
+      <strong>Flux #D</strong>의 side-effect에서 두 갈래로 갈라진 뒤,
+      <strong>Sinks.Many</strong> 허브에서 두 브라우저 탭으로 fan-out되는 과정.
+      각 패킷은 sequence 번호로 구분되고, 도착하는 노드의 상태(저장값·replay 버퍼·호가창)가 실시간으로 바뀝니다.
+    </p>
+
+    <div class="controls">
+      <div class="row" style="gap:6px;">
+        <button id="btn-boot">🚀 Spring Boot 실행</button>
+        <button id="btn-reset" class="ghost">↺ 초기화</button>
+      </div>
+      <div class="row" style="gap:6px;">
+        <button id="btn-tab-a" class="ghost" disabled>🅰️ 탭 A 열기</button>
+        <button id="btn-tab-b" class="ghost" disabled>🅱️ 탭 B 열기</button>
+      </div>
+      <label>
+        속도
+        <input type="range" id="speed" min="0.2" max="3" step="0.1" value="1" />
+        <span class="speed-val" id="speed-val">1.0x</span>
+      </label>
+      <label style="flex-direction:column; align-items:stretch; gap:6px;">
+        <span style="display:flex; justify-content:space-between; align-items:baseline;">
+          <span>패킷 spawn 간격 <span style="font-size:10px; opacity:0.7;">(시각화용)</span></span>
+          <span class="speed-val" id="rate-val">850ms</span>
+        </span>
+        <input type="range" id="rate" min="100" max="2000" step="50" value="850" />
+        <span style="font-size:10px; color:#94a3b8; line-height:1.4;">실제 Binance는 <code style="font-family:'JetBrains Mono',monospace;">@depth20@100ms</code>로 100ms마다 보내지만, 패킷이 눈에 따라가도록 기본 850ms로 늦춰둠. 100ms로 내리면 실제 속도를 볼 수 있음.</span>
+      </label>
+    </div>
+
+    <h2>실시간 상태</h2>
+    <div class="state">
+      <div class="kv"><span class="key">AtomicReference</span><span class="val" id="s-ar">—</span></div>
+      <div class="kv"><span class="key">Sink replay(1)</span><span class="val" id="s-sink">—</span></div>
+      <div class="kv"><span class="key">Tab A · 호가창</span><span class="val" id="s-taba">—</span></div>
+      <div class="kv"><span class="key">Tab B · 호가창</span><span class="val" id="s-tabb">—</span></div>
+      <div class="kv"><span class="key">전송된 프레임</span><span class="val" id="s-count">0</span></div>
+    </div>
+
+    <h2>Event Loop Threads</h2>
+    <div class="threads-panel" id="threads-panel"></div>
+
+    <h2>이벤트 로그</h2>
+    <div class="log" id="log"></div>
+
+    <h2>범례</h2>
+    <div class="legend">
+      <div class="item"><span class="sw" style="background:#dcfce7; border:2px solid #15803d;"></span>외부 시스템 (Binance / Browser)</div>
+      <div class="item"><span class="sw" style="background:#e2e8f0; border:2px dashed #475569;"></span>프레임워크 내부 (Netty)</div>
+      <div class="item"><span class="sw" style="background:#bfdbfe; border:2px solid #1d4ed8;"></span>Flux (Publisher)</div>
+      <div class="item"><span class="sw" style="background:#fed7aa; border:2px solid #c2410c;"></span>Sinks.Many (공유 허브)</div>
+      <div class="item"><span class="sw" style="background:#fef3c7; border:2px solid #a16207;"></span>AtomicReference</div>
+      <div class="item"><span class="sw" style="background:#f3e8ff; border:2px solid #7e22ce;"></span>브라우저 탭</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+/* =========================================================================
+   Sink Flow Animation — with lifecycle
+   - Boot button: simulates @PostConstruct triggering Streamer.connect():
+     creates @Component beans (Store -> AR + Sink), assembles Flux #A..#D,
+     subscribes (cold->hot), Binance frames start flowing.
+   - Open Tab A/B: simulates a browser EventSource hitting Controller.stream():
+     creates that request's Flux #E + #F, registers as Sink subscriber,
+     replay(1) immediately pushes the latest snapshot.
+   - Close Tab: disposes #E + #F, unregisters from Sink subscribers list.
+   ======================================================================= */
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// Edge id -> {from, to, color}
+const EDGES = {
+  'binance-netty': { from: 'binance', to: 'netty', color: '#15803d', kind: 'ext' },
+  'netty-a':       { from: 'netty',   to: 'a',     color: '#475569', kind: 'netty' },
+  'a-b':           { from: 'a',       to: 'b',     color: '#1d4ed8', kind: 'flux' },
+  'b-c':           { from: 'b',       to: 'c',     color: '#1d4ed8', kind: 'flux' },
+  'c-d':           { from: 'c',       to: 'd',     color: '#1d4ed8', kind: 'flux' },
+  'd-ar':          { from: 'd',       to: 'ar',    color: '#a16207', kind: 'ar' },
+  'd-sink':        { from: 'd',       to: 'sink',  color: '#c2410c', kind: 'sink' },
+  'sink-ea':       { from: 'sink',    to: 'ea',    color: '#c2410c', kind: 'sink' },
+  'sink-eb':       { from: 'sink',    to: 'eb',    color: '#c2410c', kind: 'sink' },
+  'ea-fa':         { from: 'ea',      to: 'fa',    color: '#1d4ed8', kind: 'flux' },
+  'eb-fb':         { from: 'eb',      to: 'fb',    color: '#1d4ed8', kind: 'flux' },
+  'fa-taba':       { from: 'fa',      to: 'taba',  color: '#7e22ce', kind: 'browser' },
+  'fb-tabb':       { from: 'fb',      to: 'tabb',  color: '#7e22ce', kind: 'browser' },
+};
+
+// Node id -> list of outgoing edge ids
+const OUT = {
+  binance: ['binance-netty'],
+  netty:   ['netty-a'],
+  a:       ['a-b'],
+  b:       ['b-c'],
+  c:       ['c-d'],
+  d:       ['d-ar', 'd-sink'],  // fork
+  ar:      [],                  // terminal — side effect
+  sink:    ['sink-ea', 'sink-eb'], // fork
+  ea:      ['ea-fa'],
+  fa:      ['fa-taba'],
+  eb:      ['eb-fb'],
+  fb:      ['fb-tabb'],
+  taba:    [],
+  tabb:    [],
+};
+
+/* ---------- THREADS ----------
+   Reactor Netty 가 부팅 때 만드는 event loop thread pool 의 일부.
+   각 채널(TCP 연결)은 하나의 event loop 스레드에 묶임 (channel-thread binding).
+
+   - nio-2: Binance WebSocket 클라이언트 채널 owner → ★ 메인 작업자
+            Binance 프레임 read부터 Flux #A~#D, AR.set, Sink.tryEmitNext, 그리고
+            모든 subscriber 의 onNext (#E/#F .map) 까지 전부 이 스레드의 콜스택에서 실행.
+   - nio-1: Tab A 의 HTTP 응답 채널 owner
+            ① Tab A 가 처음 접속할 때 stream() 호출 + assembly + subscribe 가 여기서 일어남
+            ② nio-2 가 Tab A 채널에 write 하려고 dispatch 한 작업을 받아 실제 socket write 수행
+   - nio-3: Tab B 의 HTTP 응답 채널 owner (같은 역할, Tab B 용)
+*/
+const THREADS = {
+  'nio-1': { name: 'reactor-http-nio-1', color: '#dc2626', tag: 'MAIN', role: 'Binance WebSocket client owner' },
+  'nio-2': { name: 'reactor-http-nio-2', color: '#0891b2', tag: '',     role: 'Tab A 응답 채널 owner' },
+  'nio-3': { name: 'reactor-http-nio-3', color: '#db2777', tag: '',     role: 'Tab B 응답 채널 owner' },
+};
+
+// 어떤 엣지를 "어느 스레드가 carry 하는지" 결정.
+// 대부분 nio-2 가 한 콜스택 안에서 처리하지만, F → Tab 의 channel.write 호출은
+// 해당 응답 채널의 event loop 로 dispatch 되므로 그 시점에 스레드가 바뀐다.
+function threadForEdge(edgeId, currentThread) {
+  if (edgeId === 'fa-taba') return 'nio-2'; // channel.write → Tab A 채널 event loop
+  if (edgeId === 'fb-tabb') return 'nio-3'; // channel.write → Tab B 채널 event loop
+  return currentThread; // 같은 콜스택 → 같은 스레드 유지
+}
+
+// Pre-compute path lengths
+const pathInfo = {};
+for (const id in EDGES) {
+  const p = document.getElementById('seg-' + id);
+  pathInfo[id] = { el: p, length: p.getTotalLength() };
+}
+
+// Pixel-per-second base speed (scaled by user speed)
+const PX_PER_SEC = 180;
+
+/* ---------- LIFECYCLE STATE ----------
+   Each node and edge has a lifecycle. Particles only flow through edges
+   whose source AND target are 'active'. The boot/tab routines drive these. */
+const lifecycle = {
+  // backend chain — created by Spring boot
+  binance: 'idle', netty: 'idle',
+  a: 'idle', b: 'idle', c: 'idle', d: 'idle',
+  ar: 'idle', sink: 'idle',
+  // per-request, created when tab opens
+  ea: 'idle', fa: 'idle', taba: 'idle',
+  eb: 'idle', fb: 'idle', tabb: 'idle',
+};
+const edgeActive = {}; // edgeId -> bool
+for (const id in EDGES) edgeActive[id] = false;
+
+let stageState = 'idle'; // 'idle' | 'booting' | 'running'
+let tabAState = 'closed'; // 'closed' | 'opening' | 'open' | 'closing'
+let tabBState = 'closed';
+
+// State
+let nextSeq = 1;
+let particleId = 1;
+const particles = [];
+let basePrice = 67234.0;
+let speed = 1.0;
+let spawnInterval = 850;
+let timeSinceSpawn = 0;
+let lastSinkSnap = null; // most recent snapshot the sink has (= replay(1) buffer)
+
+let frameCount = 0;
+const MAX_LOG_LINES = 80;
+
+// DOM refs
+const $particles = document.getElementById('particles');
+const $log = document.getElementById('log');
+const $btnBoot = document.getElementById('btn-boot');
+const $btnReset = document.getElementById('btn-reset');
+const $btnTabA = document.getElementById('btn-tab-a');
+const $btnTabB = document.getElementById('btn-tab-b');
+const $speed = document.getElementById('speed');
+const $speedVal = document.getElementById('speed-val');
+const $rate = document.getElementById('rate');
+const $rateVal = document.getElementById('rate-val');
+const $banner = document.getElementById('banner');
+const $sinkSubs = document.getElementById('sink-subs');
+
+const stateEls = {
+  ar: document.getElementById('s-ar'),
+  sink: document.getElementById('s-sink'),
+  taba: document.getElementById('s-taba'),
+  tabb: document.getElementById('s-tabb'),
+  count: document.getElementById('s-count'),
+  arNode: document.getElementById('ar-val'),
+  sinkNode: document.getElementById('sink-buf-val'),
+  sinkBufCard: document.getElementById('sink-buf'),
+};
+
+// ---------- Utilities ----------
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+function log(html) {
+  const t = new Date();
+  const tStr = t.toTimeString().slice(0, 8) + '.' + String(t.getMilliseconds()).padStart(3, '0');
+  const line = document.createElement('div');
+  line.className = 'line';
+  line.innerHTML = `<span class="t">${tStr}</span>${html}`;
+  $log.appendChild(line);
+  while ($log.children.length > MAX_LOG_LINES) $log.removeChild($log.firstChild);
+  $log.scrollTop = $log.scrollHeight;
+}
+
+// ---------- Lifecycle helpers ----------
+function setNodeLifecycle(id, state) {
+  const el = document.getElementById('n-' + id);
+  if (!el) return;
+  el.classList.remove('idle', 'materializing', 'disposed');
+  if (state === 'idle') {
+    el.classList.add('idle');
+  } else if (state === 'materializing') {
+    el.classList.add('materializing');
+  } else if (state === 'disposed') {
+    el.classList.add('disposed');
+  }
+  // 'active' = no special class (default look)
+  lifecycle[id] = state;
+}
+
+function setEdgeActive(edgeId, active) {
+  edgeActive[edgeId] = active;
+  const path = document.getElementById('seg-' + edgeId);
+  if (path) path.classList.toggle('idle', !active);
+  const lbl = document.getElementById('lbl-' + edgeId);
+  if (lbl) lbl.classList.toggle('idle', !active);
+}
+
+function isEdgeRunnable(edgeId) {
+  return edgeActive[edgeId];
+}
+
+function updateSinkSubscribers() {
+  const has = [];
+  if (lifecycle.ea === 'active' || lifecycle.ea === 'materializing') has.push('A');
+  if (lifecycle.eb === 'active' || lifecycle.eb === 'materializing') has.push('B');
+  $sinkSubs.innerHTML = '';
+  if (has.length === 0) {
+    $sinkSubs.innerHTML = '<span class="sub-empty">empty — 구독자 없음</span>';
+  } else {
+    for (const t of has) {
+      const pill = document.createElement('span');
+      pill.className = 'sub-pill fade-in';
+      pill.textContent = `Flux #E-${t} (탭 ${t})`;
+      $sinkSubs.appendChild(pill);
+    }
+  }
+}
+
+function updateButtonsForTab(letter) {
+  const btn = letter === 'A' ? $btnTabA : $btnTabB;
+  const state = letter === 'A' ? tabAState : tabBState;
+  if (stageState !== 'running') {
+    btn.disabled = true;
+    btn.textContent = `🆎 탭 ${letter} 열기`.replace('🆎', letter === 'A' ? '🅰️' : '🅱️');
+    btn.classList.add('ghost');
+    return;
+  }
+  btn.disabled = (state === 'opening' || state === 'closing');
+  if (state === 'open') {
+    btn.textContent = `✕ 탭 ${letter} 닫기`;
+    btn.classList.remove('ghost');
+  } else {
+    btn.textContent = `${letter === 'A' ? '🅰️' : '🅱️'} 탭 ${letter} 열기`;
+    btn.classList.add('ghost');
+  }
+}
+
+// ---------- Particle helpers ----------
+function priceWalk() {
+  basePrice += (Math.random() - 0.5) * 0.4;
+  if (basePrice < 67200) basePrice = 67200;
+  if (basePrice > 67280) basePrice = 67280;
+  const bid = basePrice;
+  const ask = bid + 0.01 + Math.random() * 0.02;
+  return { bid: bid.toFixed(2), ask: ask.toFixed(2) };
+}
+
+function spawnSource() {
+  if (stageState !== 'running') return;
+  const seq = nextSeq++;
+  const { bid, ask } = priceWalk();
+  const payload = { seq, bid, ask };
+  spawnParticleOnEdge(payload, 'binance-netty', 'nio-1');
+  frameCount++;
+  stateEls.count.textContent = frameCount;
+  setThreadActivity('nio-1', 'Binance 프레임 read');
+  log(`<span class="l-green">[Binance]</span> depthUpdate #${seq} → Netty 프레임 수신 <span style="color:#94a3b8">(bid ${bid} / ask ${ask}, on ${THREADS['nio-1'].name})</span>`);
+}
+
+function spawnParticleOnEdge(payload, edgeId, threadOverride) {
+  const thread = threadOverride || threadForEdge(edgeId, 'nio-1');
+  const color = THREADS[thread].color;
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.classList.add('particle');
+  const ring = document.createElementNS(SVG_NS, 'circle');
+  ring.setAttribute('r', '9.5');
+  ring.setAttribute('fill', '#ffffff');
+  ring.setAttribute('stroke', color);
+  ring.setAttribute('stroke-width', '2.4');
+  ring.classList.add('body');
+  g.appendChild(ring);
+  const text = document.createElementNS(SVG_NS, 'text');
+  text.setAttribute('fill', color);
+  text.textContent = '#' + payload.seq;
+  g.appendChild(text);
+  $particles.appendChild(g);
+
+  const p = { pid: particleId++, payload, edgeId, progress: 0, gEl: g, thread, color };
+  particles.push(p);
+  positionParticle(p);
+}
+
+function positionParticle(p) {
+  const info = pathInfo[p.edgeId];
+  const pt = info.el.getPointAtLength(p.progress * info.length);
+  p.gEl.setAttribute('transform', `translate(${pt.x.toFixed(1)}, ${pt.y.toFixed(1)})`);
+}
+function removeParticle(p) { p.gEl.remove(); }
+
+// ---------- Threads activity tracking ----------
+const NODE_LABEL = {
+  binance: 'Binance read', netty: 'Netty inbound',
+  a: 'Flux #A onNext', b: 'Flux #B .map', c: 'Flux #C .doOnNext(raw)', d: 'Flux #D parse+update',
+  ar: 'AR.latest.set()', sink: 'Sink.tryEmitNext',
+  ea: 'Flux #E-A', fa: 'Flux #F-A .map(SSE)', taba: 'Tab A channel.write',
+  eb: 'Flux #E-B', fb: 'Flux #F-B .map(SSE)', tabb: 'Tab B channel.write',
+};
+for (const k of Object.keys(THREADS)) { THREADS[k].current = 'idle'; THREADS[k].lastTs = 0; }
+function setThreadActivity(threadKey, activity) {
+  const t = THREADS[threadKey];
+  if (!t) return;
+  t.current = activity || 'idle';
+  t.lastTs = performance.now();
+  renderThreadsPanel();
+}
+function renderThreadsPanel() {
+  const root = document.getElementById('threads-panel');
+  if (!root) return;
+  root.innerHTML = '';
+  for (const k of Object.keys(THREADS)) {
+    const t = THREADS[k];
+    const busy = (t.current && t.current !== 'idle');
+    const card = document.createElement('div');
+    card.className = `thread-card t-${k.replace('-','')}` + (busy ? ' busy' : '');
+    const tagHtml = t.tag ? `<span class="thread-tag main">${t.tag}</span>` : '';
+    card.innerHTML =
+      `<div class="thread-head"><span class="thread-dot" style="background:${t.color}"></span><span>${t.name}</span>${tagHtml}</div>` +
+      `<div class="thread-role">${t.role}</div>` +
+      `<div class="thread-current ${busy ? 'busy-text' : 'idle'}">${busy ? '▸ ' + t.current : 'idle'}</div>`;
+    root.appendChild(card);
+  }
+}
+// every 250ms, clear stale activities (>= 380ms no update)
+setInterval(() => {
+  const now = performance.now();
+  let changed = false;
+  for (const k of Object.keys(THREADS)) {
+    const t = THREADS[k];
+    if (t.current !== 'idle' && now - t.lastTs > 380) {
+      t.current = 'idle';
+      changed = true;
+    }
+  }
+  if (changed) renderThreadsPanel();
+}, 250);
+const glowTimers = {};
+function glow(nodeId, durationMs = 360) {
+  const el = document.getElementById('n-' + nodeId);
+  if (!el || el.classList.contains('idle')) return;
+  el.classList.add('glow');
+  clearTimeout(glowTimers[nodeId]);
+  glowTimers[nodeId] = setTimeout(() => el.classList.remove('glow'), durationMs);
+}
+function flashCard(cardEl, durationMs = 320) {
+  cardEl.classList.add('flash');
+  setTimeout(() => cardEl.classList.remove('flash'), durationMs);
+}
+
+// ---------- Arrival handler ----------
+function onArrival(p, nodeId) {
+  glow(nodeId);
+  setThreadActivity(p.thread, NODE_LABEL[nodeId] || nodeId);
+
+  if (nodeId === 'netty') {
+    log(`<span style="color:#cbd5e1">[Netty]</span> WebSocketMessage 생성 → Flux #A onNext`);
+  } else if (nodeId === 'a') {
+    log(`<span class="l-blue">[#A]</span> incomingMessages onNext (WSMessage)`);
+  } else if (nodeId === 'b') {
+    log(`<span class="l-blue">[#B]</span> .map → Flux&lt;String&gt; payloadTexts`);
+  } else if (nodeId === 'c') {
+    log(`<span class="l-blue">[#C]</span> .doOnNext(raw log) — JSON #${p.payload.seq} 로그`);
+  } else if (nodeId === 'd') {
+    log(`<span class="l-blue">[#D]</span> .doOnNext: parse → snap #${p.payload.seq} (bid ${p.payload.bid}/ask ${p.payload.ask})`);
+    log(`         └ store.update(snap) → 2갈래 (AtomicReference, Sink)`);
+  } else if (nodeId === 'ar') {
+    stateEls.ar.textContent = `#${p.payload.seq} · ${p.payload.bid}/${p.payload.ask}`;
+    stateEls.arNode.textContent = `bid ${p.payload.bid}\nask ${p.payload.ask}`;
+    stateEls.arNode.style.whiteSpace = 'pre';
+    flashCard(stateEls.arNode);
+    log(`<span class="l-yellow">[AR]</span> latest.set(snap #${p.payload.seq})`);
+  } else if (nodeId === 'sink') {
+    lastSinkSnap = p.payload;
+    stateEls.sink.textContent = `#${p.payload.seq} · ${p.payload.bid}/${p.payload.ask}`;
+    stateEls.sinkNode.textContent = `#${p.payload.seq}  bid ${p.payload.bid} / ask ${p.payload.ask}`;
+    flashCard(stateEls.sinkBufCard);
+    const subs = [];
+    if (lifecycle.ea === 'active') subs.push('A');
+    if (lifecycle.eb === 'active') subs.push('B');
+    if (subs.length === 0) {
+      log(`<span class="l-orange">[Sink]</span> tryEmitNext(#${p.payload.seq}) — 구독자 0명, replay 버퍼만 갱신`);
+    } else {
+      log(`<span class="l-orange">[Sink]</span> tryEmitNext(#${p.payload.seq}) — fan-out to ${subs.length} subscriber${subs.length>1?'s':''} (탭 ${subs.join(', ')})`);
+    }
+  } else if (nodeId === 'ea' || nodeId === 'eb') {
+    const tab = nodeId === 'ea' ? 'A' : 'B';
+    log(`<span class="l-blue">[#E-${tab}]</span> Sink onNext 수신 → 탭 ${tab} subscriber`);
+  } else if (nodeId === 'fa' || nodeId === 'fb') {
+    const tab = nodeId === 'fa' ? 'A' : 'B';
+    log(`<span class="l-blue">[#F-${tab}]</span> .map(SSE.builder) → ServerSentEvent 봉투`);
+  } else if (nodeId === 'taba' || nodeId === 'tabb') {
+    const tab = nodeId === 'taba' ? 'A' : 'B';
+    const tabKey = nodeId === 'taba' ? 'taba' : 'tabb';
+    stateEls[tabKey].textContent = `#${p.payload.seq} · ${p.payload.bid}/${p.payload.ask}`;
+    updateTabOrderBook(nodeId, p.payload);
+    log(`<span class="l-purple">[Tab ${tab}]</span> EventSource onmessage → setSnapshot(#${p.payload.seq})`);
+  }
+}
+
+// ---------- Mini order book in tab boxes ----------
+function updateTabOrderBook(nodeId, payload) {
+  const el = document.getElementById('n-' + nodeId);
+  let ob = el.querySelector('.tab-ob');
+  if (!ob) {
+    el.style.height = '160px';
+    ob = document.createElement('div');
+    ob.className = 'tab-ob';
+    ob.innerHTML = `
+      <div class="row ask"><span>${payload.ask}</span><span>0.182</span></div>
+      <div class="row ask"><span>${(parseFloat(payload.ask)+0.02).toFixed(2)}</span><span>0.341</span></div>
+      <div class="spread">spread 0.01</div>
+      <div class="row bid"><span>${payload.bid}</span><span>0.205</span></div>
+      <div class="row bid"><span>${(parseFloat(payload.bid)-0.01).toFixed(2)}</span><span>0.118</span></div>
+      <div class="seq">snap #${payload.seq}</div>
+    `;
+    el.appendChild(ob);
+    return;
+  }
+  const rows = ob.querySelectorAll('.row');
+  const ask = parseFloat(payload.ask);
+  const bid = parseFloat(payload.bid);
+  rows[0].querySelector('span:first-child').textContent = payload.ask;
+  rows[1].querySelector('span:first-child').textContent = (ask + 0.02).toFixed(2);
+  rows[2].querySelector('span:first-child').textContent = payload.bid;
+  rows[3].querySelector('span:first-child').textContent = (bid - 0.01).toFixed(2);
+  ob.querySelector('.spread').textContent = `spread ${(ask - bid).toFixed(2)}`;
+  ob.querySelector('.seq').textContent = `snap #${payload.seq}`;
+}
+
+// ---------- BOOT SEQUENCE ----------
+async function bootSpring() {
+  if (stageState !== 'idle') return;
+  stageState = 'booting';
+  $btnBoot.disabled = true;
+  $btnBoot.textContent = '🚀 부팅 중...';
+  $banner.classList.add('hidden');
+
+  log(`<span style="color:#cbd5e1">[Spring]</span> ApplicationContext 시작 — @Component bean 스캔/생성`);
+  await sleep(450);
+
+  // External services come into view first
+  setNodeLifecycle('binance', 'materializing'); await sleep(120);
+  log(`<span class="l-green">[Binance]</span> wss://fstream.binance.com/.../btcusdt@depth20@100ms — 외부 서비스`);
+  setNodeLifecycle('netty', 'materializing'); await sleep(450);
+  setNodeLifecycle('binance', 'active'); setNodeLifecycle('netty', 'active');
+
+  // Store @Component → AR + Sink (Store는 한 객체 안에 둘 다 들고 있음)
+  log(`<span class="l-yellow">[Store]</span> LatestOrderBookSnapshotStore @Component 생성`);
+  await sleep(250);
+  setNodeLifecycle('ar', 'materializing');
+  log(`         └ <code style="font-family:'JetBrains Mono',monospace; color:#fde68a;">private final AtomicReference&lt;OrderBookSnapshot&gt; latest = new AtomicReference&lt;&gt;();</code>`);
+  await sleep(380);
+  setNodeLifecycle('sink', 'materializing');
+  log(`         └ <code style="font-family:'JetBrains Mono',monospace; color:#fdba74;">private final Sinks.Many&lt;OrderBookSnapshot&gt; sink = Sinks.many().replay().limit(1);</code> — 구독자 0명, replay 버퍼 비어있음`);
+  await sleep(500);
+  setNodeLifecycle('ar', 'active'); setNodeLifecycle('sink', 'active');
+  updateSinkSubscribers();
+
+  // Streamer @PostConstruct fires
+  log(`<span style="color:#cbd5e1">[Streamer]</span> BinanceFuturesRawDepthStreamer @Component 생성 → @PostConstruct connect() 호출`);
+  await sleep(400);
+
+  // Assembly phase — Flux objects appear one by one (no data flow yet)
+  log(`<span class="l-blue">[Assembly]</span> Flux #A = session.receive()  <span style="color:#64748b">— 객체 생성만, 아직 subscribe 전</span>`);
+  setNodeLifecycle('a', 'materializing');
+  await sleep(450);
+  log(`<span class="l-blue">[Assembly]</span> Flux #B = #A.map(getPayloadAsText)`);
+  setNodeLifecycle('b', 'materializing');
+  await sleep(450);
+  log(`<span class="l-blue">[Assembly]</span> Flux #C = #B.doOnNext(raw log)`);
+  setNodeLifecycle('c', 'materializing');
+  await sleep(450);
+  log(`<span class="l-blue">[Assembly]</span> Flux #D = #C.doOnNext(this::logParsedSnapshot)`);
+  setNodeLifecycle('d', 'materializing');
+  await sleep(550);
+
+  setNodeLifecycle('a', 'active'); setNodeLifecycle('b', 'active');
+  setNodeLifecycle('c', 'active'); setNodeLifecycle('d', 'active');
+
+  // subscribe() — cold becomes hot, propagating upward
+  log(`<span style="color:#cbd5e1">[Streamer]</span> .subscribe() — cold → hot. 구독 신호가 #D→#C→#B→#A를 따라 거슬러 올라감`);
+  await sleep(150);
+  // light up the backend pipeline edges
+  ['c-d', 'b-c', 'a-b', 'netty-a', 'binance-netty'].forEach((e, i) => {
+    setTimeout(() => setEdgeActive(e, true), i * 90);
+  });
+  // d's two outgoing branches (parse+update side-effect targets)
+  setTimeout(() => setEdgeActive('d-ar', true), 600);
+  setTimeout(() => setEdgeActive('d-sink', true), 600);
+  await sleep(900);
+
+  log(`<span class="l-green">[Binance]</span> WebSocket 연결 성공 — depth 프레임 100ms마다 도착`);
+  log(`<span style="color:#94a3b8">[Thread]</span> Reactor Netty 가 Binance 채널을 ${THREADS['nio-1'].name} 에 바인딩. 이 스레드가 #A~#D 파이프라인 + Store.update + Sink.tryEmitNext 를 전부 실행.`);
+  log(`<span style="color:#cbd5e1; font-style:italic;">현재 구독자 0명 — Sink는 emit해도 받는 사람 없음. replay(1) 버퍼만 갱신됨.</span>`);
+
+  stageState = 'running';
+  $btnBoot.textContent = '✓ Spring 부팅 완료';
+  $btnBoot.style.opacity = '0.5';
+  $btnBoot.style.cursor = 'default';
+  updateButtonsForTab('A');
+  updateButtonsForTab('B');
+}
+
+// ---------- TAB OPEN / CLOSE ----------
+async function openTab(letter) {
+  const l = letter.toLowerCase();
+  if (letter === 'A') tabAState = 'opening'; else tabBState = 'opening';
+  updateButtonsForTab(letter);
+
+  log(`<span class="l-purple">[Browser ${letter}]</span> new EventSource('/api/binance-futures/btcusdt/depth/stream') — HTTP GET 요청`);
+  await sleep(350);
+  log(`<span style="color:#94a3b8">[Thread]</span> Spring Netty 서버가 HTTP 요청 수락 → 채널을 ${THREADS[letter === 'A' ? 'nio-2' : 'nio-3'].name} 에 바인딩`);
+  log(`<span style="color:#cbd5e1">[Controller]</span> stream() 호출 — assembly 단계 시작 (${THREADS[letter === 'A' ? 'nio-2' : 'nio-3'].name} 위에서)`);
+  await sleep(200);
+
+  // === Assembly phase: #E, #F 객체가 차례로 생성 (아직 subscribe 전, 데이터 흐름 X) ===
+  log(`<span class="l-blue">[Assembly]</span> Flux #E-${letter} = latestStore.stream() = sink.asFlux()  <span style="color:#64748b">— 객체 생성만</span>`);
+  setNodeLifecycle('e' + l, 'materializing');
+  await sleep(450);
+  setNodeLifecycle('e' + l, 'active');
+
+  log(`<span class="l-blue">[Assembly]</span> Flux #F-${letter} = #E-${letter}.map(SSE.builder)`);
+  setNodeLifecycle('f' + l, 'materializing');
+  await sleep(450);
+  setNodeLifecycle('f' + l, 'active');
+
+  log(`<span class="l-purple">[Assembly]</span> 브라우저 측 EventSource 객체 준비`);
+  setNodeLifecycle('tab' + l, 'materializing');
+  await sleep(350);
+  setNodeLifecycle('tab' + l, 'active');
+
+  // === Subscribe phase: 구독 신호가 아래에서 위로 전파 ===
+  log(`<span style="color:#cbd5e1">[Spring]</span> #F-${letter}.subscribe() — 구독 신호가 #F → #E → Sink로 거슬러 올라감`);
+  await sleep(150);
+  setEdgeActive('f' + l + '-tab' + l, true);
+  await sleep(140);
+  setEdgeActive('e' + l + '-f' + l, true);
+  await sleep(140);
+  setEdgeActive('sink-e' + l, true);
+  log(`<span class="l-orange">[Sink]</span> sink.asFlux().subscribe() → Sink.subscribers.add(탭 ${letter})`);
+
+  if (letter === 'A') tabAState = 'open'; else tabBState = 'open';
+  updateSinkSubscribers();
+  await sleep(250);
+
+  // === replay(1) 즉시 push ===
+  if (lastSinkSnap) {
+    const replayThread = letter === 'A' ? 'nio-2' : 'nio-3';
+    log(`<span class="l-orange">[Sink]</span> replay(1) — 버퍼의 #${lastSinkSnap.seq}을 새 구독자에게 즉시 onNext <span style="color:#94a3b8">(${THREADS[replayThread].name} \uc704\uc5d0\uc11c \uc2e4\ud589 \u2014 \uad6c\ub3c5\ud55c \uc2a4\ub808\ub4dc)</span>`);
+    spawnParticleOnEdge(lastSinkSnap, 'sink-e' + l, replayThread);
+  }
+  updateButtonsForTab(letter);
+}
+
+async function closeTab(letter) {
+  const l = letter.toLowerCase();
+  if (letter === 'A') tabAState = 'closing'; else tabBState = 'closing';
+  updateButtonsForTab(letter);
+
+  log(`<span class="l-purple">[Browser ${letter}]</span> EventSource.close() — TCP 연결 종료`);
+  await sleep(200);
+  log(`<span style="color:#cbd5e1">[Spring]</span> Sink.subscribers.remove(탭 ${letter}) — #E-${letter}/#F-${letter} dispose`);
+
+  // remove particles currently traveling on this tab's path
+  const tabEdges = new Set(['sink-' + 'e' + l, 'e' + l + '-f' + l, 'f' + l + '-tab' + l]);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    if (tabEdges.has(particles[i].edgeId)) {
+      removeParticle(particles[i]);
+      particles.splice(i, 1);
+    }
+  }
+
+  setNodeLifecycle('tab' + l, 'disposed');
+  setNodeLifecycle('f' + l, 'disposed');
+  setNodeLifecycle('e' + l, 'disposed');
+  setEdgeActive('sink-e' + l, false);
+  setEdgeActive('e' + l + '-f' + l, false);
+  setEdgeActive('f' + l + '-tab' + l, false);
+
+  // clear tab UI state
+  const tabKey = 'tab' + l;
+  stateEls[tabKey].textContent = '—';
+  const tabEl = document.getElementById('n-' + tabKey);
+  const ob = tabEl.querySelector('.tab-ob');
+  if (ob) ob.remove();
+  tabEl.style.height = '50px';
+
+  if (letter === 'A') tabAState = 'closed'; else tabBState = 'closed';
+  updateSinkSubscribers();
+  await sleep(550);
+
+  // bring nodes back to idle (so they can be re-opened)
+  setNodeLifecycle('tab' + l, 'idle');
+  setNodeLifecycle('f' + l, 'idle');
+  setNodeLifecycle('e' + l, 'idle');
+
+  updateButtonsForTab(letter);
+}
+
+// ---------- Main loop ----------
+let lastTs = 0;
+function tick(ts) {
+  if (lastTs === 0) lastTs = ts;
+  const dtRaw = ts - lastTs;
+  lastTs = ts;
+  const dt = dtRaw * speed;
+
+  // spawn from source only when stage is running
+  if (stageState === 'running') {
+    timeSinceSpawn += dtRaw;
+    while (timeSinceSpawn >= spawnInterval) {
+      spawnSource();
+      timeSinceSpawn -= spawnInterval;
+    }
+  } else {
+    timeSinceSpawn = 0;
+  }
+
+  // advance particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    const info = pathInfo[p.edgeId];
+    const dur = (info.length / PX_PER_SEC) * 1000;
+    p.progress += dt / dur;
+    if (p.progress >= 1) {
+      p.progress = 1;
+      positionParticle(p);
+      const nodeId = EDGES[p.edgeId].to;
+      onArrival(p, nodeId);
+
+      // pick next edges — but only those whose target is active
+      const nextsAll = OUT[nodeId] || [];
+      const nexts = nextsAll.filter(eid => {
+        const tgt = EDGES[eid].to;
+        return lifecycle[tgt] === 'active' || lifecycle[tgt] === 'materializing';
+      });
+
+      if (nexts.length === 0) {
+        removeParticle(p);
+        particles.splice(i, 1);
+      } else if (nexts.length === 1) {
+        const nextEdge = nexts[0];
+        const newThread = threadForEdge(nextEdge, p.thread);
+        if (newThread !== p.thread) {
+          // Thread handoff: nio-2 calls channel.write() which dispatches to the
+          // response channel's event loop (nio-1 for Tab A / nio-3 for Tab B).
+          log(`<span style="color:#cbd5e1">[Thread handoff]</span> ${THREADS[p.thread].name} \u2192 ${THREADS[newThread].name}: channel.write() \uc791\uc5c5\uc744 dispatch \uadf8\ub9ac\uace0 \uc989\uc2dc \ub9ac\ud134 (\ub3d9\uae30\uc801 \uc4f0\uae30 \uc544\ub2d8)`);
+          setThreadActivity(p.thread, 'idle'); // calling thread released
+        }
+        p.thread = newThread;
+        p.edgeId = nextEdge;
+        p.progress = 0;
+        p.color = THREADS[newThread].color;
+        p.gEl.querySelector('circle.body').setAttribute('stroke', p.color);
+        p.gEl.querySelector('text').setAttribute('fill', p.color);
+      } else {
+        // fork — all children stay on the same thread (sink.tryEmitNext iterates
+        // subscribers synchronously on the calling thread).
+        const firstEdge = nexts[0];
+        p.edgeId = firstEdge;
+        p.progress = 0;
+        p.color = THREADS[p.thread].color;
+        p.gEl.querySelector('circle.body').setAttribute('stroke', p.color);
+        p.gEl.querySelector('text').setAttribute('fill', p.color);
+        for (let k = 1; k < nexts.length; k++) {
+          spawnParticleOnEdge(p.payload, nexts[k], p.thread);
+        }
+      }
+    } else {
+      positionParticle(p);
+    }
+  }
+
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ---------- Controls ----------
+$btnBoot.addEventListener('click', () => { if (stageState === 'idle') bootSpring(); });
+$btnTabA.addEventListener('click', () => {
+  if (stageState !== 'running') return;
+  if (tabAState === 'closed') openTab('A');
+  else if (tabAState === 'open') closeTab('A');
+});
+$btnTabB.addEventListener('click', () => {
+  if (stageState !== 'running') return;
+  if (tabBState === 'closed') openTab('B');
+  else if (tabBState === 'open') closeTab('B');
+});
+
+$btnReset.addEventListener('click', () => {
+  // full teardown — back to idle
+  for (const p of particles) removeParticle(p);
+  particles.length = 0;
+  nextSeq = 1;
+  particleId = 1;
+  frameCount = 0;
+  basePrice = 67234.0;
+  timeSinceSpawn = 0;
+  lastSinkSnap = null;
+  stageState = 'idle';
+  tabAState = 'closed';
+  tabBState = 'closed';
+
+  Object.keys(lifecycle).forEach(id => setNodeLifecycle(id, 'idle'));
+  Object.keys(edgeActive).forEach(eid => setEdgeActive(eid, false));
+
+  stateEls.count.textContent = '0';
+  stateEls.ar.textContent = '—';
+  stateEls.sink.textContent = '—';
+  stateEls.taba.textContent = '—';
+  stateEls.tabb.textContent = '—';
+  stateEls.arNode.textContent = '—';
+  stateEls.sinkNode.textContent = '—';
+
+  ['taba', 'tabb'].forEach(id => {
+    const el = document.getElementById('n-' + id);
+    const ob = el.querySelector('.tab-ob');
+    if (ob) ob.remove();
+    el.style.height = '50px';
+  });
+
+  updateSinkSubscribers();
+  for (const k of Object.keys(THREADS)) { THREADS[k].current = 'idle'; }
+  renderThreadsPanel();
+  $banner.classList.remove('hidden');
+  $btnBoot.disabled = false;
+  $btnBoot.textContent = '🚀 Spring Boot 실행';
+  $btnBoot.style.opacity = '';
+  $btnBoot.style.cursor = '';
+  updateButtonsForTab('A');
+  updateButtonsForTab('B');
+
+  $log.innerHTML = '';
+  log('<span style="color:#cbd5e1">초기화 완료. "Spring Boot 실행"을 눌러 시작하세요.</span>');
+});
+
+$speed.addEventListener('input', () => {
+  speed = parseFloat($speed.value);
+  $speedVal.textContent = speed.toFixed(1) + 'x';
+});
+$rate.addEventListener('input', () => {
+  spawnInterval = parseInt($rate.value, 10);
+  $rateVal.textContent = spawnInterval + 'ms';
+});
+
+// initial state
+renderThreadsPanel();
+updateSinkSubscribers();
+log('<span style="color:#cbd5e1">초기 상태 — Spring 아직 부팅 전. 우측 "🚀 Spring Boot 실행"을 누르면 시작합니다.</span>');
+
+</script>
+</body>
+</html>

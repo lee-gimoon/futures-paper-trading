@@ -40,6 +40,7 @@ public class BinanceFuturesRawDepthStreamer {
 			LatestOrderBookSnapshotStore latestStore) {
 		this.snapshotParser = snapshotParser;
 		this.latestStore = latestStore;
+		log.info("[STEP3-ctor.Streamer] thread={}", Thread.currentThread().getName());
 	}
 
 	// Binance WebSocket에 연결하고, 들어오는 메시지를 그대로 로그에 남긴다.
@@ -48,10 +49,12 @@ public class BinanceFuturesRawDepthStreamer {
 	// → 사용자 요청 수와 무관하게 Binance WebSocket을 정확히 1개만 유지하기 위함.
 	@PostConstruct
 	public void connect() {
+		log.info("[STEP4-connect.enter] thread={}", Thread.currentThread().getName());
 		log.info("Connecting to Binance Futures depth stream: {}", BTCUSDT_DEPTH_STREAM_URI);
 
 		// [1] 세션 핸들러: session 받으면 어떻게 처리할지 정의 (subscribe 전엔 실행 X, cold)
 		WebSocketHandler sessionHandler = session -> {
+			log.info("[STEP5-sessionHandler.enter] thread={}", Thread.currentThread().getName());
 
 			// 어댑터: Binance WebSocket 프레임 → Flux<WebSocketMessage>
 			//   역할: Netty의 저수준 WebSocket 프레임(바이트)을 Spring의 reactive 타입(WebSocketMessage)으로 감싸는 변환층.
@@ -66,7 +69,8 @@ public class BinanceFuturesRawDepthStreamer {
 
 			// 엿보기: raw JSON 로그
 			Flux<String> withRawLog = payloadTexts
-					.doOnNext(message -> log.info("Binance Futures raw depth JSON: {}", message));
+					.doOnNext(message -> log.info("[STEP6-rawJson] thread={} len={}",
+							Thread.currentThread().getName(), message.length()));
 
 			// 엿보기 + 저장: raw JSON을 파싱해 latestStore에 저장하고, 파싱 결과 로그도 남긴다.
 			Flux<String> withParsedLog = withRawLog
@@ -89,6 +93,7 @@ public class BinanceFuturesRawDepthStreamer {
 
 		// [4] subscribe = 여기서 실제 연결 시작 (cold → hot)
 		observablePublisher.subscribe();
+		log.info("[STEP4-connect.exit ] thread={} (즉시 리턴)", Thread.currentThread().getName());
 	}
 
 	// raw JSON을 파싱해서 latestStore에 저장하고 OrderBookSnapshot을 로그로 찍는다.
@@ -101,7 +106,8 @@ public class BinanceFuturesRawDepthStreamer {
 			latestStore.update(snapshot);
 			// {} 자리에 SLF4J가 snapshot.toString()을 자동 호출해 끼워 넣는다.
 			// record가 toString을 자동 생성하므로 안의 List/OrderBookLevel까지 재귀적으로 펼쳐져 한 줄로 찍힌다.
-			log.info("Parsed OrderBookSnapshot: {}", snapshot);
+			log.info("[STEP6-parsedSnapshot] thread={} eventTime={}",
+					Thread.currentThread().getName(), snapshot.eventTime());
 		} catch (Exception e) {
 			log.warn("Failed to parse depth JSON: {}", message, e);
 		}

@@ -1,5 +1,7 @@
 package com.example.futurespapertrading.market;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -18,6 +20,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @Component
 public class LatestOrderBookSnapshotStore {
 
+	private static final Logger log = LoggerFactory.getLogger(LatestOrderBookSnapshotStore.class);
+
 	// 메모리상 단 1개로 존재하는 근거:
 	//   위 @Component로 Spring이 Store 객체를 부팅 시 1개만 만들기 때문에, 그 객체에 속한 이 필드도 자연히 1개.
 	//   Streamer와 Controller가 같은 Store 빈을 주입받아 같은 latest를
@@ -33,6 +37,7 @@ public class LatestOrderBookSnapshotStore {
 
 	// 새 메시지가 파싱되어 도착할 때마다 호출된다. 통째로 교체 — 6단계에서 diff로 발전.
 	public void update(OrderBookSnapshot snapshot) {
+		log.info("[STEP7-store.update] thread={}", Thread.currentThread().getName());
 		latest.set(snapshot); // /depth/latest 단발 조회 API가 꺼내볼 최신 snapshot 1개를 저장
 		sink.tryEmitNext(snapshot); // ✨ 추가: 모든 구독자에게 push
 	}

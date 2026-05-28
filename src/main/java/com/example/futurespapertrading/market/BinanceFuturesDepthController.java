@@ -1,5 +1,7 @@
 package com.example.futurespapertrading.market;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -12,6 +14,8 @@ import reactor.core.publisher.Flux;
 // 3단계 추가: GET으로 현재 메모리에 박혀있는 최신 OrderBookSnapshot 조회.
 @RestController
 public class BinanceFuturesDepthController {
+
+	private static final Logger log = LoggerFactory.getLogger(BinanceFuturesDepthController.class);
 
 	// 실제 Binance WebSocket 연결과 raw JSON 로그 출력을 담당하는 객체다.
 	// 옛 start() 엔드포인트(아래 주석)와 함께만 쓰이던 필드. 주석을 풀면 같이 복구한다.
@@ -94,8 +98,12 @@ public class BinanceFuturesDepthController {
 	// 변경 후 ─ Hot Flux + multicast + replay(1)
 	@GetMapping(path = "/api/binance-futures/btcusdt/depth/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<OrderBookSnapshot>> stream() {
+		log.info("[STEP10-stream.enter] thread={}", Thread.currentThread().getName());
 		return latestStore.stream()
-				.map(snap -> ServerSentEvent.builder(snap).build());
+				.map(snap -> {
+					log.info("[STEP12-sse.map] thread={}", Thread.currentThread().getName());
+					return ServerSentEvent.builder(snap).build();
+				});
 	}
 
 }

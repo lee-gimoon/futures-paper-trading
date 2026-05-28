@@ -39,7 +39,7 @@ public class LatestOrderBookSnapshotStore {
 	public void update(OrderBookSnapshot snapshot) {
 		log.info("[STEP7-store.update] thread={}", Thread.currentThread().getName());
 		latest.set(snapshot); // /depth/latest 단발 조회 API가 꺼내볼 최신 snapshot 1개를 저장
-		sink.tryEmitNext(snapshot); // ✨ 추가: 모든 구독자에게 push
+		sink.tryEmitNext(snapshot); // snapshot을 Sink 허브에 발행한다. Sink는 이를 onNext로 현재 구독자들에게 전달한다
 	}
 
 	// 현재 보관 중인 최신 snapshot. SSE stream()용이 아니라 /depth/latest 단발 조회용이다.

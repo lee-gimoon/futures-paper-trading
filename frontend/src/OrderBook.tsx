@@ -1,4 +1,5 @@
 import type { OrderBookLevel, OrderBookSnapshot } from './types';
+import { deriveQuote } from './quote';
 
 // 표 한 행에 그릴 값들. quantity와 cumulative는 화면에서 계산해 만든다.
 type Row = {
@@ -36,11 +37,9 @@ export function OrderBook({ snapshot }: Props) {
   const askRows = buildAskRows(snapshot.asks);
   const bidRows = buildBidRows(snapshot.bids);
 
-  // best ask = asks 중 가장 낮은 가격 = 역순으로 정렬된 askRows의 마지막
-  // best bid = bids 중 가장 높은 가격 = bidRows의 첫번째
-  const bestAsk = askRows.length > 0 ? askRows[askRows.length - 1].price : 0;
-  const bestBid = bidRows.length > 0 ? bidRows[0].price : 0;
-  const spread = bestAsk - bestBid;
+  // spread는 차트와 동일한 계산을 쓰도록 공용 deriveQuote에서 가져온다.
+  const quote = deriveQuote(snapshot);
+  const spread = quote ? quote.spread : 0;
 
   return (
     <div className="orderbook">

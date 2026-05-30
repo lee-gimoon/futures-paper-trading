@@ -264,52 +264,83 @@ Binance partial depth20 snapshot을 그대로 보여주는 MVP(Minimum Viable Pr
 
 ---
 
-## 6단계. 호가창 기준 실시간 차트
+## 6단계. 실시간 차트 (호가 파생 → 진짜 캔들 차트)
 
-목표:
+배경 / 방향 전환:
 
 ```text
-호가창에서 파생되는 best bid, best ask, mid price, spread를 실시간 차트로 그린다.
+처음엔 호가창에서 파생한 bestBid / bestAsk / midPrice 라인을 그렸지만,
+이건 "호가(걸린 주문)" 기반이라 바이낸스 캔들차트와 데이터가 다르다.
+바이낸스식 봉차트는 "체결(trade)"을 모은 kline 데이터에서 나온다.
+
+호가 데이터의 한계:
+- midPrice는 체결가가 아니라 호가 중간값 → 공식 캔들과 미세하게 다름
+- 거래량(volume)이 없음 → 호가엔 체결량 정보가 없음
+- 과거 봉 backfill 불가 → 접속 순간부터만 쌓임
+
+따라서 진짜 바이낸스식 캔들 차트는 kline 데이터로 그린다.
 ```
 
-계산:
+데이터 경로 결정 — 프론트엔드에서 직접:
 
 ```text
-bestBid  = bids 중 가장 높은 price
-bestAsk  = asks 중 가장 낮은 price
-midPrice = (bestBid + bestAsk) / 2
-spread   = bestAsk - bestBid
+kline은 프론트엔드(브라우저)에서 바이낸스에 직접 요청한다. 백엔드는 건드리지 않는다.
+- 과거 봉:  REST  GET https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=<i>&limit=500
+- 실시간 봉: 같은 REST를 ~0.3초마다 폴링(limit=2, 이전 요청 완료 후 재요청)해서 최신 봉을 갱신.
+
+※ 원래 @kline WebSocket을 쓰려 했으나, 이 지역/네트워크에서 바이낸스 선물의 "체결 계열"
+  push 스트림(kline·aggTrade·markPrice)이 메시지 0개로 차단돼 있다(측정 확인).
+  반면 "호가 계열"(depth·bookTicker)과 REST는 정상. → 실시간 봉은 REST 폴링으로 우회한다.
+  (나중에 체결가 라인·거래량도 같은 제약을 받으므로 REST 폴링/호가 파생으로 풀어야 한다.)
+```
+
+왜 프론트 직접인가 (정리):
+
+```text
+※ 용어: 이 프로젝트엔 서버가 둘이다.
+  (a) 프론트엔드 정적 호스팅 서버 = Vercel·Netlify·nginx 등(개발 중엔 Vite dev 서버 5173).
+      HTML/JS 파일만 내려준다.
+      ─ Vite = (a)의 "개발판". npm run dev로 파일 서빙 + 저장 시 자동 새로고침(HMR), localhost라 나만 접속.
+        배포 땐 npm run build → dist/를 Vercel이 서빙(= (a)의 배포판). 둘 다 파일만 줄 뿐 바이낸스 연결과 무관.
+  (b) 스프링부트 백엔드(8080) = 호가(depth) 스트림, 나중에 체결·PnL 담당.
+  차트 kline은 (a)도 (b)도 거치지 않고, 브라우저가 바이낸스로 직접 간다.
+
+1. kline은 공개 시세라 API 키/시크릿이 필요 없다 → 프론트에 둬도 보안 문제 없음.
+2. 체결·PnL용 가격은 이미 (b) 스프링부트 백엔드의 호가 스트림이 갖고 있다
+   → 차트 kline은 순수 "표시용", (b)를 거칠 필요가 없다.
+3. 프론트 코드는 (a) 정적 호스팅 서버가 아니라 사용자 브라우저에서 실행된다.
+   (a)는 HTML/JS 파일만 한 번 내려주고, WebSocket 연결은 사용자 컴퓨터 → 바이낸스로 직접 나간다.
+4. 따라서 스트리밍 부담은 사용자 컴퓨터 ↔ 바이낸스가 진다.
+   사용자가 1명이든 100만 명이든 (a) 정적 호스팅 서버의 부담은 늘지 않는다 (파일만 제공).
+   (만약 (b) 스프링부트 백엔드가 kline을 중계하면 (b)가 SSE N개를 떠안는다.
+    fan-out으로 바이낸스 연결은 1개로 줄지만 (b)의 부담은 사용자 수에 비례해 늘어난다.
+    지금은 프론트 직접이 더 단순·합리적.)
 ```
 
 구현 방향:
 
 ```text
-1. 백엔드 변경 없이 프론트에서 현재 SSE snapshot으로 계산한다.
-2. 먼저 bestBid / bestAsk 두 줄을 그린다.
-3. 그 다음 midPrice 한 줄을 추가한다.
-4. spread는 작은 보조 표시나 하단 라인으로 둔다.
-```
-
-라이브러리 후보:
-
-```text
-TradingView Lightweight Charts
+1. 라이브러리: TradingView Lightweight Charts v5  (chart.addSeries(CandlestickSeries, ...))
+2. 캔들 시리즈 + 타임프레임 선택 버튼 (선물 지원 봉: 1m·3m·5m·15m·30m·1h·4h·1d·1w)
+   (1초봉은 선물 kline에 없음 → 필요하면 나중에 별도 집계)
+3. 마운트 시 REST로 과거 봉을 채우고(setData), REST 폴링(~0.3초)으로 마지막 봉을 실시간 갱신(update)
+4. 백엔드(.java)는 변경 없음
 ```
 
 완료 기준:
 
 ```text
-호가창이 갱신될 때 차트도 같은 snapshot 기준으로 갱신된다.
-bestBid 라인은 bestAsk 라인보다 항상 낮다.
-midPrice가 두 선 사이에 위치한다.
+과거 봉이 채워진 채로 차트가 뜨고, 실시간으로 마지막 봉이 갱신된다.
+타임프레임 버튼을 누르면 해당 봉으로 다시 그린다.
+백엔드는 건드리지 않는다 (프론트가 바이낸스에 직접 요청).
 ```
 
 나중에 보충:
 
 ```text
-캔들 차트
-1m, 5m 집계
-체결가(last price) 라인
+거래량(volume) 막대 — kline volume 사용
+이동평균선(MA7 / 25 / 99)
+호가 파생 라인(midPrice 등)을 캔들 위 오버레이로 (선택)
 ```
 
 ---

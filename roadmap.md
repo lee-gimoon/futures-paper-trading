@@ -284,14 +284,16 @@ Binance partial depth20 snapshot을 그대로 보여주는 MVP(Minimum Viable Pr
 데이터 경로 결정 — 프론트엔드에서 직접:
 
 ```text
-kline은 프론트엔드(브라우저)에서 바이낸스에 직접 요청한다. 백엔드는 건드리지 않는다.
-- 과거 봉:  REST  GET https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=<i>&limit=500
-- 실시간 봉: 같은 REST를 ~0.3초마다 폴링(limit=2, 이전 요청 완료 후 재요청)해서 최신 봉을 갱신.
+- 과거 봉:  바이낸스 kline REST  GET https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=<i>&limit=500
+            (프론트가 바이낸스에 직접 요청. 백엔드 .java는 건드리지 않는다.)
+- 진행 봉:  내 백엔드 호가 SSE snapshot의 최우선 매도호가(bestAsk)로 진행 봉 OHLC를 직접 묶어 실시간 갱신.
+            호가창과 완전히 같은 데이터라 가격이 일치한다. (추가 연결 0개 — 이미 받는 SSE 재사용.)
 
-※ 원래 @kline WebSocket을 쓰려 했으나, 이 지역/네트워크에서 바이낸스 선물의 "체결 계열"
-  push 스트림(kline·aggTrade·markPrice)이 메시지 0개로 차단돼 있다(측정 확인).
-  반면 "호가 계열"(depth·bookTicker)과 REST는 정상. → 실시간 봉은 REST 폴링으로 우회한다.
-  (나중에 체결가 라인·거래량도 같은 제약을 받으므로 REST 폴링/호가 파생으로 풀어야 한다.)
+※ 원래 @kline WebSocket으로 실시간 봉을 받으려 했으나, 이 지역/네트워크에서 바이낸스 선물의
+  "체결 계열" push 스트림(kline·aggTrade·markPrice)이 메시지 0개로 차단돼 있다(측정 확인).
+  반면 "호가 계열"(depth·bookTicker)과 REST는 정상.
+  → 진행 봉은 이미 받는 백엔드 호가(bestAsk)로 갱신한다. 단 진행 봉은 체결가가 아니라 호가 기준
+    (과거 봉은 실제 체결 kline). 나중에 체결가 라인·거래량도 같은 제약을 받음.
 ```
 
 왜 프론트 직접인가 (정리):
@@ -323,7 +325,7 @@ kline은 프론트엔드(브라우저)에서 바이낸스에 직접 요청한다
 1. 라이브러리: TradingView Lightweight Charts v5  (chart.addSeries(CandlestickSeries, ...))
 2. 캔들 시리즈 + 타임프레임 선택 버튼 (선물 지원 봉: 1m·3m·5m·15m·30m·1h·4h·1d·1w)
    (1초봉은 선물 kline에 없음 → 필요하면 나중에 별도 집계)
-3. 마운트 시 REST로 과거 봉을 채우고(setData), REST 폴링(~0.3초)으로 마지막 봉을 실시간 갱신(update)
+3. 마운트 시 바이낸스 kline REST로 과거 봉을 채우고(setData), 호가 snapshot의 최우선 매도호가(bestAsk)로 진행 봉을 실시간 갱신(update)
 4. 백엔드(.java)는 변경 없음
 ```
 

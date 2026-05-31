@@ -3,8 +3,9 @@ import { OrderBook } from './OrderBook';
 import { CandleChart } from './CandleChart';
 
 // 화면 셸: 캔들 차트 + 호가창.
-// - 캔들 차트: 브라우저가 바이낸스 kline에 직접 연결(백엔드 무관)하므로 항상 표시.
+// - 캔들 차트: 과거 봉은 바이낸스 kline, 진행 봉은 호가 snapshot(mid)으로 갱신.
 // - 호가창: 백엔드 SSE를 구독. snapshot이 도착해야 표시.
+// 같은 snapshot을 둘 다에 넘기므로 차트 진행 봉과 호가창 가격이 일치한다.
 export default function App() {
   const snapshot = useOrderBookStream();
 
@@ -14,7 +15,7 @@ export default function App() {
 
       <div className="layout">
         <div className="chart-col">
-          <CandleChart />
+          <CandleChart snapshot={snapshot} />
         </div>
         <div className="book-col">
           {snapshot ? (

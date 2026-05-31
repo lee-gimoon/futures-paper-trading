@@ -43,38 +43,18 @@ function toCandle(k: RawKline): Candle {
   };
 }
 
-// 실시간 봉 갱신.
-//
-// 원래는 @kline WebSocket을 쓰려 했으나, 일부 지역/네트워크에서 바이낸스 선물의
-// 체결 계열 push 스트림(kline·aggTrade·markPrice)이 차단돼 메시지가 0개로 온다.
-// (반면 호가 계열 depth·bookTicker, 그리고 REST는 정상.) 그래서 REST를 주기적으로
-// 폴링해 최신 봉을 갱신한다. 전부 선물 데이터라 호가창과 가격이 맞는다.
-//
-// 마지막 2개 봉을 갱신한다: 직전 봉(분 경계에서 확정) + 현재 진행 중인 봉.
-// 반환된 함수를 호출하면 폴링을 멈춘다.
-export function pollLatestKline(
-  interval: Interval,
-  onCandle: (candle: Candle) => void,
-  periodMs = 300,
-): () => void {
-  let stopped = false;
-  let timer: ReturnType<typeof setTimeout>;
+// 인터벌(봉) 길이를 초로 변환. 진행 봉의 "시간 버킷" 계산에 쓴다.
+// (실시간 봉은 백엔드 호가 snapshot의 mid로 CandleChart에서 직접 묶는다.
+//  바이낸스 선물의 체결 계열 push 스트림이 이 지역에서 막혀 있어 @kline WS는 못 씀.)
+const INTERVAL_SECONDS: Record<Interval, number> = {
+  '1m': 60,
+  '5m': 300,
+  '15m': 900,
+  '1h': 3600,
+  '4h': 14400,
+  '1d': 86400,
+};
 
-  const tick = async () => {
-    try {
-      const candles = await fetchKlineHistory(interval, 2);
-      if (stopped) return;
-      candles.forEach(onCandle); // 오래된 것 → 최신 순(REST는 오름차순)
-    } catch (err) {
-      console.error('kline 폴링 실패', err);
-    }
-    // 이전 요청이 끝난 뒤 다음 요청을 예약한다 → 응답이 느려도 요청이 쌓이지 않음.
-    if (!stopped) timer = setTimeout(tick, periodMs);
-  };
-
-  tick(); // 즉시 1회
-  return () => {
-    stopped = true;
-    clearTimeout(timer);
-  };
+export function intervalSeconds(interval: Interval): number {
+  return INTERVAL_SECONDS[interval];
 }

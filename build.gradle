@@ -22,6 +22,12 @@ dependencies {
 	// Jackson은 spring-boot-starter-webflux가 spring-boot-starter-jackson을 통해 이미 끌어온다.
 	// (Spring Boot 4 / Jackson 3은 패키지가 tools.jackson.*로 바뀌었다.)
 
+	// 7단계: 자체 회원가입/로그인 (reactive 보안 + R2DBC Postgres)
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	runtimeOnly 'org.postgresql:r2dbc-postgresql'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-webflux-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

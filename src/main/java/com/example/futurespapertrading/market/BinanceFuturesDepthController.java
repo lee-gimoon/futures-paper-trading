@@ -128,7 +128,7 @@ public class BinanceFuturesDepthController {
 	// - Binance snapshot이 100ms마다 온다면, 그 100ms 대기 시간에도 worker thread는 queue.take() 등에서 묶여 있다.
 	// - CPU를 계속 쓰는 것은 아니지만, 해당 Tomcat worker thread 자원은 다른 요청을 처리하도록 반환되지 않는다.
 	// - 브라우저 SSE connection이 100개면 이런 blocking worker thread도 100개 묶일 수 있다.
-	
+
 	// 이와 달리 WebFlux/Reactor Netty는 event loop + non-blocking I/O로 이 요청별 worker thread 대기 문제를 피한다.
 	// - 대기 시간에는 SSE connection과 Flux subscription 상태만 유지되고, event loop 스레드가 연결마다 붙어 있지 않다.
 	// - Binance snapshot이 emit되어 실제로 브라우저에 쓸 데이터가 생긴 순간에만 event loop가 잠깐 write 흐름을 처리한다.

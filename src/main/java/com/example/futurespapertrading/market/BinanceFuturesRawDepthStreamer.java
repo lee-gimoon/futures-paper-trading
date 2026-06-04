@@ -83,7 +83,14 @@ public class BinanceFuturesRawDepthStreamer {
 			return sessionDone;
 		};
 
-		// [2] 연결 Publisher: subscribe 시 URI 접속 → 세션(session) 생성 → sessionHandler 호출
+		// [2] 연결 Publisher: Mono<Void> 자체가 Reactive Streams Publisher다.
+		// - Publisher = 누군가 subscribe()하면 신호를 흘려보낼 수 있는 비동기 흐름.
+		// - 여기서는 Mono<Void>라서 Binance 메시지를 값으로 계속 발행한다는 뜻이 아니다.
+		// - 이 Mono<Void>는 WebSocket 연결 시작부터 종료/에러까지의 생명주기를 표현한다.
+		// - webSocketClient는 WebSocketClient 인터페이스이고, 실제 구현체는 ReactorNettyWebSocketClient다.
+		// - 그래서 이 Publisher가 subscribe되면 실제 socket connect/read/write 같은 네트워크 I/O는
+		//   Reactor Netty/Netty event loop를 통해 처리된다.
+		// - subscribe 시 URI 접속 → 세션(session) 생성 → sessionHandler 호출.
 		Mono<Void> connectionPublisher =
 				webSocketClient.execute(BTCUSDT_DEPTH_STREAM_URI, sessionHandler);
 

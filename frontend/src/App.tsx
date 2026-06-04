@@ -1,17 +1,44 @@
+import { useState } from 'react';
 import { useOrderBookStream } from './useOrderBookStream';
 import { OrderBook } from './OrderBook';
 import { CandleChart } from './CandleChart';
+import { useAuth } from './auth/useAuth';
+import { LoginForm } from './auth/LoginForm';
+import { SignupForm } from './auth/SignupForm';
 
-// 화면 셸: 캔들 차트 + 호가창.
-// - 캔들 차트: 과거 봉은 바이낸스 kline, 진행 봉은 호가 snapshot(mid)으로 갱신.
-// - 호가창: 백엔드 SSE를 구독. snapshot이 도착해야 표시.
-// 같은 snapshot을 둘 다에 넘기므로 차트 진행 봉과 호가창 가격이 일치한다.
+// 화면 셸: 상단 인증 바 + 캔들 차트 + 호가창.
+// - 차트/호가창은 공개 데이터라 로그인과 무관하게 항상 보인다.
+// - 인증은 상단 바에만 얹는다: 비로그인 → 로그인/회원가입 버튼, 로그인 → 이름 + 로그아웃.
+type FormMode = 'login' | 'signup' | null;
+
 export default function App() {
   const snapshot = useOrderBookStream();
+  const { user, loading, login, signup, logout } = useAuth();
+  const [form, setForm] = useState<FormMode>(null);
 
   return (
     <div className="app">
-      <h1>BTCUSDT 차트 / 호가창</h1>
+      <header className="topbar">
+        <h1>BTCUSDT 차트 / 호가창</h1>
+        <div className="auth-box">
+          {loading ? null : user ? (
+            <>
+              <span className="auth-user">{user.displayName || user.email}님</span>
+              <button className="ghost" onClick={logout}>
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setForm('login')}>로그인</button>
+              <button onClick={() => setForm('signup')}>회원가입</button>
+            </>
+          )}
+        </div>
+      </header>
+
+      {form === 'login' && <LoginForm onLogin={login} onClose={() => setForm(null)} />}
+      {form === 'signup' && <SignupForm onSignup={signup} onClose={() => setForm(null)} />}
 
       <div className="layout">
         <div className="chart-col">

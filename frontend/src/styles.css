@@ -127,3 +127,77 @@ button:disabled {
   color: #888;
   font-size: 12px;
 }
+
+/* 상단 바: 제목(왼쪽) + 인증 버튼(오른쪽) */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.topbar h1 {
+  margin: 0;
+}
+
+.auth-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-box button,
+.auth-actions button {
+  margin-bottom: 0;
+}
+
+.auth-user {
+  font-size: 13px;
+  color: #ccc;
+}
+
+/* 로그인/회원가입 폼 (헤더 아래 인라인) */
+.auth-form {
+  max-width: 320px;
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #1a1a1a;
+}
+
+.auth-form h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+
+.auth-form input {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #0d0d0d;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+/* 보조 버튼(취소/로그아웃 등) */
+button.ghost {
+  background: transparent;
+  border: 1px solid #444;
+  color: #aaa;
+}

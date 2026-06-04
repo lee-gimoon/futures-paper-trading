@@ -12,3 +12,10 @@ export type OrderBookSnapshot = {
   bids: OrderBookLevel[];
   asks: OrderBookLevel[];
 };
+
+// 백엔드 UserResponse(id, email, displayName)와 1:1 대응. 로그인 상태 표시에 쓴다.
+export type User = {
+  id: number;
+  email: string;
+  displayName: string;
+};

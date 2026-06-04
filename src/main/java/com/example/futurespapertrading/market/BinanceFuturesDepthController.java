@@ -105,5 +105,33 @@ public class BinanceFuturesDepthController {
 					return ServerSentEvent.builder(snap).build();
 				});
 	}
+	// stream() 메서드 메커니즘 정리:
+	// - 브라우저가 EventSource로 SSE 연결을 열면 이 stream() 메서드는 연결 1개당 보통 1번 호출된다.
+	// - stream()은 Flux 파이프라인을 만들어 return하고, 메서드 콜스택 자체는 바로 끝난다.
+	// - 하지만 WebFlux가 반환된 Flux를 구독하므로 Flux subscription과 HTTP SSE connection은 열린 채로 살아 있다.
+	// - 여기서 subscription은 WebFlux가 이 Flux를 subscribe해서 만든 "구독 관계"다.
+	// - 이후 Binance snapshot이 들어올 때마다 다시 호출되는 것은 stream() 메서드가 아니라 위의 map 람다다.
+	// - 즉 [STEP10-stream.enter]는 브라우저 연결 1개당 1번, [STEP12-sse.map]은 snapshot emit 때마다 찍힌다.
+	// - 브라우저 탭을 닫거나 EventSource가 끊기면 해당 Flux subscription이 cancel되고 SSE connection도 정리된다.
+
+	// 이 SSE 응답도 Netty/Reactor Netty의 event loop + non-blocking I/O 모델 위에서 처리된다.
+	// - Netty는 socket을 non-blocking 모드로 등록하고, selector/epoll/kqueue로 준비된 socket 이벤트만 처리한다.
+	// - SSE connection은 오래 열려 있지만, event loop 스레드가 연결마다 하나씩 붙어 기다리는 것은 아니다.
+	// - Binance snapshot이 emit되면 WebFlux/Reactor Netty가 브라우저 socket에 non-blocking write를 시도한다.
+	// - 당장 쓸 수 있는 만큼만 쓰고, 더 못 쓰면 기다리지 않고 빠진 뒤 나중에 writable 이벤트에서 이어서 처리한다.
+	// - 그래서 많은 브라우저 SSE connection을 적은 수의 event loop 스레드로 다룰 수 있다.
+	// - 단, 이 흐름 위에서 blocking 작업을 하면 같은 event loop가 맡은 다른 connection 처리도 같이 늦어진다.
+
+	// Tomcat blocking MVC로 SSE를 단순 구현하면:
+	// - SSE 요청 1번은 브라우저가 연결을 유지하는 동안 끝나지 않는 응답이 된다.
+	// - Controller 안에서 while + queue.take() + response.write() 같은 blocking loop를 돌리면 worker thread가 return되지 않는다.
+	// - Binance snapshot이 100ms마다 온다면, 그 100ms 대기 시간에도 worker thread는 queue.take() 등에서 묶여 있다.
+	// - CPU를 계속 쓰는 것은 아니지만, 해당 Tomcat worker thread 자원은 다른 요청을 처리하도록 반환되지 않는다.
+	// - 브라우저 SSE connection이 100개면 이런 blocking worker thread도 100개 묶일 수 있다.
+	
+	// 이와 달리 WebFlux/Reactor Netty는 event loop + non-blocking I/O로 이 요청별 worker thread 대기 문제를 피한다.
+	// - 대기 시간에는 SSE connection과 Flux subscription 상태만 유지되고, event loop 스레드가 연결마다 붙어 있지 않다.
+	// - Binance snapshot이 emit되어 실제로 브라우저에 쓸 데이터가 생긴 순간에만 event loop가 잠깐 write 흐름을 처리한다.
+	// - 즉 연결 수는 많아도 "연결 수만큼 스레드가 기다리는 구조"가 아니라, 준비된 socket 이벤트만 짧게 처리하는 구조다.
 
 }

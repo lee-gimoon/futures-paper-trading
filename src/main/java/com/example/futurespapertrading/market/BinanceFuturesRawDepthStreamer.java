@@ -129,3 +129,31 @@ public class BinanceFuturesRawDepthStreamer {
 // 이 파일의 sessionHandler 람다 핵심 두 줄:
 // ✅ sessionHandler 변수 = 그 WebSocketHandler 람다 객체에 대한 참조를 들고 있다.
 // ✅ 람다 바디 {...} 안의 코드는 session이 매개변수로 들어와야 실행된다.
+//
+// ── 람다의 두 단계 (자바 객체 동작과 동일) ──
+//   ① 람다 표현식 () -> {...} 평가 시점
+//      → 함수형 인터페이스 구현체 "객체"만 생성. 바디 {...} 안 코드는 미실행.
+//   ② 그 객체의 함수형 메서드가 호출되는 시점
+//      → 그제서야 바디 안 코드가 실행됨.
+//
+//   함수형 인터페이스마다 호출 메서드 이름이 다르다:
+//     Runnable          .run()
+//     Supplier<T>       .get()
+//     Function<T,R>     .apply(t)
+//     Consumer<T>       .accept(t)
+//     WebSocketHandler  .handle(session)   ← 이 파일이 쓰는 것
+//
+//   → sessionHandler 람다도 마찬가지. session이 매개변수로 들어와야 = 누군가
+//     sessionHandler.handle(session)을 호출해야 바디 코드가 실행된다는 뜻.
+//     이 파일에서 호출 주체는 webSocketClient — WebSocket 연결 성공 → 세션 생성 →
+//     reactor-netty가 내부에서 sessionHandler.handle(session) 호출 → 그제서야 바디 실행.
+//
+// ※ 람다는 익명 클래스의 짧은 문법일 뿐.
+//   () -> {...} ≡ new WebSocketHandler() { public Mono<Void> handle(WebSocketSession s){...} }
+//   객체 생성 + 메서드 호출의 2단계 구조는 동일하다.
+//
+// ── 결론 ──
+//   "session이 생기면 handle(session)을 호출하라" — 이 동작이 reactor-netty 내부에 미리 박혀 있다.
+//   우리가 하는 일은 그 호출 시점에 실행될 람다 1개를 인자로 넘겨주는 것뿐.
+//   그 다음부턴 라이브러리가 알아서 호출한다.
+//   → 이게 자바의 콜백 / 이벤트 핸들러 패턴의 표준 구조다.

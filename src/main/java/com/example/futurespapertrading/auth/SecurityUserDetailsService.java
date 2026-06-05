@@ -38,6 +38,8 @@ public class SecurityUserDetailsService implements ReactiveUserDetailsService {
     //  - 직접 호출 X — 로그인 시 인증 매니저가 대신 호출한다. (no usage 표시는 정상)
     @Override
     public Mono<UserDetails> findByUsername(String email) {
+        // 이 메서드 = "내 User(DB 모델) → 시큐리티 표준 UserDetails"로 바꿔주는 번역 창구(어댑터).
+        //   프레임워크는 내 User 클래스를 모르므로, 표준 규격(UserDetails)으로 바꿔 건네줘야 일할 수 있다.
         return userRepository.findByEmail(email) // Mono<User>(우리 엔티티) — 0~1개. 없으면 빈 Mono.
                 // .map = 흘러온 User(우리 엔티티)를 스프링 시큐리티가 이해하는 UserDetails로 "변환".
                 //  - 빈 Mono면 map은 실행되지 않고 그대로 빈 Mono → 인증 매니저가 "사용자 없음 = 인증 실패"로 처리.
@@ -46,7 +48,7 @@ public class SecurityUserDetailsService implements ReactiveUserDetailsService {
                 .map(u -> org.springframework.security.core.userdetails.User
                         .withUsername(u.email())    // 인증 주체의 식별자(=우리는 email)
                         .password(u.passwordHash()) // 저장된 BCrypt 해시 그대로. (실제 비교는 인증 매니저가 PasswordEncoder로 수행)
-                        .roles("USER")              // 권한 부여 → 내부적으로 "ROLE_USER"로 저장된다
-                        .build());                  // 설정을 모아 UserDetails 객체 생성
+                        .roles("USER")              // 내 User엔 권한 필드가 없음 → UserDetails는 권한이 '필수'라 기본값 부여 (내부적으로 "ROLE_USER")
+                        .build());                  // 설정을 모아 UserDetails 생성 (계정 상태 enabled/잠김X/만료X는 빌더가 기본값으로 채움)
     }
 }

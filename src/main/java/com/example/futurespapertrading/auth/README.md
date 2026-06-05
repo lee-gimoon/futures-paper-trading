@@ -25,26 +25,122 @@
 
 ---
 
-## 두 개의 핵심 흐름
+## 네 개의 핵심 흐름
+
+> `AuthController`의 엔드포인트 4개를 흐름으로 펼친 것.
+> **①② = 무언가를 처음 만들고/검증하는 복잡한 흐름**(여러 계층이 협력),
+> **③④ = 그 결과(세션·쿠키)를 활용하는 단순한 흐름**.
 
 ### ① 회원가입 (`POST /api/auth/signup`)
 
 ```
-Controller → Service(이메일 중복 검사 → 비밀번호 BCrypt 해싱) → Repository(DB 저장)
+[요청 JSON] {email, password, displayName}
+   │
+   ▼
+@Valid 검증 (SignupRequest: @Email·@NotBlank·@Size)  ── 위반 시 → 400 (컨트롤러 도달 전 차단)
+   │ 통과
+   ▼
+AuthController.signup()
+   │  authService.signup(email, password, displayName) 호출
+   ▼
+AuthService ── userRepository.findByEmail(email) 로 중복 검사
+   ├─ 이미 있으면(중복) → flatMap → IllegalStateException("이미 가입된 이메일입니다.")
+   └─ 없으면(신규)     → switchIfEmpty(defer)
+                         → BCrypt 해싱 → new User(id=null, email, 해시, displayName)
+                         → userRepository.save() (DB INSERT, id 자동 부여)
+   │
+   ▼
+저장된 User → UserResponse(id, email, displayName) 변환  ※ 비밀번호 제외
+   │
+   ▼
+[응답] 201 Created + {id, email, displayName}
 ```
 
-이미 가입된 이메일이면 `AuthService`가 예외를 던지고
-→ `AuthExceptionHandler`가 받아 HTTP 409로 변환합니다.
+- 비밀번호는 **원본을 저장하지 않고** BCrypt 단방향 해시로만 저장합니다.
+- 중복일 때 던진 `IllegalStateException`은 → `AuthExceptionHandler`가 받아
+  **HTTP 409 Conflict + `{"message":"이미 가입된 이메일입니다."}`**로 변환합니다.
+- `defer`를 쓰는 이유: 이메일이 이미 있으면 **무거운 BCrypt 해싱을 아예 안 하도록** 미루기 위함.
 
 ### ② 로그인 (`POST /api/auth/login`)
 
 ```
-Controller → authenticationManager(인증) → SecurityUserDetailsService(유저 조회)
-        → BCrypt로 비밀번호 비교 → 성공 시 SecurityContext를 세션에 저장(=쿠키 발급)
+[요청 JSON] {email, password}  (+ @Valid 검증)
+   │
+   ▼
+AuthController.login()
+   │  new UsernamePasswordAuthenticationToken(email, password)  ← "로그인 시도 토큰" 포장
+   ▼
+authenticationManager.authenticate(token)
+   │   (= UserDetailsRepositoryReactiveAuthenticationManager, SecurityConfig의 @Bean)
+   │
+   ├─ SecurityUserDetailsService.findByUsername(email)  ← 프레임워크가 대신 호출
+   │     └─ userRepository.findByEmail(email) → UserDetails(저장된 BCrypt 해시 포함)
+   │
+   └─ PasswordEncoder(BCrypt)로 [입력 비번] vs [저장 해시] 비교
+   │
+   ├─ 성공 → SecurityContext = new SecurityContextImpl(auth)
+   │         → securityContextRepository.save(exchange, context)  ← WebSession에 저장
+   │         → [응답] 200 OK + Set-Cookie: SESSION=... + {"message":"로그인 성공"}
+   │
+   └─ 실패(AuthenticationException) → onErrorResume
+             → [응답] 401 Unauthorized + {"message":"이메일 또는 비밀번호가 올바르지 않습니다."}
 ```
 
-이후 사용자는 그 쿠키를 들고 다니고, `/api/auth/me` 같은 보호된 경로에
-접근하면 `SecurityConfig`가 "쿠키 있나?"를 검사해 통과/차단합니다.
+- 인증 성공의 결과물은 쿠키입니다. 실제 인증 정보(누가 로그인했나)는 **서버 세션(WebSession)에 보관**되고,
+  브라우저에는 그걸 가리키는 **`SESSION` 쿠키만** 오갑니다.
+- 실패 시 "이메일이 틀렸는지 / 비번이 틀렸는지" 구분해 알려주지 않습니다 — 일부러 두루뭉술하게 응답해
+  공격자에게 힌트를 안 줍니다.
+- `findByUsername`을 **내가 직접 안 부른다**는 점이 핵심 — 프레임워크가 인증 절차 중 알아서 호출합니다(IoC).
+
+### ③ 로그아웃 (`POST /api/auth/logout`)
+
+```
+[요청] (브라우저가 SESSION 쿠키를 들고 옴)
+   │
+   ▼
+AuthController.logout()
+   │  exchange.getSession()      ← 현재 세션을 꺼내고
+   │  → WebSession::invalidate   ← 세션을 무효화(폐기)
+   ▼
+세션 안에 저장돼 있던 SecurityContext(인증 정보)도 함께 사라짐
+   │
+   ▼
+[응답] 200 OK + {"message":"로그아웃 되었습니다."}
+```
+
+- 핵심은 **세션 무효화 한 방**입니다. 인증 정보는 세션 안에 들어 있으므로, 세션을 버리면 인증도 같이 풀립니다.
+- 이후 그 `SESSION` 쿠키를 다시 들고 와도 **가리키던 세션이 없으므로 미인증 상태**가 됩니다 → 보호된 경로 접근 시 401.
+- 참고: `SecurityConfig`에서 시큐리티 기본 로그아웃 기능은 꺼두고(`.logout(...::disable)`),
+  이렇게 **직접 만든 JSON 엔드포인트**로 처리합니다.
+
+### ④ 내 정보 조회 (`GET /api/auth/me`) — 보호된 경로
+
+```
+[요청] (브라우저가 SESSION 쿠키를 들고 옴)
+   │
+   ▼
+SecurityConfig 필터 체인 (컨트롤러 도달 '전'에 검사)
+   │  anyExchange().authenticated() → "이 경로는 인증 필수"
+   │  쿠키 → WebSession에서 SecurityContext 복원 시도
+   ├─ 쿠키 없음/만료/무효 → 401 (HttpStatusServerEntryPoint)  ── 컨트롤러까지 못 감
+   └─ 복원 성공 → 통과
+   │
+   ▼
+AuthController.me()
+   │  ReactiveSecurityContextHolder.getContext()
+   │  → ctx.getAuthentication().getName()   ← 인증정보에서 email 꺼냄
+   │  → userRepository.findByEmail(email)   ← 그 email로 DB 조회
+   ▼
+UserResponse(id, email, displayName) 변환  ※ 비밀번호 제외
+   │
+   ▼
+[응답] 200 OK + {id, email, displayName}
+```
+
+- 이 흐름은 **두 단계**로 나뉩니다: ⑴ 컨트롤러에 닿기 전 **필터 체인이 쿠키를 검사**(통과/차단),
+  ⑵ 통과한 뒤에야 컨트롤러가 실제 내 정보를 조회.
+- 그래서 `me()` 안에는 "로그인했나?" 체크 코드가 **없습니다** — 여기 도달했다는 건 이미 인증이 끝났다는 뜻.
+- ②에서 발급한 쿠키를 **재사용**해, 매 요청마다 로그인 없이 신원을 증명하는 단계입니다.
 
 ---
 

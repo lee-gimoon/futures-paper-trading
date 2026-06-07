@@ -1,17 +1,21 @@
 8단계 안에서 다시 더 잘게 쪼갠 구현 순서입니다. 각 단계는 **독립적으로 검증 가능**하고, 앞 검증의 정정 사항(`sample()` 제거, 빈 카운터 가드, 중복 체결 방지)을 반영했습니다.
 
-## A. 영속성 토대 (동작 없음, 그릇만)
+## A. 영속성 토대 (동작 없음, 그릇만) ✅ 완료
 - **A-1** [schema.sql](src/main/resources/schema.sql)에 `paper_orders` + `paper_fills` 두 테이블 추가
 - **A-2** enum 3개: `OrderSide`(BUY/SELL), `OrderType`(MARKET/LIMIT), `OrderStatus`(NEW/OPEN/FILLED/CANCELED/REJECTED)
 - **A-3** `PaperOrder`, `PaperFill` record 엔티티 ([User](src/main/java/com/example/futurespapertrading/auth/User.java) 미러)
 - **A-4** `PaperOrderRepository`, `PaperFillRepository` (`findByUserId`, `findByStatus`)
 - **확인**: 앱이 뜨고 psql `\d`로 두 테이블 생성 확인. 끝.
 
-## B. 순수 체결 엔진 + 단위 테스트 ★ (로드맵이 "주문 단계부터 테스트"라 한 지점)
+## B. 순수 체결 엔진 + 단위 테스트 ★ (로드맵이 "주문 단계부터 테스트"라 한 지점) ✅ 완료
 - **B-1** bestBid/bestAsk 헬퍼 (백엔드 BigDecimal — 프론트 [quote.ts](frontend/src/quote.ts) 미러, 정렬 가정 안 함)
+      → [OrderBookQuotes](src/main/java/com/example/futurespapertrading/market/OrderBookQuotes.java) (market 폴더)
 - **B-2** `PaperTradingEngine.tryFill(order, snapshot)` 순수 함수 → fill 목록 또는 empty
+      → [PaperTradingEngine](src/main/java/com/example/futurespapertrading/paper/PaperTradingEngine.java). 호가를 가격순으로 긁어 레벨마다 fill 1건(1:N)
 - **B-3** 단위 테스트: 시장가 BUY/SELL 체결가, 지정가 크로싱/미크로싱, **딱 닿는 경계**(`≤/≥`)
-- **확인**: `./gradlew test` 통과. DB·웹 없이 로직만. (기준 2·3·4·5의 *로직*이 여기서 굳음)
+      → [PaperTradingEngineTest](src/test/java/com/example/futurespapertrading/paper/PaperTradingEngineTest.java)(10) + [OrderBookQuotesTest](src/test/java/com/example/futurespapertrading/market/OrderBookQuotesTest.java)(3)
+- **확인**: ✅ `./gradlew test --tests "*PaperTradingEngineTest" --tests "*OrderBookQuotesTest"` 통과.
+      DB·웹 없이 로직만 (`@SpringBootTest` 안 거침). (기준 2·3·4·5의 *로직*이 여기서 굳음)
 
 ## C. 시장가 주문 — POST (즉시 체결만)
 - **C-1** dto `CreateOrderRequest` / `OrderResponse`

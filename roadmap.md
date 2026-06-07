@@ -450,6 +450,10 @@ last price가 아니라 현재 호가창으로 paper trading 주문을 체결한
 시장가 매도:
   bid 쪽을 best bid부터 아래로 먹는다.
 
+주문 한 건이 여러 호가 레벨에 걸쳐 체결되면 체결(fill)이 레벨마다 한 건씩 생긴다.
+  → 주문 : 체결 = 1 : N (paper_orders 1건 ↔ paper_fills N건).
+  (단, 완료 기준의 0.01 같은 작은 수량은 best 한 줄에서 다 차서 보통 fill 1건.)
+
 지정가 매수:
   limit price >= best ask 이면 즉시 체결.
   아니면 대기 주문으로 둔다.

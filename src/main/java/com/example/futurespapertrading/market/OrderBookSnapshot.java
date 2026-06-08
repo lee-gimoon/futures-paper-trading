@@ -15,8 +15,8 @@ import java.util.List;
 public record OrderBookSnapshot(
 		String symbol,
 		long eventTime,
-		List<OrderBookLevel> bids,
-		List<OrderBookLevel> asks
+		List<OrderBookLevel> bids,   // 매수호가 목록(사겠다). 예: [ Level(100.5, 2), Level(100.0, 5), Level(99.5, 1) ]  ← 보통 높은→낮은 가격
+		List<OrderBookLevel> asks    // 매도호가 목록(팔겠다). 예: [ Level(101.0, 3), Level(101.5, 4), Level(102.0, 1) ] ← 보통 낮은→높은 가격
 ) {
 }
 

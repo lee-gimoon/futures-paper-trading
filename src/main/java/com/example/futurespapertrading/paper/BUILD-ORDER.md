@@ -17,11 +17,13 @@
 - **확인**: ✅ `./gradlew test --tests "*PaperTradingEngineTest" --tests "*OrderBookQuotesTest"` 통과.
       DB·웹 없이 로직만 (`@SpringBootTest` 안 거침). (기준 2·3·4·5의 *로직*이 여기서 굳음)
 
-## C. 시장가 주문 — POST (즉시 체결만)
-- **C-1** dto `CreateOrderRequest` / `OrderResponse`
-- **C-2** `PaperOrderController` `POST /api/paper/orders` — 현재 user_id 확인 → `latest()` → `tryFill` → 주문+fill 저장 → 응답. **MARKET만**
-- **C-3** `@Valid`(quantity>0), 호가 없을 때 503
+## C. 시장가 주문 — POST (즉시 체결만) ✅ 구현 완료 (curl 검증은 앱 실행 후)
+- **C-1** ✅ dto `CreateOrderRequest` / `OrderResponse`
+- **C-2** ✅ `PaperOrderController` `POST /api/paper/orders` — 현재 user_id 확인 → `latest()` → `tryFill` → 주문+fill 저장 → 응답. **MARKET만**
+      (시장가 부분체결도 FILLED, 0건이면 REJECTED. fill의 order_id는 주문 저장 후 받은 id로 채워 저장)
+- **C-3** ✅ `@Valid`(quantity>0, side/type 형식), 호가 없을 때 503. 지정가(LIMIT)는 400으로 거부(E단계까지).
 - **확인(curl)**: 로그인 쿠키로 시장가 BUY 0.01 → FILLED + best ask 가격. **비로그인 → 401**. (기준 1·2·3 달성)
+      → ⏳ 앱·DB·호가 스트림을 띄운 뒤 수동 확인 필요 (지금은 컴파일 통과까지 확인됨).
 
 ## D. 내 주문 목록 — GET
 - **D-1** `GET /api/paper/orders` → `findByUserId(현재 유저)`만

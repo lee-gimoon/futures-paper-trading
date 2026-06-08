@@ -59,6 +59,13 @@ public class PaperOrderController {
     //   반환 Mono<OrderResponse> = "나중에 OrderResponse 1개를 흘려보낼 약속". 이 메서드는 파이프라인만 짜서 return하고,
     //     실제 실행은 WebFlux가 이 Mono를 구독(subscribe)할 때 일어난다. (스트림의 '게으름'과 같은 원리)
     @PostMapping
+    // @ResponseStatus(HttpStatus.CREATED) = 이 메서드가 '정상 완료'되면 HTTP 응답 상태코드를 201로 못박는다.
+    //   · @ResponseStatus  = "성공 시 돌려줄 상태코드"를 지정하는 애너테이션. 안 붙이면 본문 있는 성공은 기본 200 OK가 된다.
+    //   · HttpStatus       = 200·201·400·401·503 같은 HTTP 상태코드를 '이름'으로 모아둔 enum (숫자 대신 의미로 쓰게).
+    //   · HttpStatus.CREATED = 그중 201. "POST 요청으로 새 자원(여기선 주문 1건)이 생성됐다"를 뜻하는 관례적 코드.
+    //       → 그냥 200(OK) 대신 201(Created)을 쓰는 이유: "조회/수정"이 아니라 "새로 만들었다"를 상태코드만으로 알리는 REST 관례.
+    //   ※ 주의: 이 201은 끝까지 성공했을 때만 적용된다. 도중에 400(LIMIT 거부)·503(호가 없음)·401(비로그인) 등
+    //          에러가 나면 그쪽 상태코드가 우선하고, 이 201은 무시된다. (성공 경로의 '기본 성공 코드'를 정하는 것일 뿐)
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<OrderResponse> create(@Valid @RequestBody CreateOrderRequest req) {
         // C단계는 시장가만. 지정가(LIMIT)는 미체결분 OPEN 등록(E단계)이 아직 없어 받지 않는다.
@@ -73,12 +80,22 @@ public class PaperOrderController {
         return currentUserId().flatMap(userId -> placeMarketOrder(req, userId));
     }
 
-    // 현재 로그인 유저의 user_id. (SecurityContext의 이름=email → DB에서 유저 조회 → id)
-    //   AuthController.me()와 같은 패턴. 인증 필수 경로라 여기 닿으면 항상 로그인 상태다.
+    // 현재 로그인 유저의 user_id 꺼내기.
+    //   레시피: SecurityContext(인증정보) → 그 이름(=로그인 식별자인 email) → DB 조회 → id.
+    //   AuthController.me()가 쓰는 바로 그 레시피다 (me()는 끝에서 UserResponse를, 여기선 id만 뽑는 차이뿐).
+    //   /api/paper/orders는 인증 필수 경로라, 비로그인 요청은 Security 필터가 '컨트롤러에 닿기 전에' 401로 끊는다.
+    //   → 그래서 이 컨트롤러 코드(create()/currentUserId())가 실행된다는 것 자체가 로그인 통과를 뜻한다.
+    //     ('여기 닿으면' = 요청이 필터를 통과해 이 컨트롤러 메서드까지 도달했다면. 그래서 아래 인증정보 추출에 null 걱정이 없다.)
     //   map vs flatMap 구분: 변환 결과가 '그냥 값'이면 map, '또 다른 Mono'면 flatMap을 쓴다.
     //     (flatMap을 안 쓰면 Mono 안에 Mono가 겹쳐 Mono<Mono<User>>처럼 돼버린다 → flatMap이 한 겹으로 펴줌)
     private Mono<Long> currentUserId() {
-        return ReactiveSecurityContextHolder.getContext()
+        // 보안 정보는 3겹으로 포개져 있고, 이 한 줄이 그 겹을 차례로 깐다 (Holder → Context → Authentication):
+        //   ReactiveSecurityContextHolder = '보관소' — 인증정보를 어떻게/어디서 꺼내느냐(저장 방식)를 담당.
+        //       (Servlet은 ThreadLocal에 두지만, 리액티브는 요청이 스레드를 넘나들어 Reactor Context에서 꺼낸다)
+        //   SecurityContext               = '표준 그릇' — 보안 상태를 담는 규격. 저장 방식이 바뀌어도 이 규격은 고정.
+        //   Authentication                = '신원증' — 실제 신원 데이터(이름=email·권한 등). getName()으로 email을 읽는다.
+        //   ※ .getContext()는 값이 아니라 Mono<SecurityContext>를 준다 → 그래서 아래 .map/.flatMap으로 Mono 안에서 꺼내 이어붙인다.
+        return ReactiveSecurityContextHolder.getContext()      // → Mono<SecurityContext>
                 .map(ctx -> ctx.getAuthentication().getName()) // 식별자(email) — 결과가 String(값)이라 map
                 .flatMap(userRepository::findByEmail)          // email → Mono<User> — 결과가 Mono라 flatMap
                 .map(User::id);                                // User → user_id(Long) — 결과가 값이라 map

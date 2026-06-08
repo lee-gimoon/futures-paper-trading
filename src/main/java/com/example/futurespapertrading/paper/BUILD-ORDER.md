@@ -17,13 +17,16 @@
 - **확인**: ✅ `./gradlew test --tests "*PaperTradingEngineTest" --tests "*OrderBookQuotesTest"` 통과.
       DB·웹 없이 로직만 (`@SpringBootTest` 안 거침). (기준 2·3·4·5의 *로직*이 여기서 굳음)
 
-## C. 시장가 주문 — POST (즉시 체결만) ✅ 구현 완료 (curl 검증은 앱 실행 후)
+## C. 시장가 주문 — POST (즉시 체결만) ✅ 구현 + curl 검증 완료
 - **C-1** ✅ dto `CreateOrderRequest` / `OrderResponse`
 - **C-2** ✅ `PaperOrderController` `POST /api/paper/orders` — 현재 user_id 확인 → `latest()` → `tryFill` → 주문+fill 저장 → 응답. **MARKET만**
       (시장가 부분체결도 FILLED, 0건이면 REJECTED. fill의 order_id는 주문 저장 후 받은 id로 채워 저장)
 - **C-3** ✅ `@Valid`(quantity>0, side/type 형식), 호가 없을 때 503. 지정가(LIMIT)는 400으로 거부(E단계까지).
 - **확인(curl)**: 로그인 쿠키로 시장가 BUY 0.01 → FILLED + best ask 가격. **비로그인 → 401**. (기준 1·2·3 달성)
-      → ⏳ 앱·DB·호가 스트림을 띄운 뒤 수동 확인 필요 (지금은 컴파일 통과까지 확인됨).
+      → ✅ 검증 완료(2026-06-08): Postgres18 + Binance depth 스트림 + 앱을 띄워 curl로 확인.
+        비로그인 401 / BUY→FILLED@best ask / SELL→FILLED@best bid(1틱 차) / LIMIT·검증위반 → 400 /
+        DB에 paper_orders(FILLED, user_id 격리) + paper_fills(order_id 연결) 저장 확인.
+        (호가 없을 때 503만 스트림이 살아있어 런타임 미재현 — 코드 경로는 확인.)
 
 ## D. 내 주문 목록 — GET
 - **D-1** `GET /api/paper/orders` → `findByUserId(현재 유저)`만

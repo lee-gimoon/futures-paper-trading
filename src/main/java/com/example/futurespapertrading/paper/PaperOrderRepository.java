@@ -10,10 +10,11 @@ import reactor.core.publisher.Flux;                                         // 0
 public interface PaperOrderRepository extends ReactiveCrudRepository<PaperOrder, Long> {
 
     // 메서드 이름이 곧 쿼리(Query Derivation):
-    //   findByUserId → SELECT * FROM paper_orders WHERE user_id = ?
+    //   findByUserIdOrderByIdDesc → SELECT * FROM paper_orders WHERE user_id = ? ORDER BY id DESC
+    //   · OrderByIdDesc = id 내림차순. id는 BIGSERIAL이라 클수록 최신 → 최신 주문이 위로 온다.
     // "내 주문만 보기"(GET /api/paper/orders, D단계)에서 쓴다.
-    // Flux<PaperOrder> = 일치하는 주문 0개 이상을 흘려보냄.
-    Flux<PaperOrder> findByUserId(Long userId);
+    // Flux<PaperOrder> = 일치하는 주문 0개 이상을 최신순으로 흘려보냄.
+    Flux<PaperOrder> findByUserIdOrderByIdDesc(Long userId);
 
     // findByStatus → SELECT * FROM paper_orders WHERE status = ?
     // 대기 주문 재평가(G단계 matcher)가 status="OPEN"인 주문만 꺼내올 때 쓴다.
@@ -27,13 +28,14 @@ public interface PaperOrderRepository extends ReactiveCrudRepository<PaperOrder,
 //   쿼리 조각              | 어디서 왔나
 //   ─────────────────────|──────────────────────────────────────────────────
 //   FROM paper_orders     | 제네릭 <PaperOrder> → PaperOrder의 @Table("paper_orders")
-//   WHERE user_id         | 메서드 이름 findByUserId 파싱 → userId 속성 → @Column("user_id")
+//   WHERE user_id         | 메서드 이름 findByUserIdOrderByIdDesc 파싱 → userId 속성 → @Column("user_id")
+//   ORDER BY id DESC      | 같은 메서드 이름의 OrderByIdDesc 파싱 → id 속성 내림차순
 //   SELECT * + 객체 복원   | 제네릭 <PaperOrder>의 필드들 (행 → new PaperOrder(...) 매핑)
 //   이 전부를 실행         | 자바(javac)가 아니라 Spring Data — 부팅 때 구현체(프록시)를
 //                         |   자동 생성하고, 어노테이션·메서드 이름을 리플렉션으로 읽어 쿼리 생성
 //
 //   즉: 제네릭 타입이 "어느 테이블/어떤 객체"를 정하고(FROM·SELECT),
-//       메서드 이름이 "무엇으로 거를지"를 정한다(WHERE). 본문은 한 줄도 안 짜도 된다.
+//       메서드 이름이 "무엇으로 거를지·정렬할지"를 정한다(WHERE·ORDER BY). 본문은 한 줄도 안 짜도 된다.
 //
 // ── "객체 복원"이란? (DB는 자바 객체를 모르고 행=값들만 안다) ─────────────────────
 //   저장(save) : PaperOrder 객체  ──분해──▶  행(값들)        → DB에 저장

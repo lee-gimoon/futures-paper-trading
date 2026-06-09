@@ -2,6 +2,7 @@ package com.example.futurespapertrading.paper.dto; // dto = 계층 간 데이터
 
 import java.math.BigDecimal;
 
+import jakarta.validation.constraints.AssertTrue; // boolean 메서드가 true여야 통과 — 교차(여러 필드) 검증에 쓴다
 import jakarta.validation.constraints.NotBlank; // null·빈문자열·공백만 금지
 import jakarta.validation.constraints.NotNull;  // null 금지(숫자라 NotBlank 대신 NotNull)
 import jakarta.validation.constraints.Pattern;  // 문자열이 정해진 형식(정규식)과 맞는지 검사
@@ -13,8 +14,7 @@ import jakarta.validation.constraints.Positive; // 0과 음수 금지 (양수만
 //  - record·DTO·@Valid 검증 흐름의 자세한 설명은 auth/dto/SignupRequest.java 참고. (여기선 주문 고유 규칙만)
 //  - 검증 규칙을 어기면 컨트롤러 로직에 닿기 전에 스프링이 자동으로 HTTP 400으로 막는다.
 //
-// C단계는 시장가(MARKET)만 처리한다. type 필드는 MARKET/LIMIT 형식을 받아두지만,
-// 지정가(LIMIT) 분기(즉시 크로싱 + OPEN 등록)는 E단계에서 컨트롤러에 추가된다.
+// type은 MARKET/LIMIT 둘 다 받는다. 시장가는 즉시 체결, 지정가는 닿으면 FILLED·아니면 OPEN 등록(컨트롤러가 분기, E단계).
 public record CreateOrderRequest(
         // 종목. 우선 "BTCUSDT" 하나. 빈 값 금지.
         @NotBlank String symbol,
@@ -30,9 +30,24 @@ public record CreateOrderRequest(
         // 주문 수량. null 금지 + 양수만(@Positive: 0·음수 거부). 가격/수량은 double 아닌 BigDecimal.
         @NotNull @Positive BigDecimal quantity,
 
-        // 지정가 한도. 시장가면 null(안 씀). 지정가일 때 필수 검증은 E단계에서 붙인다.
+        // 지정가 한도. 시장가면 null(안 씀). 지정가(LIMIT)일 때만 필수+양수 — 아래 @AssertTrue(isLimitPriceValid)가 검사.
         BigDecimal limitPrice
 ) {
+    // 이 메서드 = 'type이 LIMIT면 limitPrice가 필수+양수'를 검사하는 검증 메서드. 위반이면 @Valid 게이트에서 400으로 막는다.
+    //   왜 (필드 애너테이션 말고) 메서드인가: 시장가·지정가가 '같은 DTO'를 써서, limitPrice에 붙인 애너테이션은 시장가 요청에도 적용된다.
+    //     근데 애너테이션은 옆 필드 type을 못 봐 "지정가일 때만"으로 켜고 끌 수 없다 — 그래서 한-필드 애너테이션은 둘 다 실패한다:
+    //       · @NotNull limitPrice → limitPrice가 null인 '시장가'까지 거부(시장가는 null이 정상인데). ✗
+    //       · @Positive limitPrice → null을 '통과'로 봐서(null 막는 건 @NotNull뿐) '지정가인데 limitPrice 누락'을 못 잡음. ✗
+    //     → 그래서 type·limitPrice를 함께 읽는 메서드 + @AssertTrue("true여야 통과")로 짠다. (아래 if가 '시장가면 검사 건너뛰기' 역할)
+    //   트리거 = create()의 @Valid. 본문 바인딩 직후 검증기(Hibernate Validator)가 돌고, fail-fast가 아니라 '모든 제약'을 다 평가한다
+    //     → 이 메서드는 type·다른 필드와 무관하게 '무조건 1회' 호출된다. (type==MARKET이어도 호출은 되고, 안의 if가 true를 돌려 통과시킬 뿐 — if는 호출 여부가 아니라 반환값만 정함)
+    //     단, '검증 단계에 도달했을 때'만이다 — 401(비로그인)·본문 파싱 실패면 그 전에 끊겨 안 불린다. (이 메서드가 false면 → 컨트롤러 전에 400)
+    //   ※ 우리가 직접 호출 안 함 → IDE '사용처 없음'은 정상(프레임워크가 부르는 콜백, SecurityUserDetailsService.findByUsername처럼). 이름이 isXxx여야 검증 대상으로 인식.
+    @AssertTrue(message = "지정가(LIMIT)는 limitPrice가 양수여야 합니다")
+    private boolean isLimitPriceValid() {
+        if (!"LIMIT".equals(type)) return true;                 // 시장가면 limitPrice를 안 쓰므로 통과(null이어도 OK)
+        return limitPrice != null && limitPrice.signum() > 0;   // 지정가면 반드시 있고 양수여야 (signum>0 = 양수)
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

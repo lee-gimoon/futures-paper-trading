@@ -56,10 +56,11 @@ PaperFill  (체결 N건)
 | [`OrderStatus`](src/main/java/com/example/futurespapertrading/paper/OrderStatus.java) | enum | 주문 생애주기 — `NEW`/`OPEN`/`FILLED`/`CANCELED`/`REJECTED` |
 | [`PaperOrder`](src/main/java/com/example/futurespapertrading/paper/PaperOrder.java) | 엔티티(record) | `paper_orders` 한 줄 ↔ "주문 한 건"(의도) |
 | [`PaperFill`](src/main/java/com/example/futurespapertrading/paper/PaperFill.java) | 엔티티(record) | `paper_fills` 한 줄 ↔ "체결 한 건"(실제 거래) |
-| [`PaperOrderRepository`](src/main/java/com/example/futurespapertrading/paper/PaperOrderRepository.java) | DB 접근 | `paper_orders` 조회/저장 — `findByUserId`, `findByStatus` |
+| [`PaperOrderRepository`](src/main/java/com/example/futurespapertrading/paper/PaperOrderRepository.java) | DB 접근 | `paper_orders` 조회/저장 — `findByUserIdOrderByIdDesc`, `findByStatus` |
 | [`PaperFillRepository`](src/main/java/com/example/futurespapertrading/paper/PaperFillRepository.java) | DB 접근 | `paper_fills` 조회/저장 — `findByOrderId` |
 | [`PaperTradingEngine`](src/main/java/com/example/futurespapertrading/paper/PaperTradingEngine.java) | 체결 엔진(순수 함수) | `tryFill(order, snapshot)` → 호가를 가격순으로 긁어 `PaperFill` 목록(1:N) 생성 |
-| [`PaperOrderController`](src/main/java/com/example/futurespapertrading/paper/PaperOrderController.java) | HTTP 입구(컨트롤러) | `POST /api/paper/orders` — 시장가 주문 접수→체결→저장→요약 응답 (C단계) |
+| [`PaperOrderService`](src/main/java/com/example/futurespapertrading/paper/PaperOrderService.java) | 서비스(비즈니스 로직) | `placeOrder(req, userId)` — 체결 평가→상태 판정(FILLED/OPEN/REJECTED)→주문·fill 저장→요약. `listOrders(userId)` — 내 주문 목록 조회→요약. 컨트롤러가 위임 (F 취소·G matcher가 재사용 예정) |
+| [`PaperOrderController`](src/main/java/com/example/futurespapertrading/paper/PaperOrderController.java) | HTTP 입구(컨트롤러) | `/api/paper/orders` — `POST`(시장가·지정가 주문, C·E단계) / `GET`(내 주문 목록, 최신순, D단계). 주문 생성·목록 조회는 `PaperOrderService`에 위임 |
 | [`dto/CreateOrderRequest`](src/main/java/com/example/futurespapertrading/paper/dto/CreateOrderRequest.java) | DTO(요청) | 주문 생성 요청 본문 + 검증(`quantity>0`, `side`/`type` 형식) |
 | [`dto/OrderResponse`](src/main/java/com/example/futurespapertrading/paper/dto/OrderResponse.java) | DTO(응답) | 주문 결과 요약(상태·체결수량·`avgPrice`). 개별 fill 목록은 미포함 |
 | [`BUILD-ORDER.md`](src/main/java/com/example/futurespapertrading/paper/BUILD-ORDER.md) | 문서 | 8단계 내부 구현 순서(A~H)와 단계별 검증 방법 |
@@ -91,14 +92,14 @@ PaperFill  (체결 N건)
 
 [`UserRepository`](src/main/java/com/example/futurespapertrading/auth/UserRepository.java)와 같은 방식 —
 **인터페이스만 선언**하면 Spring Data가 부팅 시 구현체를 자동 생성합니다.
-메서드 이름이 곧 쿼리(`findByUserId` → `WHERE user_id = ?`)이고,
+메서드 이름이 곧 쿼리(`findByStatus` → `WHERE status = ?`)이고,
 결과가 여럿일 수 있어 반환은 전부 **`Flux`**(0개 이상)입니다.
 
 ---
 
-## 현재 상태 — C단계(시장가 주문 API)까지 완료
+## 현재 상태 — E단계(지정가 주문 POST)까지 완료
 
-**그릇(A) + 체결 로직(B) + 시장가 주문 입구(C)**까지 됐습니다. 이제 밖에서 시장가 주문을 넣어 체결·저장할 수 있습니다.
+**그릇(A) + 체결 로직(B) + 시장가 POST(C) + 내 주문 목록 GET(D) + 지정가 POST(E)**까지 됐습니다. 이제 시장가·지정가 주문을 넣어 체결·저장하고(지정가는 안 닿으면 OPEN 대기), 내 주문을 최신순으로 조회할 수 있습니다.
 
 - **A단계(영속성 토대)** ✅ — enum·엔티티·리포지토리(주문/체결을 담고 꺼낼 통로)
 - **B단계(순수 체결 엔진)** ✅ — `PaperTradingEngine.tryFill` + `OrderBookQuotes`, 단위 테스트 통과
@@ -106,13 +107,15 @@ PaperFill  (체결 N건)
 - **C단계(시장가 주문 POST)** ✅ — `PaperOrderController` `POST /api/paper/orders`
   (현재 유저 확인 → 최신 호가[없으면 503] → `tryFill` → 상태 판정[FILLED/REJECTED] → 주문+fill 저장 → 요약 응답)
   · 시장가만 지원(지정가는 E단계). 부분체결도 FILLED. 비로그인은 401(SecurityConfig가 자동 차단).
+- **D단계(내 주문 목록 GET)** ✅ — `PaperOrderController` `GET /api/paper/orders`
+  (컨트롤러는 현재 유저 id만 확인하고 `PaperOrderService.listOrders`에 위임. 서비스가 현재 유저의 주문만 `findByUserIdOrderByIdDesc`로 최신순 조회 → user_id 격리. 가벼운 목록이라 avgPrice는 생략[null] — fill 미조회)
+- **E단계(지정가 주문 POST)** ✅ — `POST /api/paper/orders`에 LIMIT 분기 (`placeOrder`로 일반화)
+  (지정가는 **완전 체결이면 FILLED·부분/미체결이면 OPEN**[잔량은 limit 가격에 대기]. limitPrice 필수·양수는 `CreateOrderRequest`의 `@AssertTrue`가 @Valid 게이트에서 검증 → 위반 시 400)
 
 앞으로 추가될 파일/작업(예정):
 
 | 추가 예정 | 계층 | 단계 |
 |---|---|---|
-| `PaperOrderController`에 `GET`(내 주문 목록) 추가 | HTTP 입구 | D |
-| `PaperOrderController`에 `LIMIT` 분기(즉시 크로싱 + OPEN 등록) 추가 | HTTP 입구 | E |
 | `PaperOrderController`에 `DELETE`(주문 취소) 추가 | HTTP 입구 | F |
 | `PaperExceptionHandler` | 예외 → HTTP 상태코드 변환 | F |
 | `PendingOrderMatcher` | 대기 지정가 자동 체결(백그라운드) | G |

@@ -37,7 +37,8 @@ public class PaperOrderController {
     }
 
     // POST /api/paper/orders — 주문 생성. 성공 시 201 Created + OrderResponse(JSON).
-    //   @Valid = CreateOrderRequest의 검증 규칙 위반 시 스프링이 자동 400 (여기 도달 전 차단).
+    //   · 비로그인은 SecurityConfig가 컨트롤러 닿기 전 401로 먼저 차단 → @Valid보다 바깥 관문이다. (순서: 401 → 400 → 메서드 본문)
+    //   · @Valid = CreateOrderRequest의 검증 규칙 위반 시 스프링이 자동 400 (메서드 본문 실행 전 차단).
     //   반환 Mono<OrderResponse> = "나중에 OrderResponse 1개를 흘려보낼 약속". 이 메서드는 파이프라인만 짜서 return하고,
     //     실제 실행은 WebFlux가 이 Mono를 구독(subscribe)할 때 일어난다. (스트림의 '게으름'과 같은 원리)
     @PostMapping

@@ -28,7 +28,7 @@
         DB에 paper_orders(FILLED, user_id 격리) + paper_fills(order_id 연결) 저장 확인.
         (호가 없을 때 503만 스트림이 살아있어 런타임 미재현 — 코드 경로는 확인.)
 
-## D. 내 주문 목록 — GET ✅ 구현 완료 (curl 검증 대기)
+## D. 내 주문 목록 — GET ✅ 구현 + curl 검증 완료
 - **D-1** ✅ `GET /api/paper/orders` → `findByUserIdOrderByIdDesc(현재 유저)` (최신순). 가벼운 목록이라 avgPrice는 생략(null) — fill 조회 없이 주문 행만 반환.
 - **변경 파일**:
   - [`PaperOrderController`](src/main/java/com/example/futurespapertrading/paper/PaperOrderController.java) — `list()` 메서드(`@GetMapping`) 신규 추가. import 2개(`GetMapping`·`Flux`) 추가. 클래스 헤더 주석에 GET 엔드포인트 명시(POST/GET 2개로).
@@ -36,8 +36,12 @@
   - [`README.md`](src/main/java/com/example/futurespapertrading/paper/README.md) — 리포지토리 메서드명·컨트롤러 엔드포인트 표를 위 변경에 맞춰 동기화.
   - 이 문서(`BUILD-ORDER.md`) — A-4의 메서드명 표기, D 항목 상태(✅) 갱신.
 - **확인(curl)**: 내 주문만 보임. (기준 6 절반 — user_id 격리 확인)
+      → ✅ 검증 완료(2026-06-09): Postgres18 + depth 스트림 + 앱을 띄워 curl로 확인.
+        userA(id=7) 5건 / userB(id=8) 2건을 넣고 GET → **각자 자기 주문만** 최신순(id DESC)으로 반환
+        (A=[7,6,5,4,3], B=[9,8] — 서로의 주문 안 보임 = user_id 격리). 비로그인·엉터리 쿠키 → 401.
+        목록은 설계대로 avgPrice=null(fill 미조회), filledQuantity는 상태대로(FILLED=수량, OPEN=0).
 
-## E. 지정가 주문 — POST (즉시 크로싱 + OPEN 등록) ✅ 구현 완료 (curl 검증 대기)
+## E. 지정가 주문 — POST (즉시 크로싱 + OPEN 등록) ✅ 구현 + curl 검증 완료
 - **E-1** ✅ POST에 LIMIT 분기 (`placeMarketOrder`→`placeOrder`로 일반화). 지정가: **완전 체결이면 FILLED, 부분·미체결이면 OPEN**(잔량은 limit 가격에 걸려 대기 → G단계 matcher가 채움). 시장가: 1건이라도 체결 FILLED·0건 REJECTED(잔량 드롭). 호가 없을 때는 지정가 OPEN(실거래소처럼)·시장가 503.
 - **E-2** ✅ LIMIT일 때 `limitPrice` 필수+양수 검증 — `CreateOrderRequest`에 `@AssertTrue`(isLimitPriceValid) 교차검증. @Valid 게이트에서 컨트롤러 전에 자동 400.
 - **변경 파일**:
@@ -45,6 +49,11 @@
   - [`dto/CreateOrderRequest`](src/main/java/com/example/futurespapertrading/paper/dto/CreateOrderRequest.java) — `@AssertTrue isLimitPriceValid()` 교차검증 추가(LIMIT면 limitPrice 필수·양수). import `AssertTrue`.
   - [`README.md`](src/main/java/com/example/futurespapertrading/paper/README.md) — 현재 상태·엔드포인트 표 동기화.
 - **확인(curl)**: 지정가 BUY를 bestAsk **아래** → OPEN, **위** → 즉시 FILLED. limitPrice 없는/0·음수 LIMIT → 400. (기준 4·5의 OPEN 부분)
+      → ✅ 검증 완료(2026-06-09, bestAsk≈62304): BUY @31152(아래)→OPEN / BUY @93456(위)→즉시 FILLED.
+        SELL @93456(위)→OPEN / SELL @31152(아래)→즉시 FILLED. **크로싱 체결가는 limit가 아니라 호가** —
+        BUY @93456은 limit가 아닌 ask 62304.9에 체결(paper_fills.price로 확인). limitPrice 없음/0/−100 → 400(주문 미생성).
+        DB 확인: paper_orders 7건(FILLED 4·OPEN 3, MARKET은 limit_price=NULL), 400요청은 행 0개(max id=9 그대로).
+        paper_fills 4건이 FILLED 주문(3·5·7·8)에만 order_id로 연결, OPEN(4·6·9)은 fill 0건, orphan 0.
 
 ## (리팩터) 서비스 계층 추출 ✅ 완료 (동작 불변, E와 F 사이)
 - **왜**: E까지 컨트롤러가 직접 들고 있던 체결·저장 로직을, F의 취소·G의 matcher가 재사용할 수 있게 서비스로 분리. (컨트롤러 = HTTP만, 비즈니스 = 서비스)

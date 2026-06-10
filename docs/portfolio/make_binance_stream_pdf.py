@@ -175,8 +175,8 @@ class ArchDiagram(Flowable):
 
         # 5) 엔드포인트
         self._box(50, 334, 195, 36, AR_BG, AR,
-                  "GET …/depth/latest",
-                  "단발 조회 · 비었으면 404 (디버깅용)", mono_sub=False)
+                  "GET …/depth/latest · 주문 API",
+                  "단발 조회(404) · 모의 주문 체결 기준", mono_sub=False)
         self._box(250, 334, 195, 36, SINK_BG, SINK,
                   "GET …/depth/stream  (SSE)",
                   "sink.asFlux() → ServerSentEvent")
@@ -293,7 +293,8 @@ flow_steps = [
     ("이중 발행", "Store가 AtomicReference 교체(조회용)와 sink.tryEmitNext(push용)를 동시에 수행한다."),
     ("SSE push", "/depth/stream 구독자 전원에게 즉시 push. 새로 접속한 브라우저는 replay(1)로 "
      "최신 1건을 바로 받아 빈 화면 없이 시작한다."),
-    ("단발 조회", "/depth/latest는 AtomicReference에서 최신 snapshot 1개를 꺼내는 디버깅용 API다."),
+    ("pull 조회", "/depth/latest(디버깅용 단발 조회)뿐 아니라 모의 주문 API(POST /api/paper/orders)도 "
+     "체결 직전에 AtomicReference에서 최신 snapshot을 꺼내 체결 기준 호가로 쓴다."),
 ]
 rows = []
 for i, (k, v) in enumerate(flow_steps, 1):
@@ -325,7 +326,8 @@ decisions = [
     ("3. 락 없는 동시성 — AtomicReference + 불변 record",
      "Writer는 WebSocket event loop 1개, Reader는 HTTP 요청 N개다. snapshot을 부분 수정하지 않고 "
      "매번 새 불변 record로 <b>통째 교체</b>하므로, synchronized 없이 AtomicReference의 원자적 "
-     "참조 교체만으로 안전하다. 역할도 분리했다 — AtomicReference는 단발 조회용, Sink는 실시간 push용."),
+     "참조 교체만으로 안전하다. 역할도 분리했다 — AtomicReference는 pull용(단발 조회 + 모의 주문의 "
+     "체결 기준 snapshot 공급), Sink는 실시간 push용."),
     ("4. 가격은 String → BigDecimal 직행, double 금지",
      "Binance가 가격을 " + code('"67000.10"') + " 문자열로 보내는 이유는 이진 부동소수점 오차 때문이다. "
      + code("asDouble()") + "을 거치면 그 시점에 이미 값이 망가지므로, "

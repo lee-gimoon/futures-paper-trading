@@ -53,6 +53,8 @@ public class PaperOrderService {
         // 최신 호가 확보. 없을 때(스트림 첫 메시지 전 찰나):
         //   · 시장가 → 체결 기준이 없어 즉시 체결 불가 → 503.
         //   · 지정가 → 실거래소처럼 호가와 무관하게 OPEN으로 걸어둔다(나중에 G단계 matcher가 평가). 그래서 tryFill 없이 바로 OPEN 저장.
+        //   · 여기서 받아간 snapshot은 그 시점에 박제된 불변 객체 — 아래 tryFill 계산 도중 store가
+        //     100ms마다 새 snapshot으로 교체돼도, 이 주문은 끝까지 같은 시점 호가 기준으로 계산된다.
         Optional<OrderBookSnapshot> maybeSnapshot = latestStore.latest();
         if (maybeSnapshot.isEmpty()) {
             if (!isLimit) {

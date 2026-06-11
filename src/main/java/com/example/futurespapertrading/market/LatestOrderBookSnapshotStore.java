@@ -27,7 +27,8 @@ public class LatestOrderBookSnapshotStore {
 	//   Streamer와 Controller가 같은 Store 빈을 주입받아 같은 latest를
 	//   가리키게 된다 (Writer/Reader가 같은 양동이를 보는 핵심).
 	//   현재 SSE stream() 컨트롤러는 아래 sink/asFlux()를 쓰므로 이 값을 직접 읽지 않는다.
-	//   이 latest는 /depth/latest 단발 조회 API에서 "지금 최신 snapshot 1개"를 꺼내기 위한 보관함이다.
+	//   이 latest는 pull 소비자용 보관함이다 — ① /depth/latest 단발 조회, ② 모의 주문 체결
+	//   (PaperOrderService.placeOrder가 체결 기준 snapshot으로 꺼내 씀).
 	private final AtomicReference<OrderBookSnapshot> latest = new AtomicReference<>();
 
 	// ✨ 추가: 변화 알리미 (Hot Flux + multicast + replay(1))
@@ -36,14 +37,23 @@ public class LatestOrderBookSnapshotStore {
 			Sinks.many().replay().limit(1);
 
 	// 새 메시지가 파싱되어 도착할 때마다 호출된다. 통째로 교체 — 6단계에서 diff로 발전.
+	//   호출 주기: 구독 스트림이 @depth20@100ms라 Binance가 100ms 간격으로 push
+	//   → 사실상 100ms마다 set + tryEmitNext가 한 번씩 일어난다.
+	//   단, 우리 쪽 타이머가 아니라 Binance push에 끌려가는 주기라서 연결이 끊기거나 메시지가 안 오면 호출도 같이 멈춘다.
 	public void update(OrderBookSnapshot snapshot) {
 		log.info("[STEP7-store.update] thread={}", Thread.currentThread().getName());
-		latest.set(snapshot); // /depth/latest 단발 조회 API가 꺼내볼 최신 snapshot 1개를 저장
+		latest.set(snapshot); // pull 소비자(/depth/latest 조회, 주문 체결 기준)가 꺼내볼 최신 snapshot 1개를 저장
 		sink.tryEmitNext(snapshot); // snapshot을 Sink 허브에 발행한다. Sink는 이를 onNext로 현재 구독자들에게 전달한다
 	}
 
-	// 현재 보관 중인 최신 snapshot. SSE stream()용이 아니라 /depth/latest 단발 조회용이다.
+	// 현재 보관 중인 최신 snapshot. SSE stream()용이 아니라 pull용 — /depth/latest 단발 조회와
+	// 모의 주문 체결 기준(PaperOrderService)이 쓴다.
 	// 스트림이 안 켜졌거나 첫 메시지 전이면 Optional.empty().
+	//
+	// ★ get()으로 받아간 snapshot은 그 시점에 박제된다: 이후 update()가 100ms마다 set()으로 슬롯의
+	//   주소를 갈아끼워도 바뀌는 건 '슬롯'이지, get()이 이미 건네준 옛 객체가 아니다(불변 record라
+	//   내용 수정 자체가 불가). 덕분에 호출자는 체결 계산처럼 시간이 걸리는 작업을 락 없이
+	//   '한 시점의 일관된 호가'로 끝까지 수행할 수 있다.
 	public Optional<OrderBookSnapshot> latest() {
 		return Optional.ofNullable(latest.get());
 	}

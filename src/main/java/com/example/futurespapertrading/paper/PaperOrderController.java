@@ -70,6 +70,8 @@ public class PaperOrderController {
         //   그 하나가 보장되니 람다·메서드참조로 그 객체를 즉석에서 만들 수 있다 (람다 ≡ new 함수형인터페이스(){...}의 줄임 — 몸통은 그 유일 메서드의 내용).
         //   즉 람다/메서드참조 = 그 인터페이스를 구현한 '객체'.
         //   예) 위 orderService::listOrders 는 Function<Long, Flux<OrderResponse>>의 apply를 구현한 '객체'로 들어간 것.
+        //       화살표 람다식으로 풀어 쓰면:  .flatMapMany(userId -> orderService.listOrders(userId))
+        //       — 메서드참조는 "받은 인자를 그대로 한 메서드에 넘기기만 하는" 람다의 더 짧은 표기일 뿐, 완전히 같은 객체다.
     }
 
     // 현재 로그인 유저의 user_id 꺼내기.

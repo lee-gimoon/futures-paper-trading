@@ -1,20 +1,18 @@
 package com.example.futurespapertrading.paper;
 
-import java.math.BigDecimal;     // 가격·수량·체결수량 정밀 계산 (double 금지 — 1원 오차도 손익)
-import java.util.List;           // 체결(fill) 목록 타입
-import java.util.Optional;       // 최신 호가가 '있을 수도/없을 수도' 있음을 담는 상자 (없을 때 분기용)
+import com.example.futurespapertrading.market.LatestOrderBookSnapshotStore;
+import com.example.futurespapertrading.market.OrderBookSnapshot;
+import com.example.futurespapertrading.paper.dto.CreateOrderRequest;
+import com.example.futurespapertrading.paper.dto.OrderResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import org.springframework.http.HttpStatus;                                       // 503 등 HTTP 상태코드 모음
-import org.springframework.stereotype.Service;                                    // 이 클래스를 서비스 계층 빈으로 등록(컨트롤러가 주입받게)
-import org.springframework.web.server.ResponseStatusException;                    // 예외로 HTTP 상태코드(503 등)를 바로 내려보냄
-
-import com.example.futurespapertrading.market.LatestOrderBookSnapshotStore; // 메모리에 보관된 최신 호가 snapshot 보관소
-import com.example.futurespapertrading.market.OrderBookSnapshot;          // 한 시점 호가창 (체결 기준 입력)
-import com.example.futurespapertrading.paper.dto.CreateOrderRequest;      // 주문 생성 요청 본문 DTO
-import com.example.futurespapertrading.paper.dto.OrderResponse;           // 주문 결과 응답 DTO (요약)
-
-import reactor.core.publisher.Flux;       // 0개 이상의 결과를 비동기로 흘려보내는 리액티브 상자
-import reactor.core.publisher.Mono;       // 0~1개의 결과를 비동기로 흘려보내는 리액티브 상자
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
 
 // 모의 주문의 '주문 처리(place)·조회(list) 비즈니스 로직' 계층. 컨트롤러(PaperOrderController)가 HTTP를 받아 이 서비스에 위임한다.
 //   (C~E단계까진 컨트롤러가 직접 했지만, F의 취소·G의 matcher가 같은 체결·저장 로직을 재사용하게 되어 서비스로 추출했다.)
@@ -50,7 +48,7 @@ public class PaperOrderService {
     //   create()가 입력검증·userId를 걸러 넘기므로, 여기선 '체결 판정 + 저장'에만 집중한다.
     //   상태 판정: 지정가는 '완전 체결'이면 FILLED·아니면(부분·미체결) OPEN(잔량은 limit 가격에 걸려 대기) / 시장가는 1건이라도 체결 FILLED·0건 REJECTED.
     public Mono<OrderResponse> placeOrder(CreateOrderRequest req, Long userId) {
-        boolean isLimit = OrderType.LIMIT.name().equals(req.type());  // "LIMIT"이면 지정가 (typo-safe하게 enum에서)
+        boolean isLimit = OrderType.LIMIT.name().equals(req.type());  // req.type()이 "LIMIT"이면 true(지정가), 아니면 false(시장가) — 비교 문자열은 typo-safe하게 enum에서
 
         // 최신 호가 확보. 없을 때(스트림 첫 메시지 전 찰나):
         //   · 시장가 → 체결 기준이 없어 즉시 체결 불가 → 503.
@@ -61,6 +59,9 @@ public class PaperOrderService {
                 return Mono.error(new ResponseStatusException(
                         HttpStatus.SERVICE_UNAVAILABLE, "호가 수신 전이라 체결할 수 없습니다."));
             }
+            // saveOrder = 정해진 status·filledQty·fills로 '주문+체결을 DB 저장하고 요약 응답을 만드는' 공통 꼬리 메서드(아래 정의).
+            //   여기선 호가가 없어 tryFill(체결 계산)을 건너뛰므로, 결과가 이미 정해져 있다 → status=OPEN·filledQty=0·fills=빈리스트로 바로 호출.
+            //   (호가가 있는 일반 경로도 마지막엔 결국 이 saveOrder로 모인다 — 저장 로직을 한 곳에 두려고 분리한 것.)
             return saveOrder(req, userId, OrderStatus.OPEN.name(), BigDecimal.ZERO, List.of()); // 호가 없는 지정가 → OPEN(미체결)
         }
 
@@ -74,6 +75,10 @@ public class PaperOrderService {
                 req.side(), req.type(), OrderStatus.NEW.name(),
                 req.limitPrice(), req.quantity(), BigDecimal.ZERO);
 
+
+        // 엔진이란? 주문 1건(PaperOrder)과 지금 호가창(OrderBookSnapshot)을 인자로 받아, 실거래소의 매칭 규칙대로
+        //   "어떻게 체결되는지"를 계산해 체결 내역(List<PaperFill>)을 return하는 순수 계산기다.
+        //   DB·웹 같은 바깥은 일절 안 만지고 입력만 보고 답을 내며, 이 체결 계산이 곧 모의투자의 핵심 도메인 로직이다.
         // maybeSnapshot.get() — .get()은 Optional의 메서드(상자 열어 안의 OrderBookSnapshot 꺼냄). OrderBookSnapshot 자체엔 .get()이 없다.
         //   위 isEmpty() 체크를 통과한 뒤라 '비어있지 않음'이 보장돼 안전하게 꺼낸다.
         List<PaperFill> fills = engine.tryFill(probe, maybeSnapshot.get());

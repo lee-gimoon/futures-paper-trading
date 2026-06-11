@@ -47,36 +47,53 @@ PaperFill  (체결 N건)
 
 ---
 
+## 폴더 구조 — 폴더가 곧 계층
+
+```
+paper/
+├── controller/   HTTP 입구 + 예외→상태코드 번역 (HTTP를 아는 곳)
+├── service/      비즈니스 로직 (체결 판정·저장·취소)
+├── domain/       업무 개념·규칙 — 엔티티·enum·체결 엔진 (HTTP도 DB도 모름)
+├── repository/   DB 접근
+├── exception/    도메인 예외 (비즈니스 실패 사실만, HTTP 모름)
+└── dto/          요청/응답 그릇 (HTTP 경계 전용)
+```
+
+배치 기준: **HTTP를 아나? → controller · DB를 아나? → repository · 둘 다 모르나? → domain.**
+`auth`(+`config`)·`market`(+`stream`)도 같은 방식이다. (※ 자바엔 하위 패키지 가시성이 없어 폴더끼리는 서로 남남 — 전부 public이라 실질 영향 없음)
+
 ## 파일별 역할
 
 | 파일 | 종류/계층 | 역할 |
 |---|---|---|
-| [`OrderSide`](src/main/java/com/example/futurespapertrading/paper/OrderSide.java) | enum | 주문 방향 — `BUY` / `SELL` |
-| [`OrderType`](src/main/java/com/example/futurespapertrading/paper/OrderType.java) | enum | 주문 종류 — `MARKET`(시장가) / `LIMIT`(지정가) |
-| [`OrderStatus`](src/main/java/com/example/futurespapertrading/paper/OrderStatus.java) | enum | 주문 생애주기 — `NEW`/`OPEN`/`FILLED`/`CANCELED`/`REJECTED` |
-| [`PaperOrder`](src/main/java/com/example/futurespapertrading/paper/PaperOrder.java) | 엔티티(record) | `paper_orders` 한 줄 ↔ "주문 한 건"(의도) |
-| [`PaperFill`](src/main/java/com/example/futurespapertrading/paper/PaperFill.java) | 엔티티(record) | `paper_fills` 한 줄 ↔ "체결 한 건"(실제 거래) |
-| [`PaperOrderRepository`](src/main/java/com/example/futurespapertrading/paper/PaperOrderRepository.java) | DB 접근 | `paper_orders` 조회/저장 — `findByUserIdOrderByIdDesc`, `findByStatus` |
-| [`PaperFillRepository`](src/main/java/com/example/futurespapertrading/paper/PaperFillRepository.java) | DB 접근 | `paper_fills` 조회/저장 — `findByOrderId` |
-| [`PaperTradingEngine`](src/main/java/com/example/futurespapertrading/paper/PaperTradingEngine.java) | 체결 엔진(순수 함수) | `tryFill(order, snapshot)` → 호가를 가격순으로 긁어 `PaperFill` 목록(1:N) 생성 |
-| [`PaperOrderService`](src/main/java/com/example/futurespapertrading/paper/PaperOrderService.java) | 서비스(비즈니스 로직) | `placeOrder(req, userId)` — 체결 평가→상태 판정(FILLED/OPEN/REJECTED)→주문·fill 저장→요약. `listOrders(userId)` — 내 주문 목록 조회→요약. 컨트롤러가 위임 (F 취소·G matcher가 재사용 예정) |
-| [`PaperOrderController`](src/main/java/com/example/futurespapertrading/paper/PaperOrderController.java) | HTTP 입구(컨트롤러) | `/api/paper/orders` — `POST`(시장가·지정가 주문, C·E단계) / `GET`(내 주문 목록, 최신순, D단계). 주문 생성·목록 조회는 `PaperOrderService`에 위임 |
+| [`OrderSide`](src/main/java/com/example/futurespapertrading/paper/domain/OrderSide.java) | enum | 주문 방향 — `BUY` / `SELL` |
+| [`OrderType`](src/main/java/com/example/futurespapertrading/paper/domain/OrderType.java) | enum | 주문 종류 — `MARKET`(시장가) / `LIMIT`(지정가) |
+| [`OrderStatus`](src/main/java/com/example/futurespapertrading/paper/domain/OrderStatus.java) | enum | 주문 생애주기 — `NEW`/`OPEN`/`FILLED`/`CANCELED`/`REJECTED` |
+| [`PaperOrder`](src/main/java/com/example/futurespapertrading/paper/domain/PaperOrder.java) | 엔티티(record) | `paper_orders` 한 줄 ↔ "주문 한 건"(의도) |
+| [`PaperFill`](src/main/java/com/example/futurespapertrading/paper/domain/PaperFill.java) | 엔티티(record) | `paper_fills` 한 줄 ↔ "체결 한 건"(실제 거래) |
+| [`PaperOrderRepository`](src/main/java/com/example/futurespapertrading/paper/repository/PaperOrderRepository.java) | DB 접근 | `paper_orders` 조회/저장 — `findByUserIdOrderByIdDesc`, `findByStatus` |
+| [`PaperFillRepository`](src/main/java/com/example/futurespapertrading/paper/repository/PaperFillRepository.java) | DB 접근 | `paper_fills` 조회/저장 — `findByOrderId` |
+| [`PaperTradingEngine`](src/main/java/com/example/futurespapertrading/paper/domain/PaperTradingEngine.java) | 체결 엔진(순수 함수) | `tryFill(order, snapshot)` → 호가를 가격순으로 긁어 `PaperFill` 목록(1:N) 생성 |
+| [`PaperOrderService`](src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java) | 서비스(비즈니스 로직) | `placeOrder(req, userId)` — 체결 평가→상태 판정(FILLED/OPEN/REJECTED)→주문·fill 저장→요약. `listOrders(userId)` — 내 주문 목록 조회→요약. `cancel(orderId, userId)` — 404→403→409 검증 후 CANCELED로 UPDATE. 컨트롤러가 위임 (G matcher가 재사용 예정) |
+| [`PaperOrderController`](src/main/java/com/example/futurespapertrading/paper/controller/PaperOrderController.java) | HTTP 입구(컨트롤러) | `/api/paper/orders` — `POST`(시장가·지정가 주문, C·E단계) / `GET`(내 주문 목록, 최신순, D단계) / `DELETE /{id}`(주문 취소, F단계). 전부 `PaperOrderService`에 위임 |
+| 도메인 예외 4개 ([`OrderNotFoundException`](src/main/java/com/example/futurespapertrading/paper/exception/OrderNotFoundException.java) 등) | 예외(도메인) | 서비스가 던지는 비즈니스 실패 — 주문 없음/남의 주문/OPEN 아님/호가 없음. HTTP를 모름 |
+| [`PaperExceptionHandler`](src/main/java/com/example/futurespapertrading/paper/controller/PaperExceptionHandler.java) | 예외 → HTTP 번역 | `@RestControllerAdvice` — 도메인 예외를 `404/403/409/503 + {"message": ...}` 응답으로 변환 |
 | [`dto/CreateOrderRequest`](src/main/java/com/example/futurespapertrading/paper/dto/CreateOrderRequest.java) | DTO(요청) | 주문 생성 요청 본문 + 검증(`quantity>0`, `side`/`type` 형식) |
 | [`dto/OrderResponse`](src/main/java/com/example/futurespapertrading/paper/dto/OrderResponse.java) | DTO(응답) | 주문 결과 요약(상태·체결수량·`avgPrice`). 개별 fill 목록은 미포함 |
 | [`BUILD-ORDER.md`](src/main/java/com/example/futurespapertrading/paper/BUILD-ORDER.md) | 문서 | 8단계 내부 구현 순서(A~H)와 단계별 검증 방법 |
 
-> 엔진이 쓰는 best 가격 헬퍼 [`OrderBookQuotes`](src/main/java/com/example/futurespapertrading/market/OrderBookQuotes.java)(bestBid/bestAsk)는
+> 엔진이 쓰는 best 가격 헬퍼 [`OrderBookQuotes`](src/main/java/com/example/futurespapertrading/market/domain/OrderBookQuotes.java)(bestBid/bestAsk)는
 > 호가 도메인이라 `paper`가 아니라 **`market` 폴더**에 있습니다(프론트 `quote.ts`의 백엔드 미러).
 
 ### 세 enum이 하는 일
 
 세 개 다 "정해진 값만 허용"해서 `"buy"`, `"markett"` 같은 오타를 **컴파일 단계에서** 막습니다.
 단, DB에는 enum이 아니라 **String**으로 저장합니다 (입구/출구에서만 `valueOf()`↔`name()`으로 변환).
-이유는 [`OrderSide`](src/main/java/com/example/futurespapertrading/paper/OrderSide.java) 상단 주석 참고.
+이유는 [`OrderSide`](src/main/java/com/example/futurespapertrading/paper/domain/OrderSide.java) 상단 주석 참고.
 
 ### 두 엔티티가 하는 일
 
-[`User`](src/main/java/com/example/futurespapertrading/auth/User.java)와 똑같은 패턴(`record` + `@Table` + `@Id` + `@Column`)의
+[`User`](src/main/java/com/example/futurespapertrading/auth/domain/User.java)와 똑같은 패턴(`record` + `@Table` + `@Id` + `@Column`)의
 **영속성 전용 그릇**입니다. 외부 응답에는 이걸 그대로 안 쓰고 DTO([`dto/OrderResponse`](src/main/java/com/example/futurespapertrading/paper/dto/OrderResponse.java))를 따로 둡니다(C단계 완료).
 가격·수량은 1원 오차도 손익이 되므로 `double`이 아닌 **`BigDecimal`**(DB는 `NUMERIC`).
 
@@ -90,16 +107,16 @@ PaperFill  (체결 N건)
 
 ### 두 리포지토리가 하는 일
 
-[`UserRepository`](src/main/java/com/example/futurespapertrading/auth/UserRepository.java)와 같은 방식 —
+[`UserRepository`](src/main/java/com/example/futurespapertrading/auth/repository/UserRepository.java)와 같은 방식 —
 **인터페이스만 선언**하면 Spring Data가 부팅 시 구현체를 자동 생성합니다.
 메서드 이름이 곧 쿼리(`findByStatus` → `WHERE status = ?`)이고,
 결과가 여럿일 수 있어 반환은 전부 **`Flux`**(0개 이상)입니다.
 
 ---
 
-## 현재 상태 — E단계(지정가 주문 POST)까지 완료
+## 현재 상태 — F단계(주문 취소 DELETE + 예외 처리)까지 완료
 
-**그릇(A) + 체결 로직(B) + 시장가 POST(C) + 내 주문 목록 GET(D) + 지정가 POST(E)**까지 됐습니다. 이제 시장가·지정가 주문을 넣어 체결·저장하고(지정가는 안 닿으면 OPEN 대기), 내 주문을 최신순으로 조회할 수 있습니다.
+**그릇(A) + 체결 로직(B) + 시장가 POST(C) + 내 주문 목록 GET(D) + 지정가 POST(E) + 취소 DELETE(F)**까지 됐습니다. 이제 시장가·지정가 주문을 넣어 체결·저장하고(지정가는 안 닿으면 OPEN 대기), 내 주문을 최신순으로 조회하고, OPEN 주문을 취소할 수 있습니다.
 
 - **A단계(영속성 토대)** ✅ — enum·엔티티·리포지토리(주문/체결을 담고 꺼낼 통로)
 - **B단계(순수 체결 엔진)** ✅ — `PaperTradingEngine.tryFill` + `OrderBookQuotes`, 단위 테스트 통과
@@ -111,13 +128,14 @@ PaperFill  (체결 N건)
   (컨트롤러는 현재 유저 id만 확인하고 `PaperOrderService.listOrders`에 위임. 서비스가 현재 유저의 주문만 `findByUserIdOrderByIdDesc`로 최신순 조회 → user_id 격리. 가벼운 목록이라 avgPrice는 생략[null] — fill 미조회)
 - **E단계(지정가 주문 POST)** ✅ — `POST /api/paper/orders`에 LIMIT 분기 (`placeOrder`로 일반화)
   (지정가는 **완전 체결이면 FILLED·부분/미체결이면 OPEN**[잔량은 limit 가격에 대기]. limitPrice 필수·양수는 `CreateOrderRequest`의 `@AssertTrue`가 @Valid 게이트에서 검증 → 위반 시 400)
+- **F단계(주문 취소 DELETE + 예외 처리)** ✅ — `DELETE /api/paper/orders/{id}`
+  (`PaperOrderService.cancel` — 404 없음→403 남의 것→409 OPEN 아님 순서로 검증 후 CANCELED로 UPDATE[행 삭제 아님 — 주문은 원장].
+  도메인 예외 4개 + `PaperExceptionHandler`[`@RestControllerAdvice`]가 상태코드로 번역. placeOrder의 503도 `QuoteUnavailableException`으로 정리 — 서비스는 HTTP를 모름)
 
 앞으로 추가될 파일/작업(예정):
 
 | 추가 예정 | 계층 | 단계 |
 |---|---|---|
-| `PaperOrderController`에 `DELETE`(주문 취소) 추가 | HTTP 입구 | F |
-| `PaperExceptionHandler` | 예외 → HTTP 상태코드 변환 | F |
 | `PendingOrderMatcher` | 대기 지정가 자동 체결(백그라운드) | G |
 
 > 자세한 순서·검증 방법·완료 기준 매핑은 [BUILD-ORDER.md](src/main/java/com/example/futurespapertrading/paper/BUILD-ORDER.md)에 있습니다.

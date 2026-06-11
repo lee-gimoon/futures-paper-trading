@@ -1,7 +1,7 @@
 package com.example.futurespapertrading.paper.dto;
 
-import com.example.futurespapertrading.paper.PaperFill;
-import com.example.futurespapertrading.paper.PaperOrder;
+import com.example.futurespapertrading.paper.domain.PaperFill;
+import com.example.futurespapertrading.paper.domain.PaperOrder;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

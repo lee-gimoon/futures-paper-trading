@@ -7,6 +7,10 @@ import reactor.core.publisher.Flux;                                         // 0
 // 인터페이스만 선언하면 Spring Data가 부팅 시 구현체를 자동 생성해 빈으로 등록한다.
 //   <PaperOrder, Long> = "이 리포지토리가 다루는 엔티티는 PaperOrder, PK 타입은 Long"
 //   상속만으로 save/findById/findAll/deleteById 등 기본 메서드가 자동 제공된다.
+//
+//   단, 모든 메서드가 PaperOrder를 반환하는 건 아니다 — findById/findAll은 제네릭 T가
+//   PaperOrder로 채워지지만, count/existsById/deleteById는 Long/Boolean/Void를 반환한다.
+//   → <PaperOrder, Long>이 정하는 건 반환 타입이 아니라 쿼리의 대상(paper_orders 테이블)이다.
 public interface PaperOrderRepository extends ReactiveCrudRepository<PaperOrder, Long> {
 
     // 메서드 이름이 곧 쿼리(Query Derivation):

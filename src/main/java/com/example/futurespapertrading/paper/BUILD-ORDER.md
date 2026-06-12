@@ -90,11 +90,32 @@
   - ※ 자바엔 '하위 패키지 가시성'이 없어 `paper.domain`과 `paper.service`는 서로 남남(전부 public이라 실질 영향 없음).
 - **확인**: 순수 이동이라 동작 불변 — 컴파일 ✅ / 단위테스트 13개 ✅ / 부팅 + curl 회귀 ✅.
 
-## G. 대기 주문 자동 체결 — 백그라운드 matcher (정정된 설계)
-- **G-1** `openOrderCount` 카운터: OPEN 생성 +1 / 체결·취소 −1
-- **G-2** `PendingOrderMatcher`: `@PostConstruct`에서 `stream()` 구독 — **`sample()` 없이 모든 snapshot**, `concatMap`(직렬화), `openOrderCount==0이면 skip`, `onErrorContinue`. (OPEN 주문 재평가·체결은 `PaperOrderService`의 체결·저장 로직을 재사용)
-- **G-3** 중복 체결 방지: 조건부 갱신 `UPDATE … WHERE status='OPEN'`
+## G. 대기 주문 자동 체결 — 백그라운드 matcher (정정된 설계) ✅ 구현 + curl 검증 완료
+- **G-1** ✅ `OpenOrderCounter`: OPEN 생성 +1 / 완전 체결·취소 −1 (`AtomicInteger` — Writer가 HTTP 스레드+matcher 복수). 부분 체결로 OPEN 유지면 그대로. **재시작 보정**: 부팅 시 `countByStatus("OPEN")`로 채움(0으로 시작하면 DB에 남은 OPEN을 matcher가 영원히 skip) — `set` 아닌 `addAndGet`(비동기 조회 도착 전의 +1 보존).
+- **G-2** ✅ `PendingOrderMatcher`: `@PostConstruct`에서 `stream()` 구독 — **`sample()` 없이 모든 snapshot**, `concatMap`(직렬화 — flatMap이면 같은 OPEN을 두 snapshot이 동시 체결), `openOrderCount==0이면 filter로 skip`, `onErrorContinue`(에러로 부팅 시 1회뿐인 구독이 죽으면 영구 정지). 처리 중 밀린 snapshot은 sink가 replay(1)이라 자연히 건너뜀. 재평가·체결은 `PaperOrderService.matchOpenOrders`가 수행 — matcher는 배선만.
+- **G-3** ✅ 중복 체결 방지: `updateIfOpen` — `@Modifying @Query("UPDATE … WHERE id=:id AND status='OPEN'")` → 갱신 행 수(0/1) 반환. **체결(matcher)·취소(cancel) 양쪽 다** 이 조건부 UPDATE를 거침 — 한쪽만 1을 받고, 0을 받은 쪽은 쓰기 포기(취소가 지면 409 "취소하는 사이 체결", 체결이 지면 fill 저장 안 함). fill 저장은 UPDATE 성공 **뒤**(CANCELED 주문에 fill만 남는 모순 방지).
+- **변경 파일**:
+  - [`OpenOrderCounter`](src/main/java/com/example/futurespapertrading/paper/service/OpenOrderCounter.java) 신규 — G-1 카운터 + 부팅 시 DB 씨딩.
+  - [`PendingOrderMatcher`](src/main/java/com/example/futurespapertrading/paper/service/PendingOrderMatcher.java) 신규 — G-2 구독 배선(`filter`→`concatMap`→`onErrorContinue`→`subscribe`).
+  - [`PaperOrderRepository`](src/main/java/com/example/futurespapertrading/paper/repository/PaperOrderRepository.java) — `countByStatus`(씨딩용), `updateIfOpen`(G-3 조건부 갱신) 추가.
+  - [`PaperOrderService`](src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java) — `matchOpenOrders`(public 진입점)·`fillOpenOrder`(잔량 probe로 재평가 — 전량이면 부분체결분 과체결) 추가. `saveOrder`가 OPEN 저장 시 +1. `cancel`의 마지막 쓰기를 `save`→`updateIfOpen`으로 교체(0행이면 409) + 성공 시 −1.
+  - [`README.md`](src/main/java/com/example/futurespapertrading/paper/README.md) — 파일 표·현재 상태 동기화.
 - **확인(curl)**: 지정가 BUY를 bestAsk 살짝 아래로 → OPEN, 가격이 내려와 닿으면 **자동 FILLED**. SELL 반대. (기준 4·5 "닿으면 FILLED" 완성)
+      → ✅ 검증 완료(2026-06-12): Postgres18 + depth 스트림 + 앱(jar)을 띄워 curl로 확인. 유저 id=12로 —
+        BUY @bestAsk−0.5(id=15) → OPEN, **2초 뒤 자동 FILLED** / SELL @bestBid+0.5(id=16) → OPEN, 4초 뒤 자동 FILLED.
+        **체결가는 limit이 아니라 닿은 호가**: BUY limit 63679.6 → fill 63668.3 / SELL limit 63660.8 → fill 63666.2 (둘 다 limit보다 유리한 쪽 ✓).
+        취소: 멀리 건 BUY @62000(id=14) DELETE → 200 CANCELED(fill 0건), 재취소 → 409.
+        **재시작 씨딩**: BUY @bestAsk−0.5(id=17)를 OPEN으로 걸고 프로세스 kill → 재기동 → 새 프로세스가 자동 FILLED
+        (placeOrder의 +1은 옛 JVM과 함께 죽었으므로, 부팅 시 countByStatus 씨딩이 동작했다는 증명).
+        DB 확인: FILLED 3건 모두 fill 1건씩 order_id로 연결·filled_quantity=0.01, CANCELED는 fill 0건, 앱 로그 WARN/ERROR 0건(onErrorContinue 미발동).
+
+## (통합 점검) 8단계 전체 정합성 검토 ✅ 완료 (2026-06-12, G 직후)
+- **무엇**: A~G 전 파일을 경로별(시장가/지정가/목록/취소/matcher/재시작)로 다시 추적해 "다 잘 어우러졌는지" 점검. 발견된 틈 2개를 정정:
+  - **① cancel의 filled_quantity 되돌림 race** — cancel이 주문을 읽고 `updateIfOpen(CANCELED, 읽어둔 filled_quantity)`로 끝내면, 읽기~쓰기 사이 matcher의 **부분 체결**(status는 OPEN 유지 + filled_quantity 증가)이 끼어들 때 둘 다 `WHERE status='OPEN'`을 통과 → 옛 filled_quantity로 되돌려 써 paper_fills 합계와 어긋남(완전 체결은 status가 바뀌어 0행으로 막히지만 부분 체결은 못 막음). → 취소는 status만 바꾸는 전용 쿼리 `cancelIfOpen`으로 분리(filled_quantity를 안 만지면 어긋날 수 없음).
+  - **② symbol 미검증** — `CreateOrderRequest.symbol`이 `@NotBlank`뿐이라 "ETHUSDT"를 보내도 받아서 BTCUSDT 호가로 체결. → 로드맵 명세("BTCUSDT 하나만 지원")대로 `@Pattern(regexp="BTCUSDT")` 추가, 다른 symbol은 400.
+- **MVP로 수용하고 넘어가는 것**(이미 코드 주석에 문서화됨): 주문+fill 저장이 트랜잭션 아님(서비스 헤더 ⚠️) / UPDATE 시 updated_at 미갱신(엔티티 주석) / 카운터는 크래시 타이밍에 따라 일시적 과대 가능(재시작 씨딩으로 복원, 무해).
+- **확인**: 단위테스트 13개 ✅ / 새 jar로 재기동 후 curl 회귀 — ETHUSDT 주문 → **400** / OPEN 취소 → 200 CANCELED·재취소 409(`cancelIfOpen` 경로) / 지정가 BUY @bestAsk−1.5 → OPEN, 2초 뒤 matcher 자동 FILLED.
+  **정합성 불변식**: 전 주문 11건에서 `filled_quantity = Σ(그 주문의 paper_fills.quantity)` 불일치 **0건**, OPEN 잔여 0건(카운터 0 → matcher idle skip). 8단계 완료 기준 6개 전부 충족 상태 유지.
 
 ## H. (선택) 프론트 주문 폼
 - 9단계 거래화면(잔고/포지션/PnL)과 함께 만드는 걸 권장. 8단계는 G까지 curl로 완결.

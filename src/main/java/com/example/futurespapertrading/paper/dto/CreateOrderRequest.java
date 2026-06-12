@@ -16,8 +16,8 @@ import jakarta.validation.constraints.Positive; // 0과 음수 금지 (양수만
 //
 // type은 MARKET/LIMIT 둘 다 받는다. 시장가는 즉시 체결, 지정가는 닿으면 FILLED·아니면 OPEN 등록(컨트롤러가 분기, E단계).
 public record CreateOrderRequest(
-        // 종목. 우선 "BTCUSDT" 하나. 빈 값 금지.
-        @NotBlank String symbol,
+        // 종목. 8단계는 BTCUSDT 하나만 지원 — 다른 symbol을 받으면 전부 BTCUSDT 호가로 체결해버리므로 여기서 400으로 막는다.
+        @NotBlank @Pattern(regexp = "BTCUSDT", message = "지원하는 symbol은 BTCUSDT 뿐입니다") String symbol,
 
         // 주문 방향. @Pattern = 이 side 문자열이 주어진 정규식(regexp)과 맞는지 검사하는 제약.
         //   regexp "BUY|SELL" (| = 정규식의 OR) → 문자열 전체가 "BUY" 또는 "SELL"이어야 통과.

@@ -71,10 +71,12 @@ paper/
 | [`OrderStatus`](src/main/java/com/example/futurespapertrading/paper/domain/OrderStatus.java) | enum | 주문 생애주기 — `NEW`/`OPEN`/`FILLED`/`CANCELED`/`REJECTED` |
 | [`PaperOrder`](src/main/java/com/example/futurespapertrading/paper/domain/PaperOrder.java) | 엔티티(record) | `paper_orders` 한 줄 ↔ "주문 한 건"(의도) |
 | [`PaperFill`](src/main/java/com/example/futurespapertrading/paper/domain/PaperFill.java) | 엔티티(record) | `paper_fills` 한 줄 ↔ "체결 한 건"(실제 거래) |
-| [`PaperOrderRepository`](src/main/java/com/example/futurespapertrading/paper/repository/PaperOrderRepository.java) | DB 접근 | `paper_orders` 조회/저장 — `findByUserIdOrderByIdDesc`, `findByStatus` |
+| [`PaperOrderRepository`](src/main/java/com/example/futurespapertrading/paper/repository/PaperOrderRepository.java) | DB 접근 | `paper_orders` 조회/저장 — `findByUserIdOrderByIdDesc`, `findByStatus`, `countByStatus`, 조건부 갱신 2개(`updateIfOpen` 체결용 / `cancelIfOpen` 취소용, G-3) |
 | [`PaperFillRepository`](src/main/java/com/example/futurespapertrading/paper/repository/PaperFillRepository.java) | DB 접근 | `paper_fills` 조회/저장 — `findByOrderId` |
 | [`PaperTradingEngine`](src/main/java/com/example/futurespapertrading/paper/domain/PaperTradingEngine.java) | 체결 엔진(순수 함수) | `tryFill(order, snapshot)` → 호가를 가격순으로 긁어 `PaperFill` 목록(1:N) 생성 |
-| [`PaperOrderService`](src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java) | 서비스(비즈니스 로직) | `placeOrder(req, userId)` — 체결 평가→상태 판정(FILLED/OPEN/REJECTED)→주문·fill 저장→요약. `listOrders(userId)` — 내 주문 목록 조회→요약. `cancel(orderId, userId)` — 404→403→409 검증 후 CANCELED로 UPDATE. 컨트롤러가 위임 (G matcher가 재사용 예정) |
+| [`PaperOrderService`](src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java) | 서비스(비즈니스 로직) | `placeOrder(req, userId)` — 체결 평가→상태 판정(FILLED/OPEN/REJECTED)→주문·fill 저장→요약. `listOrders(userId)` — 내 주문 목록 조회→요약. `cancel(orderId, userId)` — 404→403→409 검증 후 CANCELED로 조건부 UPDATE. `matchOpenOrders(snapshot)` — OPEN 주문 전부 재평가, 닿으면 조건부 UPDATE+fill 저장 (matcher가 호출) |
+| [`OpenOrderCounter`](src/main/java/com/example/futurespapertrading/paper/service/OpenOrderCounter.java) | 서비스(카운터) | "지금 OPEN이 몇 건인가"를 `AtomicInteger`로 보관 (G-1) — matcher의 fast-path skip 판정용. 부팅 시 `countByStatus`로 재시작 보정 |
+| [`PendingOrderMatcher`](src/main/java/com/example/futurespapertrading/paper/service/PendingOrderMatcher.java) | 서비스(백그라운드) | `@PostConstruct`에서 snapshot `stream()` 구독 (G-2) — OPEN 0건이면 skip, `concatMap` 직렬화로 snapshot마다 `matchOpenOrders` 실행, `onErrorContinue`로 구독 생존 |
 | [`PaperOrderController`](src/main/java/com/example/futurespapertrading/paper/controller/PaperOrderController.java) | HTTP 입구(컨트롤러) | `/api/paper/orders` — `POST`(시장가·지정가 주문, C·E단계) / `GET`(내 주문 목록, 최신순, D단계) / `DELETE /{id}`(주문 취소, F단계). 전부 `PaperOrderService`에 위임 |
 | 도메인 예외 4개 ([`OrderNotFoundException`](src/main/java/com/example/futurespapertrading/paper/exception/OrderNotFoundException.java) 등) | 예외(도메인) | 서비스가 던지는 비즈니스 실패 — 주문 없음/남의 주문/OPEN 아님/호가 없음. HTTP를 모름 |
 | [`PaperExceptionHandler`](src/main/java/com/example/futurespapertrading/paper/controller/PaperExceptionHandler.java) | 예외 → HTTP 번역 | `@RestControllerAdvice` — 도메인 예외를 `404/403/409/503 + {"message": ...}` 응답으로 변환 |
@@ -114,9 +116,9 @@ paper/
 
 ---
 
-## 현재 상태 — F단계(주문 취소 DELETE + 예외 처리)까지 완료
+## 현재 상태 — G단계(대기 주문 자동 체결 matcher)까지 완료
 
-**그릇(A) + 체결 로직(B) + 시장가 POST(C) + 내 주문 목록 GET(D) + 지정가 POST(E) + 취소 DELETE(F)**까지 됐습니다. 이제 시장가·지정가 주문을 넣어 체결·저장하고(지정가는 안 닿으면 OPEN 대기), 내 주문을 최신순으로 조회하고, OPEN 주문을 취소할 수 있습니다.
+**그릇(A) + 체결 로직(B) + 시장가 POST(C) + 내 주문 목록 GET(D) + 지정가 POST(E) + 취소 DELETE(F) + 자동 체결 matcher(G)**까지 됐습니다. 이제 시장가·지정가 주문을 넣어 체결·저장하고, 안 닿은 지정가는 OPEN으로 대기하다가 호가가 닿으면 백그라운드 matcher가 자동 체결하며, 내 주문을 최신순으로 조회하고, OPEN 주문을 취소할 수 있습니다.
 
 - **A단계(영속성 토대)** ✅ — enum·엔티티·리포지토리(주문/체결을 담고 꺼낼 통로)
 - **B단계(순수 체결 엔진)** ✅ — `PaperTradingEngine.tryFill` + `OrderBookQuotes`, 단위 테스트 통과
@@ -131,12 +133,11 @@ paper/
 - **F단계(주문 취소 DELETE + 예외 처리)** ✅ — `DELETE /api/paper/orders/{id}`
   (`PaperOrderService.cancel` — 404 없음→403 남의 것→409 OPEN 아님 순서로 검증 후 CANCELED로 UPDATE[행 삭제 아님 — 주문은 원장].
   도메인 예외 4개 + `PaperExceptionHandler`[`@RestControllerAdvice`]가 상태코드로 번역. placeOrder의 503도 `QuoteUnavailableException`으로 정리 — 서비스는 HTTP를 모름)
+- **G단계(대기 주문 자동 체결 matcher)** ✅ — `PendingOrderMatcher`가 snapshot마다 OPEN 주문을 재평가
+  (`OpenOrderCounter`[G-1]가 0이면 DB 안 건드리고 skip. `concatMap` 직렬화로 snapshot을 한 장씩 처리.
+  체결·취소 둘 다 조건부 갱신 `updateIfOpen`[G-3]을 거쳐 race에서 한쪽만 이김 — 진 쪽은 쓰기 포기)
 
-앞으로 추가될 파일/작업(예정):
-
-| 추가 예정 | 계층 | 단계 |
-|---|---|---|
-| `PendingOrderMatcher` | 대기 지정가 자동 체결(백그라운드) | G |
+남은 작업: H(프론트 주문 폼, 선택)는 9단계 거래화면과 함께 — 8단계 백엔드는 G까지로 완결.
 
 > 자세한 순서·검증 방법·완료 기준 매핑은 [BUILD-ORDER.md](src/main/java/com/example/futurespapertrading/paper/BUILD-ORDER.md)에 있습니다.
 

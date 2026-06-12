@@ -31,8 +31,8 @@ import java.util.Optional;
 //   · 엔진은 "fill 목록"만 계산하는 순수 함수. "상태 결정 + DB 저장"이라는 부수효과는 이 서비스가 맡는다.
 //
 // public API vs private 헬퍼: 이 클래스를 처음 여는 사람의 질문은 "이 서비스가 뭘 해주지?"다.
-//   그 답이 public API 3개(placeOrder·listOrders·cancel) — 이것만 읽으면 파악이 끝난다.
-//   private 헬퍼(saveOrder·saveFills·totalQuantity)는 그 일을 "어떻게 하는지"의 내부 부품 — 궁금할 때만 내려가 읽는다.
+//   그 답이 public API 4개(placeOrder·listOrders·cancel·matchOpenOrders) — 이것만 읽으면 파악이 끝난다.
+//   private 헬퍼(fillOpenOrder·saveOrder·saveFills·totalQuantity)는 그 일을 "어떻게 하는지"의 내부 부품 — 궁금할 때만 내려가 읽는다.
 //   변경의 자유도가 다르다: 본문(구현)은 둘 다 자유지만, 시그니처(이름·매개변수·반환타입)와 약속한 동작을 바꿀 때
 //   public은 호출자(컨트롤러·G matcher)와 함께 바꿔야 하고(변경 비용이 파일 밖으로 번짐), private은 그마저 자유(밖에선 존재도 안 보임).
 //   그래서 정렬도 public API가 위, private 헬퍼가 아래.
@@ -47,15 +47,18 @@ public class PaperOrderService {
     private final PaperOrderRepository orderRepository;      // 주문 저장/조회
     private final PaperFillRepository fillRepository;        // 체결 저장/조회
     private final LatestOrderBookSnapshotStore latestStore;  // 메모리에 보관된 최신 호가 snapshot
+    private final OpenOrderCounter openOrderCounter;         // 지금 OPEN이 몇 건인지 — matcher의 skip 판정용 (G-1)
 
     public PaperOrderService(PaperTradingEngine engine,
                              PaperOrderRepository orderRepository,
                              PaperFillRepository fillRepository,
-                             LatestOrderBookSnapshotStore latestStore) {
+                             LatestOrderBookSnapshotStore latestStore,
+                             OpenOrderCounter openOrderCounter) {
         this.engine = engine;
         this.orderRepository = orderRepository;
         this.fillRepository = fillRepository;
         this.latestStore = latestStore;
+        this.openOrderCounter = openOrderCounter;
     }
 
     // 검증 통과한(@Valid 통과) 주문 1건을 받아: ① 지금 호가에 대고 '얼마나 체결되나' 평가 → ② 그 결과로 상태(FILLED/OPEN/REJECTED) 판정 → ③ 주문·체결을 DB 저장 → ④ 요약(OrderResponse)을 돌려준다.
@@ -128,8 +131,6 @@ public class PaperOrderService {
     //   셋 다 통과하면 CANCELED로 저장.
     //   "주문이 존재하나 → 내 것인가 → 취소 가능한 상태인가" — 주문을 찾아야 소유자도 상태도 볼 수 있으니 이 순서가 논리적으로 강제된다.
     //   여기서 던진 도메인 예외는 PaperExceptionHandler가 받아 상태코드로 번역한다(서비스는 HTTP를 모름).
-    //   ※ 경합 주의: 취소하는 사이 matcher가 체결시키는 race는 G-3의 조건부 갱신(UPDATE … WHERE status='OPEN')으로 막는다.
-    //     지금은 matcher가 없어 발생 불가라 단순 findById+save로 둔다.
     public Mono<OrderResponse> cancel(Long orderId, Long userId) {
         return orderRepository.findById(orderId)
                 // switchIfEmpty = 업스트림이 '빈 채로 완료'(해당 행 없음)면 대체 Mono로 갈아탐 — placeOrder의 Optional.isEmpty() 체크의 리액티브판
@@ -142,13 +143,20 @@ public class PaperOrderService {
                     //   FILLED(이미 체결)·CANCELED(이미 취소)·REJECTED(이미 거부)는 종료 상태 — 없앨 가능성 자체가 없어 409.
                     if (!OrderStatus.OPEN.name().equals(order.status()))
                         return Mono.error(new OrderNotOpenException("OPEN 상태가 아니라 취소할 수 없습니다: " + order.status()));
-                    // record라 status만 CANCELED로 갈아끼운 복제본을 만든다. 이번엔 id가 있으니 save()는 INSERT가 아니라 UPDATE.
-                    //   filledQuantity는 그대로 둔다 — 부분체결 후 OPEN이던 주문은 '여기까지 체결된 채 취소됐다'가 사실이라서.
-                    PaperOrder canceled = new PaperOrder(
-                            order.id(), order.userId(), order.accountId(), order.symbol(),
-                            order.side(), order.type(), OrderStatus.CANCELED.name(),
-                            order.limitPrice(), order.quantity(), order.filledQuantity());
-                    return orderRepository.save(canceled);
+                    // 위 OPEN 검사를 통과해도, 이 줄에 닿기 전 matcher가 막 체결시켰을 수 있다(race) — 그래서 마지막
+                    //   쓰기는 save(무조건 덮어쓰기)가 아니라 조건부 UPDATE(G-3). 0행 = 진 것: FILLED를 덮어쓰지 않고 409.
+                    //   status만 바꾸는 cancelIfOpen인 이유(왜 filled_quantity를 안 넘기나)는 repository 주석 참고.
+                    return orderRepository.cancelIfOpen(order.id())
+                            .flatMap(rows -> {
+                                if (rows == 0)
+                                    return Mono.error(new OrderNotOpenException("취소하는 사이 체결이 완료됐습니다."));
+                                openOrderCounter.decrement(); // OPEN 1건이 CANCELED로 종료 (G-1)
+                                // UPDATE는 갱신된 행을 돌려주지 않으므로, 응답용으로 같은 내용의 복제본을 만든다(record라 복제+수정).
+                                return Mono.just(new PaperOrder(
+                                        order.id(), order.userId(), order.accountId(), order.symbol(),
+                                        order.side(), order.type(), OrderStatus.CANCELED.name(),
+                                        order.limitPrice(), order.quantity(), order.filledQuantity()));
+                            });
                 })
                 .map(updated -> OrderResponse.from(updated, List.of())); // 취소엔 새 체결이 없으니 빈 fills → avgPrice=null
         // ── 위에서 Mono.error로 흘린 에러는 어떻게 핸들러까지 가나 ──
@@ -162,6 +170,43 @@ public class PaperOrderService {
         //   ※ 중간에 onErrorResume 같은 복구 연산자를 끼우면 끝에 닿기 전에 가로챌 수도 있다 — 여기선 복구할 게 없어 끝까지 흘려보낸다.
     }
 
+    // 대기(OPEN) 주문 전부를 새 snapshot에 대고 재평가한다 (G단계 — matcher가 snapshot마다 1회 호출하는 진입점).
+    //   concatMap = 주문도 한 건씩 차례로(앞 주문의 갱신·저장이 끝나야 다음 주문). then() = 값은 버리고
+    //   "이 snapshot 처리 끝"이라는 완료 신호만 남김 — matcher의 concatMap이 이 신호를 받아야 다음 snapshot으로 넘어간다.
+    public Mono<Void> matchOpenOrders(OrderBookSnapshot snapshot) {
+        return orderRepository.findByStatus(OrderStatus.OPEN.name())
+                .concatMap(order -> fillOpenOrder(order, snapshot))
+                .then();
+    }
+
+    // OPEN 주문 1건을 snapshot에 대고 재평가해, 가격이 닿았으면 체결을 반영한다. (placeOrder처럼 tryFill→판정→저장이되,
+    //   '새 주문 INSERT'가 아니라 '있는 주문의 조건부 UPDATE + fill INSERT'라는 점이 다르다)
+    private Mono<Void> fillOpenOrder(PaperOrder order, OrderBookSnapshot snapshot) {
+        // probe 수량은 주문 전량이 아니라 '잔량' — placeOrder에서 부분 체결된 채 OPEN으로 남은 주문을
+        //   전량으로 재평가하면 이미 체결된 몫까지 또 체결돼 과체결되기 때문.
+        BigDecimal remaining = order.quantity().subtract(order.filledQuantity());
+        PaperOrder probe = new PaperOrder(
+                order.id(), order.userId(), order.accountId(), order.symbol(),
+                order.side(), order.type(), order.status(),
+                order.limitPrice(), remaining, BigDecimal.ZERO);
+
+        List<PaperFill> fills = engine.tryFill(probe, snapshot);
+        if (fills.isEmpty()) return Mono.empty();   // 여전히 안 닿음 → OPEN 그대로, DB 쓰기 0회
+
+        BigDecimal newFilledQty = order.filledQuantity().add(totalQuantity(fills));
+        boolean fullyFilled = newFilledQty.compareTo(order.quantity()) >= 0;
+        String status = fullyFilled ? OrderStatus.FILLED.name() : OrderStatus.OPEN.name(); // 잔량이 남으면 OPEN 유지(계속 대기)
+
+        // 조건부 갱신(G-3): tryFill 계산 사이 사용자가 취소했으면(status≠OPEN) 0행 — 체결을 포기한다.
+        //   fill 저장이 UPDATE '성공 뒤'인 순서가 중요: 졌는데 fill부터 저장하면 주문은 CANCELED인데 fill만 남는 모순.
+        return orderRepository.updateIfOpen(order.id(), status, newFilledQty)
+                .flatMap(rows -> {
+                    if (rows == 0) return Mono.empty();
+                    if (fullyFilled) openOrderCounter.decrement(); // OPEN 1건이 FILLED로 종료 (G-1)
+                    return saveFills(order.id(), fills);
+                });
+    }
+
     // 결정된 status·filledQty·fills로 주문+체결을 DB에 저장하고 요약 응답을 만든다. (placeOrder의 공통 꼬리 — 시장가·지정가·OPEN 모두 여기로)
     //   PaperOrder는 record(불변)라, 결정된 status·filledQty를 담아 '저장용' 객체를 새로 만든다(복제+수정).
     private Mono<OrderResponse> saveOrder(CreateOrderRequest req, Long userId,
@@ -173,7 +218,10 @@ public class PaperOrderService {
 
         // save()는 ReactiveCrudRepository 내장 — 주문을 INSERT하고, DB가 id를 매긴 '저장본'(saved)을 돌려준다.
         //   (OPEN 주문은 fills가 비어 saveFills가 Mono.empty()로 즉시 끝남 → 주문만 저장)
-        return orderRepository.save(toSave).flatMap(saved ->
+        return orderRepository.save(toSave)
+                // OPEN으로 저장됐으면 카운터 +1 (G-1). INSERT가 '성공한 뒤'에 세야 실패한 주문을 세지 않는다.
+                .doOnNext(saved -> { if (OrderStatus.OPEN.name().equals(status)) openOrderCounter.increment(); })
+                .flatMap(saved ->
                 saveFills(saved.id(), fills) // 그 id를 박은 fills를 '처음' 저장하고
                         .thenReturn(OrderResponse.from(saved, fills)));
                         // thenReturn: 업스트림(Mono<Void>) 값은 안 받고 완료 신호만 기다렸다가, 미리 만들어 둔 이 값을 대신 흘려보냄.

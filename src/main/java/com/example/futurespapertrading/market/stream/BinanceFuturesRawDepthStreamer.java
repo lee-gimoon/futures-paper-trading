@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.net.URI;
 
-// Binance Futures BTCUSDT partial depth WebSocket에 연결하고 받은 raw JSON을 로그로 출력한다.
+// Binance Futures BTCUSDT partial depth WebSocket에 연결하고 받은 raw JSON을 snapshot으로 저장한다.
 @Component
 public class BinanceFuturesRawDepthStreamer {
 
@@ -44,7 +44,7 @@ public class BinanceFuturesRawDepthStreamer {
 		log.info("[STEP3-ctor.Streamer] thread={}", Thread.currentThread().getName());
 	}
 
-	// Binance WebSocket에 연결하고, 들어오는 메시지를 그대로 로그에 남긴다.
+	// Binance WebSocket에 연결하고, 들어오는 메시지를 snapshot으로 변환해 최신 상태로 저장한다.
 	// @PostConstruct: Spring이 빈 생성 + 의존성 주입 직후 1회만 자동 호출.
 	// → Binance WebSocket 1개를 부팅 시점에 확정한다.
 	// → 사용자 요청 수와 무관하게 Binance WebSocket을 정확히 1개만 유지하기 위함.
@@ -68,13 +68,8 @@ public class BinanceFuturesRawDepthStreamer {
 			Flux<String> payloadTexts = incomingMessages
 					.map(WebSocketMessage::getPayloadAsText);
 
-			// 엿보기: raw JSON 로그
-			Flux<String> withRawLog = payloadTexts
-					.doOnNext(message -> log.info("[STEP6-rawJson] thread={} len={}",
-							Thread.currentThread().getName(), message.length()));
-
-			// 엿보기 + 저장: raw JSON을 파싱해 latestStore에 저장하고, 파싱 결과 로그도 남긴다.
-			Flux<String> withParsedLog = withRawLog
+			// 저장: raw JSON을 파싱해 latestStore에 저장한다.
+			Flux<String> withParsedLog = payloadTexts
 					.doOnNext(this::logParsedSnapshot);
 
 			// Flux<String> → Mono<Void>: 값은 버리고 완료/에러 신호만 전달 (handle() 반환 타입 맞춤용).
@@ -104,7 +99,7 @@ public class BinanceFuturesRawDepthStreamer {
 		log.info("[STEP4-connect.exit ] thread={} (즉시 리턴)", Thread.currentThread().getName());
 	}
 
-	// raw JSON을 파싱해서 latestStore에 저장하고 OrderBookSnapshot을 로그로 찍는다.
+	// raw JSON을 파싱해서 latestStore에 저장한다.
 	// 파싱이 실패해도 raw 스트림 전체를 죽이지 않도록 여기서 예외를 잡아 로그만 남긴다.
 	private void logParsedSnapshot(String message) {
 		try {
@@ -112,10 +107,6 @@ public class BinanceFuturesRawDepthStreamer {
 			// 3단계: snapshot이 메모리에 존재하는 "이 순간"에 store에 박아둔다.
 			// 이 try 블록이 끝나면 지역변수 참조가 끊겨 GC 대상이 되므로, 여기서 안 잡아두면 영원히 사라진다.
 			latestStore.update(snapshot);
-			// {} 자리에 SLF4J가 snapshot.toString()을 자동 호출해 끼워 넣는다.
-			// record가 toString을 자동 생성하므로 안의 List/OrderBookLevel까지 재귀적으로 펼쳐져 한 줄로 찍힌다.
-			log.info("[STEP6-parsedSnapshot] thread={} eventTime={}",
-					Thread.currentThread().getName(), snapshot.eventTime());
 		} catch (Exception e) {
 			log.warn("Failed to parse depth JSON: {}", message, e);
 		}

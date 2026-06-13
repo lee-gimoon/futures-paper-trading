@@ -103,7 +103,36 @@ flowchart LR
 
 ## 시작하기
 
-### 사전 준비
+### Docker로 실행하기
+
+Docker Desktop을 설치하고 실행한 상태에서 프로젝트 루트 폴더에서 아래 명령어를 실행한다.
+별도의 Java, Node.js, PostgreSQL 설치는 필요 없다.
+
+```bash
+docker compose up --build
+```
+
+실행 후 브라우저에서 `http://localhost:8080`으로 접속한다.
+React 빌드 파일은 Spring Boot가 함께 서빙하고, PostgreSQL도 Docker Compose가 같이 실행한다.
+
+종료하려면 터미널에서 `Ctrl + C`를 누른 뒤 아래 명령어를 실행한다.
+
+```bash
+docker compose down
+```
+
+DB 데이터까지 초기화하고 다시 시작하려면:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+### 로컬 개발용 실행
+
+프론트/백엔드를 따로 띄우며 개발할 때 사용한다.
+
+사전 준비:
 
 - Java 21
 - Node.js 18+

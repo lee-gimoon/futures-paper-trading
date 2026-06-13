@@ -1,8 +1,6 @@
 package com.example.futurespapertrading.market.stream;
 import com.example.futurespapertrading.market.domain.OrderBookSnapshot;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -20,8 +18,6 @@ import java.util.concurrent.atomic.AtomicReference;
 //   (6단계에서 diff 적용으로 갈 때는 별도 자료구조가 필요해질 수 있다.)
 @Component
 public class LatestOrderBookSnapshotStore {
-
-	private static final Logger log = LoggerFactory.getLogger(LatestOrderBookSnapshotStore.class);
 
 	// 메모리상 단 1개로 존재하는 근거:
 	//   위 @Component로 Spring이 Store 객체를 부팅 시 1개만 만들기 때문에, 그 객체에 속한 이 필드도 자연히 1개.
@@ -42,7 +38,6 @@ public class LatestOrderBookSnapshotStore {
 	//   → 사실상 100ms마다 set + tryEmitNext가 한 번씩 일어난다.
 	//   단, 우리 쪽 타이머가 아니라 Binance push에 끌려가는 주기라서 연결이 끊기거나 메시지가 안 오면 호출도 같이 멈춘다.
 	public void update(OrderBookSnapshot snapshot) {
-		log.info("[STEP7-store.update] thread={}", Thread.currentThread().getName());
 		latest.set(snapshot); // pull 소비자(/depth/latest 조회, 주문 체결 기준)가 꺼내볼 최신 snapshot 1개를 저장
 		sink.tryEmitNext(snapshot); // snapshot을 Sink 허브에 발행한다. Sink는 이를 onNext로 현재 구독자들에게 전달한다
 	}

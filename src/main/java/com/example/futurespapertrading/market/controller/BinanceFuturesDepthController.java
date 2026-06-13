@@ -19,7 +19,7 @@ public class BinanceFuturesDepthController {
 
 	private static final Logger log = LoggerFactory.getLogger(BinanceFuturesDepthController.class);
 
-	// 실제 Binance WebSocket 연결과 raw JSON 로그 출력을 담당하는 객체다.
+	// 실제 Binance WebSocket 연결과 snapshot 저장을 담당하는 객체다.
 	// 옛 start() 엔드포인트(아래 주석)와 함께만 쓰이던 필드. 주석을 풀면 같이 복구한다.
 	// private final BinanceFuturesRawDepthStreamer rawDepthStreamer;
 
@@ -102,10 +102,7 @@ public class BinanceFuturesDepthController {
 	public Flux<ServerSentEvent<OrderBookSnapshot>> stream() {
 		log.info("[STEP10-stream.enter] thread={}", Thread.currentThread().getName());
 		return latestStore.stream()
-				.map(snap -> {
-					log.info("[STEP12-sse.map] thread={}", Thread.currentThread().getName());
-					return ServerSentEvent.builder(snap).build();
-				});
+				.map(snap -> ServerSentEvent.builder(snap).build());
 	}
 	// stream() 메서드 메커니즘 정리:
 	// - 브라우저가 EventSource로 SSE 연결을 열면 이 stream() 메서드는 연결 1개당 보통 1번 호출된다.
@@ -113,7 +110,7 @@ public class BinanceFuturesDepthController {
 	// - 하지만 WebFlux가 반환된 Flux를 구독하므로 Flux subscription과 HTTP SSE connection은 열린 채로 살아 있다.
 	// - 여기서 subscription은 WebFlux가 이 Flux를 subscribe해서 만든 "구독 관계"다.
 	// - 이후 Binance snapshot이 들어올 때마다 다시 호출되는 것은 stream() 메서드가 아니라 위의 map 람다다.
-	// - 즉 [STEP10-stream.enter]는 브라우저 연결 1개당 1번, [STEP12-sse.map]은 snapshot emit 때마다 찍힌다.
+	// - 즉 [STEP10-stream.enter]는 브라우저 연결 1개당 1번만 찍히고, snapshot emit 때마다 SSE 이벤트가 만들어진다.
 	// - 브라우저 탭을 닫거나 EventSource가 끊기면 해당 Flux subscription이 cancel되고 SSE connection도 정리된다.
 
 	// 이 SSE 응답도 Netty/Reactor Netty의 event loop + non-blocking I/O 모델 위에서 처리된다.

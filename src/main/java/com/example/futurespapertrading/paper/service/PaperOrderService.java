@@ -179,8 +179,10 @@ public class PaperOrderService {
                 .then();
     }
 
-    // OPEN 주문 1건을 snapshot에 대고 재평가해, 가격이 닿았으면 체결을 반영한다. (placeOrder처럼 tryFill→판정→저장이되,
-    //   '새 주문 INSERT'가 아니라 '있는 주문의 조건부 UPDATE + fill INSERT'라는 점이 다르다)
+    // OPEN 주문 1건을 snapshot에 대고 재평가한다.
+    // 가격이 닿으면 placeOrder처럼 tryFill→판정→저장 흐름을 타되,
+    // 새 주문을 INSERT하지 않고 기존 OPEN 주문을 조건부 UPDATE한 뒤 fill을 INSERT한다.
+    // 이름 의미: fillOpenOrder = 아직 체결 대기 중인 OPEN 주문 하나를 현재 호가 snapshot 기준으로 체결 가능한 만큼 처리한다.
     private Mono<Void> fillOpenOrder(PaperOrder order, OrderBookSnapshot snapshot) {
         // probe 수량은 주문 전량이 아니라 '잔량' — placeOrder에서 부분 체결된 채 OPEN으로 남은 주문을
         //   전량으로 재평가하면 이미 체결된 몫까지 또 체결돼 과체결되기 때문.
@@ -190,15 +192,25 @@ public class PaperOrderService {
                 order.side(), order.type(), order.status(),
                 order.limitPrice(), remaining, BigDecimal.ZERO);
 
+        // 현재 snapshot 기준으로 이 OPEN 주문이 체결될 수 있는지 계산한다. 결과는 실제 저장 전의 fill 후보 목록이다.
         List<PaperFill> fills = engine.tryFill(probe, snapshot);
-        if (fills.isEmpty()) return Mono.empty();   // 여전히 안 닿음 → OPEN 그대로, DB 쓰기 0회
 
+        // 체결 후보가 없으면 아직 가격이 닿지 않은 상태다. 주문은 OPEN 그대로 두고 DB에는 아무것도 쓰지 않는다.
+        if (fills.isEmpty()) return Mono.empty();
+
+        // 기존 누적 체결 수량에 이번 snapshot에서 새로 체결 가능한 수량을 더해 최신 누적 체결 수량을 만든다.
         BigDecimal newFilledQty = order.filledQuantity().add(totalQuantity(fills));
-        boolean fullyFilled = newFilledQty.compareTo(order.quantity()) >= 0;
-        String status = fullyFilled ? OrderStatus.FILLED.name() : OrderStatus.OPEN.name(); // 잔량이 남으면 OPEN 유지(계속 대기)
 
+        // 최신 누적 체결 수량이 원 주문 수량 이상이면 전량 체결, 작으면 부분 체결이다.
+        boolean fullyFilled = newFilledQty.compareTo(order.quantity()) >= 0;
+
+        // 전량 체결이면 FILLED로 닫고, 잔량이 남은 부분 체결이면 OPEN으로 유지해 다음 snapshot에서 계속 재평가한다.
+        String status = fullyFilled ? OrderStatus.FILLED.name() : OrderStatus.OPEN.name();
+
+        // 아직 OPEN인 주문이면 체결 수량과 상태를 DB에 반영한다.
+        // 전량 체결이면 OPEN 카운터를 줄이고, 마지막으로 실제 체결 내역(fill)을 저장한다.
         // 조건부 갱신(G-3): tryFill 계산 사이 사용자가 취소했으면(status≠OPEN) 0행 — 체결을 포기한다.
-        //   fill 저장이 UPDATE '성공 뒤'인 순서가 중요: 졌는데 fill부터 저장하면 주문은 CANCELED인데 fill만 남는 모순.
+        // fill 저장은 UPDATE 성공 뒤에만 한다. 졌는데 fill부터 저장하면 주문은 CANCELED인데 fill만 남는 모순이 생긴다.
         return orderRepository.updateIfOpen(order.id(), status, newFilledQty)
                 .flatMap(rows -> {
                     if (rows == 0) return Mono.empty();

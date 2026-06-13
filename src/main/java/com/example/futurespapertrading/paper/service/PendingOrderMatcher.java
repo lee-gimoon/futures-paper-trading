@@ -25,6 +25,8 @@ public class PendingOrderMatcher {
         this.orderService = orderService;
     }
 
+    // @PostConstruct = 생성자(constructor) 실행 후(post)에 Spring이 1번 자동 호출하는 초기화 메서드 표시.
+    // 객체 생성 -> 의존성 주입 완료(latestStore/openOrderCounter/orderService) -> start() 자동 실행 -> 앱 계속 동작.
     @PostConstruct
     public void start() {
         // latestStore.stream()은 새 호가 snapshot이 들어올 때마다 그 snapshot을 흘려주는 내부 Flux다.

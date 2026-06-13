@@ -1,4 +1,5 @@
 package com.example.futurespapertrading.paper.controller;
+import com.example.futurespapertrading.paper.exception.InsufficientMarginException;
 import com.example.futurespapertrading.paper.exception.OrderForbiddenException;
 import com.example.futurespapertrading.paper.exception.OrderNotFoundException;
 import com.example.futurespapertrading.paper.exception.OrderNotOpenException;
@@ -35,6 +36,11 @@ public class PaperExceptionHandler {
     @ExceptionHandler(QuoteUnavailableException.class)
     public ResponseEntity<Map<String, String>> handleQuoteUnavailable(QuoteUnavailableException e) {
         return toResponse(HttpStatus.SERVICE_UNAVAILABLE, e); // 503 — 호가 수신 전이라 일시적으로 처리 불가
+    }
+
+    @ExceptionHandler(InsufficientMarginException.class)
+    public ResponseEntity<Map<String, String>> handleInsufficientMargin(InsufficientMarginException e) {
+        return toResponse(HttpStatus.BAD_REQUEST, e);         // 400 — 가용 증거금 부족 (레버리지 매수가능 검증)
     }
 
     // 상태코드만 다르고 본문 모양({"message": ...})은 같아서 공통 꼬리로 모음.

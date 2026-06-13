@@ -31,9 +31,10 @@ function buildBidRows(bids: OrderBookLevel[]): Row[] {
 
 type Props = {
   snapshot: OrderBookSnapshot;
+  onPriceClick?: (price: number) => void; // 가격 행 클릭 → 주문폼 지정가로 (바이낸스식)
 };
 
-export function OrderBook({ snapshot }: Props) {
+export function OrderBook({ snapshot, onPriceClick }: Props) {
   const askRows = buildAskRows(snapshot.asks);
   const bidRows = buildBidRows(snapshot.bids);
 
@@ -51,7 +52,12 @@ export function OrderBook({ snapshot }: Props) {
 
       <div className="asks">
         {askRows.map((row) => (
-          <div key={`ask-${row.price}`} className="row ask">
+          <div
+            key={`ask-${row.price}`}
+            className="row ask"
+            onClick={() => onPriceClick?.(row.price)}
+            title="클릭 → 지정가로 입력"
+          >
             <span>{row.price.toFixed(2)}</span>
             <span>{row.quantity.toFixed(3)}</span>
             <span>{row.cumulative.toFixed(3)}</span>
@@ -65,7 +71,12 @@ export function OrderBook({ snapshot }: Props) {
 
       <div className="bids">
         {bidRows.map((row) => (
-          <div key={`bid-${row.price}`} className="row bid">
+          <div
+            key={`bid-${row.price}`}
+            className="row bid"
+            onClick={() => onPriceClick?.(row.price)}
+            title="클릭 → 지정가로 입력"
+          >
             <span>{row.price.toFixed(2)}</span>
             <span>{row.quantity.toFixed(3)}</span>
             <span>{row.cumulative.toFixed(3)}</span>

@@ -152,11 +152,11 @@ class PaperTradingEngineTest {
 
     private static PaperOrder order(String side, String type, String limitPrice, String quantity) {
         return new PaperOrder(
-                1L, 1L, null, "BTCUSDT",
+                1L, 1L, "BTCUSDT",
                 side, type, "NEW",
                 limitPrice == null ? null : new BigDecimal(limitPrice),
                 new BigDecimal(quantity),
-                BigDecimal.ZERO);
+                BigDecimal.ZERO, 10);
     }
 
     // BigDecimal은 scale이 달라도(예: 3 vs 3.0) 값이 같으면 통과해야 하므로 compareTo로 비교.

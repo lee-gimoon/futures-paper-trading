@@ -87,7 +87,6 @@ public class PaperTradingEngine {
             fills.add(new PaperFill(
                     null,                // id — 아직 없음. DB에 저장될 때 자동 부여된다 (엔진은 DB를 모름)
                     order.id(),          // 어느 주문의 체결인지 (이 fill의 부모 주문 id)
-                    order.accountId(),   // 어느 계정의 체결인지 — 9단계(계정) 전까지는 null
                     order.symbol(),      // 종목 (예: BTCUSDT) — 주문 것을 그대로
                     order.side(),        // 방향(BUY/SELL) — 주문 것을 그대로 (문자열)
                     level.price(),       // 체결가 = 이 호가 레벨의 가격 (레벨마다 달라 fill이 여러 건으로 쪼개진다)

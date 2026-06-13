@@ -19,14 +19,14 @@ import org.springframework.data.relational.core.mapping.Table;  // 클래스 ↔
 public record PaperOrder(
         @Id Long id,                                          // null로 저장 → INSERT(새 행), 값 있음 → 그 행 UPDATE
         @Column("user_id") Long userId,                       // 주문을 낸 사용자(users.id). "내 주문만" 격리의 기준
-        @Column("account_id") Long accountId,                 // 9단계 계좌 도입 전까지는 null
         String symbol,                                        // 우선 "BTCUSDT" 하나
         String side,                                          // "BUY" / "SELL"        → OrderSide
         String type,                                          // "MARKET" / "LIMIT"    → OrderType
         String status,                                        // OrderStatus
         @Column("limit_price") BigDecimal limitPrice,         // 지정가에만 값, 시장가면 null
         BigDecimal quantity,                                  // 주문 수량
-        @Column("filled_quantity") BigDecimal filledQuantity  // 체결된 누적 수량 (처음엔 0)
+        @Column("filled_quantity") BigDecimal filledQuantity, // 체결된 누적 수량 (처음엔 0)
+        int leverage                                          // 주문 시점 레버리지 (9단계) — 포지션이 진입 시점 값을 고정으로 들고 간다
 ) {
 }
 

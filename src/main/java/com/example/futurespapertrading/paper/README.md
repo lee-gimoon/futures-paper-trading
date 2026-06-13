@@ -3,6 +3,7 @@
 이 폴더는 **"로그인한 사용자가 낸 모의 주문을, 실시간 호가창 기준으로 체결한다"를 책임지는 곳**입니다.
 실제 돈이 아니라 가짜(paper) 계좌로, Binance 실시간 호가(depth)를 기준값 삼아
 시장가/지정가 매수·매도를 체결하고 그 기록을 DB에 남깁니다. (로드맵 **8단계**)
+그리고 그 체결 기록을 **계좌 잔고·포지션·실현/미실현 PnL로 본다**까지 합니다. (로드맵 **9단계** — 자세한 내용은 [STAGE9-PORTFOLIO.md](src/main/java/com/example/futurespapertrading/paper/STAGE9-PORTFOLIO.md))
 
 `auth` 폴더가 "누가 사용자인가"를 끝내줬기 때문에, 이 폴더는 **"이미 로그인된 사용자"**라고
 가정하고 "그 사용자의 주문"만 다룹니다.
@@ -78,6 +79,14 @@ paper/
 | [`OpenOrderCounter`](src/main/java/com/example/futurespapertrading/paper/service/OpenOrderCounter.java) | 서비스(카운터) | "지금 OPEN이 몇 건인가"를 `AtomicInteger`로 보관 (G-1) — matcher의 fast-path skip 판정용. 부팅 시 `countByStatus`로 재시작 보정 |
 | [`PendingOrderMatcher`](src/main/java/com/example/futurespapertrading/paper/service/PendingOrderMatcher.java) | 서비스(백그라운드) | `@PostConstruct`에서 snapshot `stream()` 구독 (G-2) — OPEN 0건이면 skip, `concatMap` 직렬화로 snapshot마다 `matchOpenOrders` 실행, `onErrorContinue`로 구독 생존 |
 | [`PaperOrderController`](src/main/java/com/example/futurespapertrading/paper/controller/PaperOrderController.java) | HTTP 입구(컨트롤러) | `/api/paper/orders` — `POST`(시장가·지정가 주문, C·E단계) / `GET`(내 주문 목록, 최신순, D단계) / `DELETE /{id}`(주문 취소, F단계). 전부 `PaperOrderService`에 위임 |
+| **(9단계)** [`PaperAccount`](src/main/java/com/example/futurespapertrading/paper/domain/PaperAccount.java) | 엔티티(record) | `paper_accounts` 한 줄 ↔ "사용자 계좌"(시드 현금만 저장) |
+| **(9단계)** [`Position`](src/main/java/com/example/futurespapertrading/paper/domain/Position.java) | 값 객체(record) | 계산 결과 — 부호수량·평균진입가·실현PnL (DB 저장 안 함) |
+| **(9단계)** [`PositionCalculator`](src/main/java/com/example/futurespapertrading/paper/domain/PositionCalculator.java) | 순수 함수 | ★ 체결 목록(오름차순) → `Position`. 롱/숏·평균진입가·실현PnL·뒤집기 누적 |
+| **(9단계)** [`PaperAccountRepository`](src/main/java/com/example/futurespapertrading/paper/repository/PaperAccountRepository.java) | DB 접근 | `paper_accounts` — `findByUserId` |
+| **(9단계)** [`PaperFillRepository#findByUserIdOrderByIdAsc`](src/main/java/com/example/futurespapertrading/paper/repository/PaperFillRepository.java) | DB 접근 | 유저의 체결 전부(JOIN `paper_orders`, id 오름차순 = 시간순) — 포지션 계산용 |
+| **(9단계)** [`PortfolioService`](src/main/java/com/example/futurespapertrading/paper/service/PortfolioService.java) | 서비스 | `getPortfolio(userId)` — 계좌 확보(없으면 시드 생성)→체결 조회→`PositionCalculator`→현재 mid로 미실현PnL·equity 조립. `listFills(userId)` — 체결 내역 |
+| **(9단계)** [`PortfolioController`](src/main/java/com/example/futurespapertrading/paper/controller/PortfolioController.java) | HTTP 입구(컨트롤러) | `/api/paper` — `GET /account`(잔고·실현/미실현PnL·포지션) / `GET /fills`(체결 내역). `PortfolioService`에 위임 |
+| **(9단계)** [`dto/PortfolioResponse`](src/main/java/com/example/futurespapertrading/paper/dto/PortfolioResponse.java) · [`dto/FillResponse`](src/main/java/com/example/futurespapertrading/paper/dto/FillResponse.java) | DTO(응답) | 계좌 한 화면분(+`PositionView`) · 체결 1건 |
 | 도메인 예외 4개 ([`OrderNotFoundException`](src/main/java/com/example/futurespapertrading/paper/exception/OrderNotFoundException.java) 등) | 예외(도메인) | 서비스가 던지는 비즈니스 실패 — 주문 없음/남의 주문/OPEN 아님/호가 없음. HTTP를 모름 |
 | [`PaperExceptionHandler`](src/main/java/com/example/futurespapertrading/paper/controller/PaperExceptionHandler.java) | 예외 → HTTP 번역 | `@RestControllerAdvice` — 도메인 예외를 `404/403/409/503 + {"message": ...}` 응답으로 변환 |
 | [`dto/CreateOrderRequest`](src/main/java/com/example/futurespapertrading/paper/dto/CreateOrderRequest.java) | DTO(요청) | 주문 생성 요청 본문 + 검증(`quantity>0`, `side`/`type` 형식) |
@@ -137,7 +146,16 @@ paper/
   (`OpenOrderCounter`[G-1]가 0이면 DB 안 건드리고 skip. `concatMap` 직렬화로 snapshot을 한 장씩 처리.
   체결·취소 둘 다 조건부 갱신 `updateIfOpen`[G-3]을 거쳐 race에서 한쪽만 이김 — 진 쪽은 쓰기 포기)
 
-남은 작업: H(프론트 주문 폼, 선택)는 9단계 거래화면과 함께 — 8단계 백엔드는 G까지로 완결.
+## 9단계(계좌·포지션·PnL) + 레버리지/마진/청산 + 거래 패널 — 구현 완료
+
+8단계 체결 기록(`paper_fills`)을 **계좌로 본다**. 포지션·실현/미실현 PnL은 저장하지 않고 매 조회마다 체결에서 계산하고, 저장하는 건 시드 현금·레버리지(`paper_accounts`)뿐이다. 8단계 체결 엔진은 그대로고, `placeOrder`에 **매수가능(증거금) 검증**만 얹었다.
+
+- **계좌/포지션/PnL**: `PaperAccount`/`PaperAccountRepository`(시드 계좌, lazy 생성) + `PositionCalculator`(★ 순수 함수) + `PortfolioService` + `PortfolioController`(`GET /account`·`/fills`).
+- **레버리지/마진/청산** (로드맵에서 당겨옴, 격리·MMR0): `MarginCalculator`(★ 사용증거금·청산가) + `placeOrder` 매수가능 검증(`InsufficientMarginException` 400) + `PUT /account/leverage` + `LiquidationService`/`LiquidationMonitor`(snapshot 1초 샘플 → mark가 청산가 넘긴 포지션 강제 청산).
+- **프론트**(`frontend/src/paper/`): `TradingPanel`(로그인 시 차트·호가창 사이 컬럼) = 주문 폼(Long/Short·BTC↔USDT 토글·레버리지·잔고 % 바) + 계좌요약(증거금·가용잔고·청산가) + 주문목록(취소) + 체결내역. `useTrading` 3초 폴링, 미실현 PnL은 SSE mid로 화면에서 실시간 재계산.
+- 단위테스트: `PositionCalculatorTest`(6) + `MarginCalculatorTest`(6). 설계·수식·워크스루는 [STAGE9-PORTFOLIO.md](src/main/java/com/example/futurespapertrading/paper/STAGE9-PORTFOLIO.md).
+
+> 8단계 H(프론트 주문 폼, 선택)는 이 9단계 거래 패널에 함께 들어갔다.
 
 > 자세한 순서·검증 방법·완료 기준 매핑은 [BUILD-ORDER.md](src/main/java/com/example/futurespapertrading/paper/BUILD-ORDER.md)에 있습니다.
 

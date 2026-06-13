@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import {
   createChart,
   CandlestickSeries,
+  LineStyle,
   type IChartApi,
+  type IPriceLine,
   type ISeriesApi,
   type UTCTimestamp,
 } from 'lightweight-charts';
@@ -14,23 +16,53 @@ import {
   type Interval,
 } from './binanceKline';
 import { deriveQuote } from './quote';
-import type { OrderBookSnapshot } from './types';
+import type { Order, OrderBookSnapshot, Position } from './types';
 
 type Props = {
   snapshot: OrderBookSnapshot | null;
+  position?: Position | null;
+  openOrders?: Order[];
 };
+
+const INITIAL_VISIBLE_BARS = 190;
+const RIGHT_MARGIN_BARS = 16;
+
+function applyInitialVisibleRange(chart: IChartApi, dataLength: number) {
+  if (dataLength <= 0) return;
+
+  const to = dataLength - 1 + RIGHT_MARGIN_BARS;
+  const from = Math.max(0, to - INITIAL_VISIBLE_BARS);
+  chart.timeScale().setVisibleLogicalRange({ from, to });
+}
+
+function orderPositionLabel(side: string) {
+  return side === 'BUY' ? 'Long' : 'Short';
+}
+
+function priceLineKey(position: Position | null | undefined, openOrders: Order[]) {
+  const positionPart = position
+    ? `${position.side}:${position.averageEntryPrice}:${position.quantity}`
+    : 'flat';
+  const orderPart = openOrders
+    .filter((order) => order.status === 'OPEN' && order.limitPrice != null)
+    .map((order) => `${order.id}:${order.side}:${order.limitPrice}:${order.quantity}:${order.filledQuantity}`)
+    .join('|');
+  return `${positionPart}::${orderPart}`;
+}
 
 // 캔들 차트.
 // - 과거 봉: 바이낸스 kline REST로 한 번 채운다(실제 체결 OHLC).
 // - 진행 봉: 내 백엔드 호가(SSE) snapshot의 mid로 실시간 갱신한다 → 호가창과 같은 값.
 //   (호가 snapshot은 "가격 한 개"라, 진행 봉의 OHLC는 여기서 직접 묶는다.)
-export function CandleChart({ snapshot }: Props) {
+export function CandleChart({ snapshot, position = null, openOrders = [] }: Props) {
   const [activeInterval, setActiveInterval] = useState<Interval>('1m');
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const priceLinesRef = useRef<IPriceLine[]>([]);
   const currentBarRef = useRef<Candle | null>(null); // 진행 중인 봉
   const readyRef = useRef(false); // 현재 인터벌의 과거 봉이 채워졌는지
+  const markerKey = priceLineKey(position, openOrders);
 
   // 마운트 1회: 차트와 캔들 시리즈를 만든다.
   useEffect(() => {
@@ -54,9 +86,60 @@ export function CandleChart({ snapshot }: Props) {
     });
 
     return () => {
+      for (const line of priceLinesRef.current) {
+        seriesRef.current?.removePriceLine(line);
+      }
+      priceLinesRef.current = [];
+      seriesRef.current = null;
+      chartRef.current = null;
       chart.remove();
     };
   }, []);
+
+  // 바이낸스처럼 내 진입가와 대기 주문가를 차트 가격선으로 표시한다.
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+
+    for (const line of priceLinesRef.current) {
+      series.removePriceLine(line);
+    }
+    priceLinesRef.current = [];
+
+    if (position && position.quantity > 0) {
+      priceLinesRef.current.push(
+        series.createPriceLine({
+          price: position.averageEntryPrice,
+          color: '#f59e0b',
+          lineWidth: 2,
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          axisLabelColor: '#f59e0b',
+          axisLabelTextColor: '#0d0d0d',
+          title: `진입가 ${position.side}`,
+        }),
+      );
+    }
+
+    for (const order of openOrders) {
+      if (order.status !== 'OPEN' || order.limitPrice == null) continue;
+
+      const remainingQty = Math.max(order.quantity - order.filledQuantity, 0);
+      const color = order.side === 'BUY' ? '#22c55e' : '#ef4444';
+      priceLinesRef.current.push(
+        series.createPriceLine({
+          price: order.limitPrice,
+          color,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          axisLabelColor: color,
+          axisLabelTextColor: '#ffffff',
+          title: `대기 ${orderPositionLabel(order.side)} ${remainingQty.toFixed(3)}`,
+        }),
+      );
+    }
+  }, [markerKey]);
 
   // 인터벌이 바뀔 때마다: 과거 봉을 REST로 채운다.
   useEffect(() => {
@@ -74,7 +157,8 @@ export function CandleChart({ snapshot }: Props) {
         if (candles.length > 0) {
           currentBarRef.current = { ...candles[candles.length - 1] }; // 진행 봉의 시작점
         }
-        chartRef.current?.timeScale().fitContent();
+        const chart = chartRef.current;
+        if (chart) applyInitialVisibleRange(chart, candles.length);
         readyRef.current = true;
       })
       .catch((err) => console.error('kline 과거 봉 로드 실패', err));

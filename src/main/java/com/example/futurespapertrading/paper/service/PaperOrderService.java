@@ -1,7 +1,9 @@
 package com.example.futurespapertrading.paper.service;
 import com.example.futurespapertrading.paper.domain.PaperOrder;
+import com.example.futurespapertrading.paper.domain.OrderSide;
 import com.example.futurespapertrading.paper.domain.OrderStatus;
 import com.example.futurespapertrading.paper.repository.PaperOrderRepository;
+import com.example.futurespapertrading.paper.exception.InsufficientMarginException;
 import com.example.futurespapertrading.paper.exception.OrderForbiddenException;
 import com.example.futurespapertrading.paper.exception.OrderNotFoundException;
 import com.example.futurespapertrading.paper.exception.OrderNotOpenException;
@@ -20,6 +22,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,17 +51,20 @@ public class PaperOrderService {
     private final PaperFillRepository fillRepository;        // 체결 저장/조회
     private final LatestOrderBookSnapshotStore latestStore;  // 메모리에 보관된 최신 호가 snapshot
     private final OpenOrderCounter openOrderCounter;         // 지금 OPEN이 몇 건인지 — matcher의 skip 판정용 (G-1)
+    private final PortfolioService portfolioService;         // 매수가능 검증용 계좌/포지션/가용잔고 계산 (9단계 마진)
 
     public PaperOrderService(PaperTradingEngine engine,
                              PaperOrderRepository orderRepository,
                              PaperFillRepository fillRepository,
                              LatestOrderBookSnapshotStore latestStore,
-                             OpenOrderCounter openOrderCounter) {
+                             OpenOrderCounter openOrderCounter,
+                             PortfolioService portfolioService) {
         this.engine = engine;
         this.orderRepository = orderRepository;
         this.fillRepository = fillRepository;
         this.latestStore = latestStore;
         this.openOrderCounter = openOrderCounter;
+        this.portfolioService = portfolioService;
     }
 
     // 검증 통과한(@Valid 통과) 주문 1건을 받아: ① 지금 호가에 대고 '얼마나 체결되나' 평가 → ② 그 결과로 상태(FILLED/OPEN/REJECTED) 판정 → ③ 주문·체결을 DB 저장 → ④ 요약(OrderResponse)을 돌려준다.
@@ -67,6 +73,40 @@ public class PaperOrderService {
     //   create()가 입력검증·userId를 걸러 넘기므로, 여기선 '체결 판정 + 저장'에만 집중한다.
     //   상태 판정: 지정가는 '완전 체결'이면 FILLED·아니면(부분·미체결) OPEN(잔량은 limit 가격에 걸려 대기) / 시장가는 1건이라도 체결 FILLED·0건 REJECTED.
     public Mono<OrderResponse> placeOrder(CreateOrderRequest req, Long userId) {
+        // 레버리지 매수가능 검증(9단계 마진): 새로 여는/늘리는 주문의 필요 증거금이 가용잔고를 넘으면 거부(400).
+        //   순수 축소/청산 주문은 필요 증거금 0이라 항상 통과. 통과하면 원래 처리(placeOrderChecked)로 넘어간다.
+        return portfolioService.accountState(userId).flatMap(state -> {
+            BigDecimal required = requiredOpeningMargin(req, state);
+            if (required.compareTo(state.availableBalance()) > 0)
+                return Mono.<OrderResponse>error(new InsufficientMarginException(
+                        "가용 증거금 부족: 필요 " + required + " > 가용 " + state.availableBalance()
+                                + " (레버리지 " + state.account().leverage() + "x)"));
+            return placeOrderChecked(req, userId, state.account().leverage());
+        });
+    }
+
+    // 새로 여는(늘리는) 수량에 필요한 증거금 = 여는수량 × 기준가 / 레버리지.
+    //   기준가: 지정가는 limitPrice, 시장가는 현재 mid. 시장가인데 호가 없으면 0(검증 스킵 — 뒤에서 503).
+    //   여는수량: 같은 방향/신규면 전량, 반대 방향이면 축소분을 뺀 '뒤집혀 새로 열리는 초과분'만(순수 축소는 0).
+    private static BigDecimal requiredOpeningMargin(CreateOrderRequest req, PortfolioService.AccountState state) {
+        boolean isLimit = OrderType.LIMIT.name().equals(req.type());
+        BigDecimal refPrice = isLimit ? req.limitPrice() : state.mark();
+        if (refPrice == null) return BigDecimal.ZERO;
+
+        int orderDir = OrderSide.BUY.name().equals(req.side()) ? 1 : -1;
+        BigDecimal currentQty = state.position().signedQuantity();
+        BigDecimal openingQty = (currentQty.signum() == 0 || currentQty.signum() == orderDir)
+                ? req.quantity()                                             // 신규/같은 방향 증가 → 전량
+                : req.quantity().subtract(currentQty.abs()).max(BigDecimal.ZERO); // 반대 방향 → 축소분 제외한 초과분만
+
+        if (openingQty.signum() <= 0) return BigDecimal.ZERO;                // 순수 축소/청산 → 증거금 불필요
+        return openingQty.multiply(refPrice)
+                .divide(BigDecimal.valueOf(state.account().leverage()), 8, RoundingMode.HALF_UP);
+    }
+
+    // 매수가능 검증을 통과한 뒤의 원래 주문 처리: 체결 평가 → 상태 판정(FILLED/OPEN/REJECTED) → 주문·체결 저장.
+    //   leverage = 주문 시점 계좌 레버리지. 주문에 박아 저장해, 포지션이 진입 시점 레버리지를 들고 가게 한다(이후 버튼으로 바꿔도 이 포지션은 불변).
+    private Mono<OrderResponse> placeOrderChecked(CreateOrderRequest req, Long userId, int leverage) {
         boolean isLimit = OrderType.LIMIT.name().equals(req.type());  // req.type()이 "LIMIT"이면 true(지정가), 아니면 false(시장가) — 비교 문자열은 typo-safe하게 enum에서
 
         // 최신 호가 확보. 없을 때(스트림 첫 메시지 전 찰나):
@@ -83,7 +123,7 @@ public class PaperOrderService {
             // saveOrder = 정해진 status·filledQty·fills로 '주문+체결을 DB 저장하고 요약 응답을 만드는' 공통 꼬리 메서드(아래 정의).
             //   여기선 호가가 없어 tryFill(체결 계산)을 건너뛰므로, 결과가 이미 정해져 있다 → status=OPEN·filledQty=0·fills=빈리스트로 바로 호출.
             //   (호가가 있는 일반 경로도 마지막엔 결국 이 saveOrder로 모인다 — 저장 로직을 한 곳에 두려고 분리한 것.)
-            return saveOrder(req, userId, OrderStatus.OPEN.name(), BigDecimal.ZERO, List.of()); // 호가 없는 지정가 → OPEN(미체결)
+            return saveOrder(req, userId, OrderStatus.OPEN.name(), BigDecimal.ZERO, List.of(), leverage); // 호가 없는 지정가 → OPEN(미체결)
         }
 
         // 엔진에 넘길 입력 주문(probe)을 요청 DTO로부터 만든다.
@@ -92,9 +132,9 @@ public class PaperOrderService {
         //   · 왜 이름이 probe('떠보다')인가: '지금 호가에 어떻게 체결되나'를 떠보는 임시 입력이라서 — 저장본이 아니다.
         //     (저장본 toSave는 saveOrder에서 status·filledQty 확정해 따로 만든다.) status=NEW는 자리만(tryFill이 status는 안 읽음), id도 null(저장 시 부여).
         PaperOrder probe = new PaperOrder(
-                null, userId, null, req.symbol(),
+                null, userId, req.symbol(),
                 req.side(), req.type(), OrderStatus.NEW.name(),
-                req.limitPrice(), req.quantity(), BigDecimal.ZERO);
+                req.limitPrice(), req.quantity(), BigDecimal.ZERO, leverage);
 
 
         // 엔진이란? 주문 1건(PaperOrder)과 지금 호가창(OrderBookSnapshot)을 인자로 받아, 실거래소의 매칭 규칙대로
@@ -111,7 +151,7 @@ public class PaperOrderService {
         if (isLimit)  status = fullyFilled ? OrderStatus.FILLED.name() : OrderStatus.OPEN.name();        // 지정가: 다 차면 FILLED, 아니면(부분·미체결) OPEN — 잔량은 limit가에 걸려 대기(G단계 matcher가 채움)
         else          status = fills.isEmpty() ? OrderStatus.REJECTED.name() : OrderStatus.FILLED.name(); // 시장가: 0건이면 REJECTED, 1건이라도 체결되면 FILLED(잔량은 못 쉬어 드롭)
 
-        return saveOrder(req, userId, status, filledQty, fills);         // 정해진 status·filledQty·fills로 주문+체결을 저장하고 요약 응답을 반환
+        return saveOrder(req, userId, status, filledQty, fills, leverage); // 정해진 status·filledQty·fills로 주문+체결을 저장하고 요약 응답을 반환
     }
 
     // 현재 유저의 주문 목록을 최신순으로 조회해 응답 DTO로 바꾼다.
@@ -153,9 +193,9 @@ public class PaperOrderService {
                                 openOrderCounter.decrement(); // OPEN 1건이 CANCELED로 종료 (G-1)
                                 // UPDATE는 갱신된 행을 돌려주지 않으므로, 응답용으로 같은 내용의 복제본을 만든다(record라 복제+수정).
                                 return Mono.just(new PaperOrder(
-                                        order.id(), order.userId(), order.accountId(), order.symbol(),
+                                        order.id(), order.userId(), order.symbol(),
                                         order.side(), order.type(), OrderStatus.CANCELED.name(),
-                                        order.limitPrice(), order.quantity(), order.filledQuantity()));
+                                        order.limitPrice(), order.quantity(), order.filledQuantity(), order.leverage()));
                             });
                 })
                 .map(updated -> OrderResponse.from(updated, List.of())); // 취소엔 새 체결이 없으니 빈 fills → avgPrice=null
@@ -188,9 +228,9 @@ public class PaperOrderService {
         //   전량으로 재평가하면 이미 체결된 몫까지 또 체결돼 과체결되기 때문.
         BigDecimal remaining = order.quantity().subtract(order.filledQuantity());
         PaperOrder probe = new PaperOrder(
-                order.id(), order.userId(), order.accountId(), order.symbol(),
+                order.id(), order.userId(), order.symbol(),
                 order.side(), order.type(), order.status(),
-                order.limitPrice(), remaining, BigDecimal.ZERO);
+                order.limitPrice(), remaining, BigDecimal.ZERO, order.leverage());
 
         // 현재 snapshot 기준으로 이 OPEN 주문이 체결될 수 있는지 계산한다. 결과는 실제 저장 전의 fill 후보 목록이다.
         List<PaperFill> fills = engine.tryFill(probe, snapshot);
@@ -222,11 +262,11 @@ public class PaperOrderService {
     // 결정된 status·filledQty·fills로 주문+체결을 DB에 저장하고 요약 응답을 만든다. (placeOrder의 공통 꼬리 — 시장가·지정가·OPEN 모두 여기로)
     //   PaperOrder는 record(불변)라, 결정된 status·filledQty를 담아 '저장용' 객체를 새로 만든다(복제+수정).
     private Mono<OrderResponse> saveOrder(CreateOrderRequest req, Long userId,
-                                          String status, BigDecimal filledQty, List<PaperFill> fills) {
+                                          String status, BigDecimal filledQty, List<PaperFill> fills, int leverage) {
         PaperOrder toSave = new PaperOrder(
-                null, userId, null, req.symbol(),
+                null, userId, req.symbol(),
                 req.side(), req.type(), status,
-                req.limitPrice(), req.quantity(), filledQty);
+                req.limitPrice(), req.quantity(), filledQty, leverage);
 
         // save()는 ReactiveCrudRepository 내장 — 주문을 INSERT하고, DB가 id를 매긴 '저장본'(saved)을 돌려준다.
         //   (OPEN 주문은 fills가 비어 saveFills가 Mono.empty()로 즉시 끝남 → 주문만 저장)
@@ -248,7 +288,7 @@ public class PaperOrderService {
         if (fills.isEmpty()) return Mono.empty();   // 체결 0건이면 저장할 것도 없음 → 빈 '완료' Mono
         // orderId만 채운 새 PaperFill로 복제 (record라 기존 객체의 orderId를 못 고쳐서 새로 만든다).
         List<PaperFill> withOrderId = fills.stream()
-                .map(f -> new PaperFill(null, orderId, f.accountId(), f.symbol(),
+                .map(f -> new PaperFill(null, orderId, f.symbol(),
                         f.side(), f.price(), f.quantity(), f.fee()))
                 .toList();
         // saveAll = save의 '여러 건' 버전. 둘 다 우리가 안 만든 ReactiveCrudRepository 내장 메서드.

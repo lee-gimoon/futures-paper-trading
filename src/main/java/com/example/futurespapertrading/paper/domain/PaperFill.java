@@ -24,7 +24,6 @@ import org.springframework.data.relational.core.mapping.Table;
 public record PaperFill(
         @Id Long id,
         @Column("order_id") Long orderId,        // 어느 주문의 체결인지 (paper_orders.id)
-        @Column("account_id") Long accountId,    // 9단계 전까지 null
         String symbol,
         String side,                             // "BUY" / "SELL"
         BigDecimal price,                        // 실제 체결 가격
@@ -45,8 +44,6 @@ public record PaperFill(
 //     private final Long id;
 //     @Column("order_id")
 //     private final Long orderId;
-//     @Column("account_id")
-//     private final Long accountId;
 //     private final String symbol;
 //     private final String side;
 //     private final BigDecimal price;
@@ -54,11 +51,10 @@ public record PaperFill(
 //     private final BigDecimal fee;
 //
 //     // 2) 모든 필드를 받는 생성자(canonical constructor)
-//     public PaperFill(Long id, Long orderId, Long accountId, String symbol,
+//     public PaperFill(Long id, Long orderId, String symbol,
 //                      String side, BigDecimal price, BigDecimal quantity, BigDecimal fee) {
 //         this.id = id;
 //         this.orderId = orderId;
-//         this.accountId = accountId;
 //         this.symbol = symbol;
 //         this.side = side;
 //         this.price = price;
@@ -69,7 +65,6 @@ public record PaperFill(
 //     // 3) 접근자(accessor) — 주의: record는 getId()가 아니라 id() 처럼 필드명과 똑같다
 //     public Long id()            { return id; }
 //     public Long orderId()       { return orderId; }
-//     public Long accountId()     { return accountId; }
 //     public String symbol()      { return symbol; }
 //     public String side()        { return side; }
 //     public BigDecimal price()   { return price; }
@@ -83,7 +78,6 @@ public record PaperFill(
 //         if (!(o instanceof PaperFill other)) return false;
 //         return java.util.Objects.equals(id, other.id)
 //                 && java.util.Objects.equals(orderId, other.orderId)
-//                 && java.util.Objects.equals(accountId, other.accountId)
 //                 && java.util.Objects.equals(symbol, other.symbol)
 //                 && java.util.Objects.equals(side, other.side)
 //                 && java.util.Objects.equals(price, other.price)
@@ -94,13 +88,13 @@ public record PaperFill(
 //     // 5) hashCode — equals와 짝. 같은 값이면 같은 해시(HashMap/HashSet에서 필요)
 //     @Override
 //     public int hashCode() {
-//         return java.util.Objects.hash(id, orderId, accountId, symbol, side, price, quantity, fee);
+//         return java.util.Objects.hash(id, orderId, symbol, side, price, quantity, fee);
 //     }
 //
 //     // 6) toString — 디버깅용 출력. "PaperFill[id=1, orderId=10, ...]" 형태
 //     @Override
 //     public String toString() {
-//         return "PaperFill[id=" + id + ", orderId=" + orderId + ", accountId=" + accountId
+//         return "PaperFill[id=" + id + ", orderId=" + orderId
 //                 + ", symbol=" + symbol + ", side=" + side + ", price=" + price
 //                 + ", quantity=" + quantity + ", fee=" + fee + "]";
 //     }

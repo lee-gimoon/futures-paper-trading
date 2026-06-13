@@ -23,6 +23,7 @@ public record OrderResponse(
         String side,
         String type,
         String status,             // C단계: FILLED / REJECTED. (E단계에서 OPEN 추가)
+        BigDecimal limitPrice,     // 지정가 주문이면 사용자가 걸어둔 가격, 시장가면 null.
         BigDecimal quantity,       // 주문 수량
         BigDecimal filledQuantity, // 실제 체결된 누적 수량 (시장가 부분체결이면 quantity보다 작을 수 있음)
         BigDecimal avgPrice        // 가중평균 체결가 = Σ(price×qty)/Σqty. 0건 체결이면 null.
@@ -42,7 +43,7 @@ public record OrderResponse(
     public static OrderResponse from(PaperOrder order, List<PaperFill> fills) {
         return new OrderResponse(
                 order.id(), order.symbol(), order.side(), order.type(),
-                order.status(), order.quantity(), order.filledQuantity(),
+                order.status(), order.limitPrice(), order.quantity(), order.filledQuantity(),
                 averagePrice(fills));
     }
 

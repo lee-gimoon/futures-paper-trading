@@ -55,24 +55,26 @@ flowchart LR
 
     subgraph CLIENT["④ 브라우저 N명"]
         direction TB
-        BR["호가창 · 캔들 차트"]
-        ACC["계좌 · 포지션 패널"]
+        OB["호가창"]
+        CH["캔들 차트"]
+        ACC["계좌 · 포지션 · 주문 패널"]
     end
 
     DB[("PostgreSQL")]
     KLINE["Binance<br/>kline REST"]
 
-    STORE -->|SSE| BR
+    STORE -->|SSE 호가| OB
+    STORE -->|best ask · 진행 봉| CH
     STORE -->|스냅샷마다| MATCH
     STORE -->|1초 샘플| LIQ
     STORE -.최신 호가.-> ENG
-    BR -->|POST 주문| ENG
+    KLINE -->|과거 봉 직접| CH
     MATCH --> ENG
     LIQ --> ENG
+    ACC -->|POST 주문| ENG
     ENG -->|orders · fills| DB
     DB -.fills 재생.-> PORT
     PORT -->|GET /account| ACC
-    KLINE -->|과거 봉 직접| BR
 ```
 
 데이터 흐름의 핵심:

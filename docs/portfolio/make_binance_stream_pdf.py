@@ -347,6 +347,99 @@ for title, body in decisions:
         Paragraph(body, S_BODY),
         Spacer(1, 5),
     ]))
+
+# MVC + Tomcat 이었다면? — 스레드 모델 비교 (워크로드 기준, 벤치마크 아님)
+_th = st("cmp_th", fontName="MalgunBold", fontSize=8.4, leading=11.5)
+_td = st("cmp_td", fontSize=8.4, leading=11.5)
+_tdb = st("cmp_tdb", fontName="MalgunBold", fontSize=8.4, leading=11.5)
+
+cmp_rows = [
+    ("SSE 연결 N개", "연결마다 worker thread 점유 — 기본 풀(~200)에서 한계",
+     "적은 event loop 스레드가 다수 연결을 담당"),
+    ("이 프로젝트", "오래 열린 idle 호가 연결이 스레드를 잡아둠",
+     "snapshot 도착 시에만 잠깐 write"),
+    ("DB 접근", "JDBC(blocking) — 단순", "R2DBC 필요 · blocking 호출 금지"),
+    ("난이도", "스택트레이스 명확 · 디버깅 쉬움", "연산자 체인 추적 어려움 · 학습곡선"),
+    ("적합한 곳", "일반 CRUD · 트랜잭션", "스트리밍 · 다수 long-lived 연결"),
+]
+cmp_data = [[
+    Paragraph("관점", _th),
+    Paragraph("MVC + Tomcat <font size='7'>(thread-per-request)</font>", _th),
+    Paragraph("WebFlux + Netty <font size='7'>(event loop)</font>", _th),
+]]
+for k, a, b in cmp_rows:
+    cmp_data.append([Paragraph(k, _tdb), Paragraph(a, _td), Paragraph(b, _td)])
+
+cmp_table = Table(cmp_data, colWidths=[78, 209, 208])
+cmp_table.setStyle(TableStyle([
+    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ("BACKGROUND", (0, 0), (-1, 0), HexColor("#eef2f7")),
+    ("BACKGROUND", (0, 1), (0, -1), CANVAS),
+    ("LINEBELOW", (0, 0), (-1, 0), 0.6, MUT),
+    ("LINEBELOW", (0, 1), (-1, -2), 0.3, RULE),
+    ("BOX", (0, 0), (-1, -1), 0.6, RULE),
+    ("LINEAFTER", (0, 0), (1, -1), 0.4, RULE),
+    ("TOPPADDING", (0, 0), (-1, -1), 5),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ("LEFTPADDING", (0, 0), (-1, -1), 7),
+    ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+]))
+
+story.append(KeepTogether([
+    Paragraph("MVC + Tomcat이었다면? — 스레드 모델 비교", S_H2),
+    Paragraph("같은 SSE를 <b>thread-per-request(블로킹)</b> 모델로 구현하면 열린 연결 1개당 스레드 1개가 묶인다 "
+              "— 대부분 다음 snapshot을 기다리며 노는데도. 이 앱은 100ms마다 갱신되는 호가를 다수 브라우저로 "
+              "fan-out하는, 오래 열린 연결이 많은 워크로드라 연결과 스레드를 분리하는 event loop 모델이 맞았다.",
+              S_BODY),
+    Spacer(1, 4),
+    cmp_table,
+]))
+story.append(Spacer(1, 9))
+
+# 구체적 시나리오 — 브라우저 300명이 동시에 붙으면?
+_sc = st("sc_td", fontSize=8.4, leading=12)
+_scb = st("sc_th", fontName="MalgunBold", fontSize=8.6, leading=12)
+sc_data = [
+    [Paragraph("MVC + Tomcat <font size='7'>(블로킹)</font>", _scb),
+     Paragraph("WebFlux + Netty <font size='7'>(event loop)</font>", _scb)],
+    [Paragraph("연결 300개 = 스레드 <b>300개</b> 점유 (대부분 대기)", _sc),
+     Paragraph("적은 스레드(≈코어 수)가 300 연결을 모두 담당", _sc)],
+    [Paragraph("기본 스레드 풀 ~200 → <b>201번째부터 막힘</b>", _sc),
+     Paragraph("연결이 늘어도 스레드는 거의 안 늘어남", _sc)],
+    [Paragraph("스레드당 스택 ~1MB → 약 <b>300MB</b> 점유", _sc),
+     Paragraph("새 snapshot 올 때만 잠깐 write", _sc)],
+]
+sc_table = Table(sc_data, colWidths=[247, 248])
+sc_table.setStyle(TableStyle([
+    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ("BACKGROUND", (0, 0), (0, -1), HexColor("#fdece0")),
+    ("BACKGROUND", (1, 0), (1, -1), HexColor("#e7f0ff")),
+    ("LINEBELOW", (0, 0), (-1, 0), 0.5, MUT),
+    ("LINEBELOW", (0, 1), (-1, -2), 0.3, RULE),
+    ("BOX", (0, 0), (-1, -1), 0.6, RULE),
+    ("LINEAFTER", (0, 0), (0, -1), 0.5, RULE),
+    ("TOPPADDING", (0, 0), (-1, -1), 5),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+]))
+story.append(KeepTogether([
+    Paragraph("구체적으로 — 브라우저 300명이 동시에 붙으면?", S_H2),
+    Spacer(1, 4),
+    sc_table,
+    Spacer(1, 5),
+    Paragraph("양쪽 모두 Binance 업스트림 연결은 <b>1개</b>로 같다. 차이는 다운스트림(브라우저)을 처리하는 방식 "
+              "— 핵심은 <b>연결과 스레드를 분리</b>해 적은 스레드로 많은 long-lived 연결을 유지하는 것이다.",
+              S_BODY),
+    Paragraph("정확히는 위 표는 <b>블로킹</b> 모델 기준이다 — Spring MVC도 SseEmitter(async)를 쓰면 idle 연결에 "
+              "스레드를 묶지 않는다. WebFlux의 추가 이점은 DB 접근까지(R2DBC) 논블로킹이 기본이라는 점이다.",
+              S_BODY_MUT),
+    Spacer(1, 5),
+    Paragraph("<b>정직한 결론</b> — reactive는 '항상 우월한 기본값'이 아니다. 평범한 CRUD·트랜잭션 위주였다면 "
+              "MVC + Tomcat이 더 단순하고 옳았을 것이다. 이 프로젝트는 스트리밍·다수 long-lived 연결이라는 "
+              "특성 때문에 WebFlux + Netty를 골랐다 — 즉 워크로드에 맞춰 고른 도구다.", S_BODY),
+]))
+story.append(Spacer(1, 6))
 story.append(PageBreak())
 
 # ================================================================ 4p — 트러블슈팅
@@ -398,6 +491,53 @@ story += ts_block(
         ("배운 점", "'안 된다'를 '정확히 무엇이 어디까지 되는가'로 좁히는 측정 기반 디버깅. "
          "진행 봉이 체결가가 아닌 호가 기준이라는 한계는 숨기지 않고 문서에 명시했다."),
     ])
+
+# 트러블슈팅 2 — '이렇게 해결했다' 두 경로 다이어그램
+def _arrow(label):
+    return f' <font size="8" color="#64748b">──{label}──▶</font> '
+
+
+def _actor(text, hexcolor):
+    return f'<font color="{hexcolor}"><b>{text}</b></font>'
+
+
+def _tag(title, sub):
+    return Paragraph(f"<b>{title}</b><br/><font size='7' color='#64748b'>{sub}</font>", S_BODY)
+
+
+_path_a = (_actor("브라우저", "#7e22ce") + _arrow("HTTP GET")
+           + _actor("Binance kline REST", "#15803d")
+           + ' <font size="8" color="#64748b">fapi.binance.com</font>')
+_path_b = (_actor("브라우저", "#7e22ce") + _arrow("SSE")
+           + _actor("Spring 서버", "#475569") + _arrow("WebSocket")
+           + _actor("Binance @depth", "#15803d")
+           + ' <font size="8" color="#64748b">fstream.binance.com</font>')
+
+path_table = Table(
+    [[_tag("과거 봉", "직접"), Paragraph(_path_a, S_BODY)],
+     [_tag("호가창 · 진행 봉", "서버 경유"), Paragraph(_path_b, S_BODY)]],
+    colWidths=[96, 399])
+path_table.setStyle(TableStyle([
+    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ("BACKGROUND", (0, 0), (-1, -1), CANVAS),
+    ("BOX", (0, 0), (-1, -1), 0.7, RULE),
+    ("INNERGRID", (0, 0), (-1, -1), 0.4, RULE),
+    ("TOPPADDING", (0, 0), (-1, -1), 8),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+    ("LEFTPADDING", (0, 0), (-1, -1), 9),
+    ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+]))
+story.append(KeepTogether([
+    Paragraph("해결 경로 — 막힌 @kline을 빼고 차트를 두 경로로 완성", S_LABEL),
+    Spacer(1, 5),
+    path_table,
+    Spacer(1, 5),
+    Paragraph("과거 봉은 브라우저가 Binance에 직접 요청(서버 안 거침), 진행 봉은 호가창이 쓰는 그 SSE의 "
+              "<b>best ask</b>를 재활용한다 — 차트용 추가 연결 0개, 막힌 @kline WebSocket은 전혀 쓰지 않는다.",
+              S_CAPTION),
+]))
+story.append(Spacer(1, 8))
+
 story.append(PageBreak())
 
 # ================================================================ 5p — 한계와 다음 단계

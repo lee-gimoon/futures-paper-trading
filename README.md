@@ -36,40 +36,43 @@ Binance 선물 호가 스트림은 서버가 부팅 시 **단 1개 연결로만*
 
 ```mermaid
 flowchart LR
-    subgraph Binance
-        BWS["WebSocket<br/>depth20@100ms"]
-        BREST["kline REST"]
+    subgraph MARKET["① 시세 수신 · 브라우저 0명이어도 항상 켜짐"]
+        direction LR
+        BWS["Binance WS<br/>depth20@100ms"] -->|raw JSON| RDS["RawDepthStreamer<br/>부팅 시 1회 구독"] --> STORE["SnapshotStore<br/>replay(1) 호가 허브"]
     end
 
-    subgraph Backend["Spring Boot (WebFlux, :8080)"]
-        ST["RawDepthStreamer<br/>부팅 시 1회 구독"]
-        STORE["SnapshotStore<br/>AtomicReference + Sinks.replay(1)"]
-        ENG["PaperTradingEngine<br/>호가 기준 체결"]
+    subgraph BG["② 백그라운드 소비자 · HTTP 요청 없이 자동"]
+        direction TB
         MATCH["PendingOrderMatcher<br/>대기 지정가 재평가"]
-        LIQ["LiquidationMonitor<br/>1s 청산 검사"]
-        PORT["PortfolioService<br/>포지션·PnL·마진 계산"]
-        AUTH["Auth<br/>세션 + BCrypt"]
+        LIQ["LiquidationMonitor<br/>1초 청산 검사"]
     end
 
-    subgraph Browser["브라우저 (React, :5173)"]
-        OB["호가창"]
-        CH["캔들 차트"]
-        ACC["계좌·포지션·주문 패널"]
+    subgraph CORE["③ 거래 · 계좌"]
+        direction TB
+        ENG["PaperTradingEngine<br/>호가 기준 체결"]
+        PORT["PortfolioService<br/>포지션·PnL·마진 (fills 재생)"]
     end
 
-    DB[("PostgreSQL<br/>users · paper_accounts<br/>paper_orders · paper_fills")]
+    subgraph CLIENT["④ 브라우저 N명"]
+        direction TB
+        BR["호가창 · 캔들 차트"]
+        ACC["계좌 · 포지션 패널"]
+    end
 
-    BWS -->|raw JSON| ST --> STORE
-    STORE -->|"SSE /depth/stream"| OB
-    STORE -->|best ask| CH
-    BREST -->|"과거 봉 (직접 요청)"| CH
-    STORE --> ENG
-    STORE -->|새 스냅샷마다| MATCH --> ENG
-    STORE -->|1초마다 샘플링| LIQ --> ENG
-    ENG --> DB
-    PORT --> DB
-    PORT -->|"GET /account"| ACC
-    AUTH --> DB
+    DB[("PostgreSQL")]
+    KLINE["Binance<br/>kline REST"]
+
+    STORE -->|SSE| BR
+    STORE -->|스냅샷마다| MATCH
+    STORE -->|1초 샘플| LIQ
+    STORE -.최신 호가.-> ENG
+    BR -->|POST 주문| ENG
+    MATCH --> ENG
+    LIQ --> ENG
+    ENG -->|orders · fills| DB
+    DB -.fills 재생.-> PORT
+    PORT -->|GET /account| ACC
+    KLINE -->|과거 봉 직접| BR
 ```
 
 데이터 흐름의 핵심:

@@ -251,18 +251,3 @@ frontend/      React 화면 — 호가창, 캔들 차트, 거래 패널(주문·
 docs/          학습 노트, 실행 흐름 다이어그램
 roadmap.md     단계별 로드맵 (설계 배경과 결정 이유 포함)
 ```
-
-## 진행 현황
-
-- [x] Binance 선물 호가 WebSocket 수신 → 파싱 → 메모리 보관
-- [x] Sinks 기반 SSE push, React 실시간 호가창
-- [x] 캔들 차트 (과거 봉 kline REST + 진행 봉 실시간)
-- [x] 자체 회원가입 / 로그인 (세션 + BCrypt)
-- [x] 호가창 기준 모의 주문 (시장가·지정가·취소, 1:N 체결)
-- [x] 계좌·포지션·실현/미실현 PnL (체결 내역에서 재계산)
-- [x] 레버리지·격리 마진·증거금 검증·자동 강제청산
-- [ ] 운영성 보강 (재연결, stale 감지, health)
-- [ ] REST snapshot + diff depth 기반 정밀 로컬 오더북
-- [ ] 수수료·펀딩비·maker/taker 모델
-
-상세 계획은 [roadmap.md](roadmap.md) 참고.

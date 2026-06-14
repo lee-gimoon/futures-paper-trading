@@ -79,7 +79,7 @@ flowchart LR
 
 데이터 흐름의 핵심:
 
-> 앱 실행 후 [Sinks 흐름 애니메이션](http://localhost:8080/docs/sink-flow-animation.html)에서 이 구조를 움직이는 화면으로 확인할 수 있다. GitHub에서는 [HTML 소스](src/main/resources/static/docs/sink-flow-animation.html)도 볼 수 있다.
+> 브라우저 실행용 [Sinks 흐름 애니메이션](https://htmlpreview.github.io/?https://github.com/lee-gimoon/futures-paper-trading/blob/main/src/main/resources/static/docs/sink-flow-animation.html)에서 이 구조를 움직이는 화면으로 확인할 수 있다. 원본은 [HTML 소스](src/main/resources/static/docs/sink-flow-animation.html)에 있다.
 
 - Binance 수신은 `@PostConstruct`로 서버 부팅 시 1회 시작되고, 브라우저가 0명이어도 계속 돈다. 브라우저 SSE 구독은 `Sinks.asFlux()` 아래쪽에만 생기므로 **수신 생명주기와 구독 생명주기가 분리**되어 있다.
 - `Sinks.many().replay(1)` 덕분에 늦게 접속한 브라우저도 최신 스냅샷 1건을 즉시 받는다.

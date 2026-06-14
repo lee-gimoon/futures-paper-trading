@@ -100,7 +100,7 @@ public class BinanceFuturesRawDepthStreamer {
 	}
 
 	// raw JSON을 파싱해서 latestStore에 저장한다.
-	// 파싱이 실패해도 raw 스트림 전체를 죽이지 않도록 여기서 예외를 잡아 로그만 남긴다.
+	// 파싱 실패는 메시지 1건 단위로 격리한다 — 스트림 전체를 죽이지 않게(이유는 아래 catch).
 	private void logParsedSnapshot(String message) {
 		try {
 			OrderBookSnapshot snapshot = snapshotParser.parse(message);
@@ -108,6 +108,11 @@ public class BinanceFuturesRawDepthStreamer {
 			// 이 try 블록이 끝나면 지역변수 참조가 끊겨 GC 대상이 되므로, 여기서 안 잡아두면 영원히 사라진다.
 			latestStore.update(snapshot);
 		} catch (Exception e) {
+			// 메시지 1건 단위 장애 격리.
+			// parse()가 던진 예외를 여기서 안 잡으면: 그 예외가 doOnNext 밖으로 전파되고,
+			//   Reactor가 그걸 onError 신호로 바꿔 호가 Flux 전체를 종료시킨다
+			//   → 이후 메시지 0건 → 모든 사용자의 호가창이 멈춤(재연결 전엔 복구 안 됨).
+			// 잡으면: 깨진 그 1건의 예외만 warn 남기고 버리고, 다음 100ms 메시지부터 정상 흐른다.
 			log.warn("Failed to parse depth JSON: {}", message, e);
 		}
 	}

@@ -393,6 +393,9 @@ story.append(KeepTogether([
               S_BODY),
     Spacer(1, 4),
     cmp_table,
+    Spacer(1, 3),
+    Paragraph("* idle(유휴) = 연결은 열려 있지만 데이터가 안 흐르는 대기 시간. 호가 SSE는 100ms마다 잠깐 "
+              "write하고 나머지 시간은 대부분 idle이다.", S_CAPTION),
 ]))
 story.append(Spacer(1, 9))
 
@@ -431,13 +434,35 @@ story.append(KeepTogether([
     Paragraph("양쪽 모두 Binance 업스트림 연결은 <b>1개</b>로 같다. 차이는 다운스트림(브라우저)을 처리하는 방식 "
               "— 핵심은 <b>연결과 스레드를 분리</b>해 적은 스레드로 많은 long-lived 연결을 유지하는 것이다.",
               S_BODY),
-    Paragraph("정확히는 위 표는 <b>블로킹</b> 모델 기준이다 — Spring MVC도 SseEmitter(async)를 쓰면 idle 연결에 "
-              "스레드를 묶지 않는다. WebFlux의 추가 이점은 DB 접근까지(R2DBC) 논블로킹이 기본이라는 점이다.",
+    Paragraph("단, 위 표는 <b>블로킹</b> 모델 기준이다. Spring MVC도 SseEmitter(async)를 쓰면 idle 연결에 "
+              "스레드를 묶지 않는다 — 그러면 'idle 연결 스레드 절약'은 WebFlux만의 이점이 아니다. 그럼 왜 WebFlux인가?",
               S_BODY_MUT),
-    Spacer(1, 5),
-    Paragraph("<b>정직한 결론</b> — reactive는 '항상 우월한 기본값'이 아니다. 평범한 CRUD·트랜잭션 위주였다면 "
-              "MVC + Tomcat이 더 단순하고 옳았을 것이다. 이 프로젝트는 스트리밍·다수 long-lived 연결이라는 "
-              "특성 때문에 WebFlux + Netty를 골랐다 — 즉 워크로드에 맞춰 고른 도구다.", S_BODY),
+]))
+story.append(Spacer(1, 9))
+
+story.append(KeepTogether([
+    Paragraph("왜 WebFlux + Netty인가 — 스레드 효율과 스트림 적합성", S_H2),
+    Paragraph("WebFlux + Netty의 <b>근본 장점은 스레드 효율</b>이다 — event loop가 블로킹 없이 I/O를 다뤄 "
+              "적은 스레드로 많은 동시 연결을 감당한다. 다수 long-lived SSE를 들고 있어야 하는 이 앱과 맞는 1차 이유다.",
+              S_BODY),
+    Paragraph("다만 정밀하게 — <b>idle SSE 연결만</b>은 MVC도 SseEmitter(async)로 스레드를 안 묶는다. 스레드 효율이 "
+              "<b>결정적으로</b> 벌어지는 지점은 <b>경로 전체가 논블로킹</b>일 때다: 중간에 블로킹(JDBC 등)이 하나라도 "
+              "끼면 MVC는 그 순간 풀 스레드를 잡지만, WebFlux는 끝까지 event loop 몇 개로 흐른다(이 앱은 R2DBC로 "
+              "DB까지 논블로킹).", S_BODY),
+    Paragraph("거기에 이 프로젝트가 특히 reactive와 맞은 추가 이유:", S_BODY),
+    bullet("<b>업스트림도 다운스트림도 Flux</b> — Binance WebSocket 수신(Flux&lt;WebSocketMessage&gt;)부터 "
+           "브라우저 SSE 송신까지 하나의 reactive 파이프라인으로 이어진다. MVC엔 일급 reactive WebSocket "
+           "클라이언트가 없어 업스트림 수신을 따로 다리 놓아야 한다."),
+    bullet("<b>Sinks 멀티캐스트 + replay(1)이 기본 제공</b> — '1 upstream → N downstream, 늦게 온 구독자에겐 "
+           "최신 1건 즉시'가 Sinks.many().replay().limit(1)와 sink.asFlux()로 끝난다. MVC + SseEmitter면 "
+           "List&lt;SseEmitter&gt;를 직접 add/remove/순회 send하고 replay까지 수동 구현해야 한다."),
+    bullet("<b>백프레셔·구독 취소가 모델에 내장</b> — 느린 클라이언트 대응과 탭 닫힘(cancel) 정리가 "
+           "Reactor에 일관되게 들어 있다."),
+    Spacer(1, 4),
+    Paragraph("<b>정직한 결론</b> — 이 앱 규모면 MVC + SseEmitter로도 가능하다. 그럼에도 WebFlux를 고른 건 "
+              "스레드 효율을 <b>경로 끝까지(논블로킹 일관)</b> 보장하면서 '양 끝이 스트림'인 구조를 자연스럽게 "
+              "표현하기 때문이다 — 문제 모양에 맞는 도구다. 평범한 CRUD·트랜잭션 위주였다면 MVC + Tomcat이 더 "
+              "단순하고 옳았을 것이다.", S_BODY),
 ]))
 story.append(Spacer(1, 6))
 story.append(PageBreak())

@@ -29,7 +29,7 @@ Binance 선물 호가 스트림은 서버가 부팅 시 **단 1개 연결로만*
 - **호가창 기준 모의 주문** — 시장가 / 지정가 BUY·SELL, 지정가 대기·취소, 호가 레벨 단위 부분 체결(주문 1 : 체결 N)
 - **레버리지·마진** — 1·3·5·10·20·50x 프리셋 레버리지(기본 10x), 격리 마진 모델, 신규 주문 시 가용 증거금 검증
 - **포지션·PnL** — 롱/숏 포지션, 포지션 뒤집기, 실현·미실현 PnL, equity, 가용잔고를 체결 내역에서 실시간 계산
-- **자동 강제청산** — 현재 mark가 청산가에 닿은 포지션을 백그라운드에서 1초마다 검사해 시장가로 강제 청산
+- **자동 강제청산** — 현재 mark(mid)가 청산가에 닿은 포지션을 백그라운드에서 1초 샘플링으로 검사하고, 청산가 fill을 기록해 강제 청산
 - **사용자별 격리** — 로그인한 사용자는 자신의 계좌·주문·체결·포지션만 조회·취소 가능
 
 ## 아키텍처
@@ -70,7 +70,8 @@ flowchart LR
     STORE -.최신 호가.-> ENG
     KLINE -->|과거 봉 직접| CH
     MATCH --> ENG
-    LIQ --> ENG
+    LIQ -.계좌 상태 계산.-> PORT
+    LIQ -->|청산가 fill 기록| DB
     ACC -->|POST 주문| ENG
     ENG -->|orders · fills| DB
     DB -.fills 재생.-> PORT
@@ -93,8 +94,8 @@ flowchart LR
 |---|---|
 | 시장가 BUY | best ask부터 위로 호가 레벨 잔량을 소진하며 체결 |
 | 시장가 SELL | best bid부터 아래로 소진하며 체결 |
-| 지정가 BUY | `limit ≥ best ask`면 즉시 체결, 아니면 OPEN 대기 |
-| 지정가 SELL | `limit ≤ best bid`면 즉시 체결, 아니면 OPEN 대기 |
+| 지정가 BUY | `limit ≥ best ask`면 가능한 만큼 즉시 체결, 잔량이 남으면 OPEN 대기 |
+| 지정가 SELL | `limit ≤ best bid`면 가능한 만큼 즉시 체결, 잔량이 남으면 OPEN 대기 |
 
 한 주문이 여러 호가 레벨에 걸치면 레벨마다 체결(fill)이 한 건씩 생긴다 → `paper_orders` 1건 : `paper_fills` N건. 평균 체결가는 fill들의 수량가중평균이다.
 
@@ -109,12 +110,12 @@ flowchart LR
 | 사용 증거금 | 명목금액 / 레버리지 |
 | 청산가 | 롱 = 진입가 × (1 − 1/L), 숏 = 진입가 × (1 + 1/L) |
 | 미실현 PnL | (현재 mid − 평균진입가) × 부호수량 |
-| 가용잔고 | (현금 + 실현 PnL) − 사용 증거금 |
+| 가용잔고 | (현금 + 실현 PnL) − 사용 증거금 (0 미만이면 0) |
 
 - **신규 주문 검증** — 새로 여는(또는 뒤집어 늘어나는) 수량의 필요 증거금이 가용잔고를 넘으면 거부(`400`). 순수 축소·청산 주문은 증거금이 들지 않아 항상 통과한다.
-- **강제청산** — 현재 mark가 청산가에 닿으면 `LiquidationMonitor`가 반대 방향 시장가로 포지션을 강제 청산하고, 묶였던 증거금만큼 실현 손실이 확정된다.
+- **강제청산** — 현재 mark(mid)가 청산가에 닿으면 `LiquidationMonitor`가 반대 방향 `FILLED` 주문과 청산가 fill을 기록해 포지션을 닫고, 묶였던 증거금만큼 실현 손실이 확정된다.
 
-현재 MVP 가정: 모의 주문은 실제 호가창에 영향을 주지 않으며, depth20 안에 보이는 수량만 유동성으로 간주한다. queue priority / maker·taker / 슬리피지 / 펀딩비 모델은 이후 단계에서 다룬다.
+현재 MVP 가정: 모의 주문은 실제 호가창에 영향을 주지 않으며, depth20 안에 보이는 수량만 유동성으로 간주한다. 호가 레벨 소진으로 생기는 평균 체결가 차이는 반영하지만, depth20 밖 유동성 / queue priority / maker·taker 수수료 / 펀딩비 / 별도 시장충격 모델은 이후 단계에서 다룬다.
 
 ## 설계 결정
 
@@ -143,7 +144,7 @@ flowchart LR
 | Backend | Java 21, Spring Boot 4.0.6, Spring WebFlux (Reactor), Spring Security (reactive), R2DBC |
 | Database | PostgreSQL |
 | Frontend | React 18, TypeScript, Vite, TradingView Lightweight Charts v5 |
-| Test | JUnit 5 — 체결 엔진·포지션/PnL·마진/청산가·호가 파생값 단위 테스트 |
+| Test | JUnit 5 — 체결 엔진·포지션/PnL·마진/청산가·호가 파생값 단위 테스트 + Spring context 테스트 |
 
 ## 시작하기
 
@@ -212,6 +213,8 @@ npm run dev
 ./gradlew test
 ```
 
+`contextLoads`가 Spring Boot 전체 컨텍스트와 R2DBC 연결을 함께 띄우므로, 로컬 실행 시에는 `application.yaml` 기준의 PostgreSQL(`localhost:5432`, 기본 DB/계정)이 준비되어 있어야 한다.
+
 ## API
 
 | Method | Path | 인증 | 설명 |
@@ -256,7 +259,7 @@ roadmap.md     단계별 로드맵 (설계 배경과 결정 이유 포함)
 
 ### 백엔드 파일 역할 상세
 
-면접관이 README만 보고도 "어떤 파일이 어떤 책임을 맡는지" 빠르게 따라올 수 있도록, 백엔드 주요 파일을 모듈별로 정리했다.
+면접관이 README만 보고도 "어떤 파일이 어떤 책임을 맡는지" 빠르게 따라올 수 있도록, 백엔드 Java 코드 파일을 모듈별로 정리했다.
 
 <details>
 <summary><strong>root · resources</strong> — 앱 부팅과 설정</summary>
@@ -297,7 +300,7 @@ roadmap.md     단계별 로드맵 (설계 배경과 결정 이유 포함)
 | `market/domain/OrderBookLevel.java` | 호가 한 레벨의 가격과 수량을 표현하는 값 객체. |
 | `market/domain/OrderBookSnapshot.java` | 한 시점의 BTCUSDT 호가창 snapshot. bids/asks와 이벤트 시간을 담는다. |
 | `market/domain/OrderBookQuotes.java` | snapshot에서 best bid, best ask, mid price를 뽑는 호가 파생 계산 유틸리티. |
-| `market/stream/BinanceFuturesRawDepthStreamer.java` | Binance Futures WebSocket에 연결해 raw depth 메시지를 수신한다. 부팅 시 1개 upstream 연결을 유지한다. |
+| `market/stream/BinanceFuturesRawDepthStreamer.java` | Binance Futures WebSocket에 연결해 raw depth 메시지를 수신한다. 부팅 시 1개 upstream 연결을 시작해 사용자 수와 무관하게 공유한다. |
 | `market/stream/OrderBookSnapshotParser.java` | Binance raw JSON 메시지를 `OrderBookSnapshot` 도메인 객체로 파싱한다. |
 | `market/stream/LatestOrderBookSnapshotStore.java` | 최신 snapshot을 메모리에 보관하고, 여러 구독자에게 hot stream으로 전달한다. SSE, 지정가 matcher, 청산 모니터가 같은 데이터 축을 공유한다. |
 

@@ -2,7 +2,8 @@ package com.example.futurespapertrading.paper.service;
 import com.example.futurespapertrading.paper.domain.OrderStatus;
 import com.example.futurespapertrading.paper.repository.PaperOrderRepository;
 
-import jakarta.annotation.PostConstruct;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,12 +39,19 @@ public class OpenOrderCounter {
     }
 
     // 재시작 보정: 서버가 죽었다 떠도 DB의 OPEN 주문은 남아 있다 — 0으로 시작하면 matcher가 영원히 skip하므로
-    //   부팅 시 DB에서 한 번 세어 채운다.
-    //   set이 아니라 addAndGet인 이유: 이 조회는 비동기라 결과가 도착하기
-    //   전에 새 주문이 +1을 했을 수 있는데, set은 그 +1을 덮어쓰지만 add는 보존한다.
+    //   앱 준비가 끝난 뒤 DB에서 한 번 세어 채운다.
+    //
+    // 왜 @PostConstruct가 아니라 ApplicationReadyEvent인가:
+    //   @PostConstruct는 이 Bean 하나가 만들어진 직후 실행된다. 그 시점에는 schema.sql이 아직 paper_orders 테이블을
+    //   만들기 전일 수 있어, 첫 조회가 "relation paper_orders does not exist"로 실패할 수 있다.
+    //   ApplicationReadyEvent는 Spring Boot 앱 전체 준비가 끝난 뒤 발행되므로 DB 초기화 이후에 조회할 수 있다.
+    //
+    // 왜 set이 아니라 addAndGet인가:
+    //   이 조회는 비동기라 결과가 도착하기 전에 새 주문이 +1을 했을 수 있다.
+    //   set은 그 +1을 덮어쓰지만, addAndGet은 기존 증가분을 보존한 채 DB 조회값을 더한다.
     //   set(n)은 현재 count를 n으로 교체하고, addAndGet(n)은 현재 count에 n을 원자적으로 더한다.
     //   원자적 = 여러 스레드가 동시에 건드려도 "읽고-더하고-저장"이 중간에 끊기지 않는 한 번의 안전한 연산.
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     void seedFromDb() {
         // countByStatus(...)는 Mono<Long>("아직 안 온 건수 1개"의 약속) — 이 줄은 파이프라인을 만들 뿐 실행은 안 된다(cold).
         //   OrderStatus.OPEN.name() = enum을 DB에 저장된 문자열 "OPEN"으로 바꿔 넘김 (status 컬럼이 문자열이라).

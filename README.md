@@ -253,3 +253,133 @@ frontend/      React 화면 — 호가창, 캔들 차트, 거래 패널(주문·
 docs/          학습 노트, 실행 흐름 다이어그램
 roadmap.md     단계별 로드맵 (설계 배경과 결정 이유 포함)
 ```
+
+### 백엔드 파일 역할 상세
+
+면접관이 README만 보고도 "어떤 파일이 어떤 책임을 맡는지" 빠르게 따라올 수 있도록, 백엔드 주요 파일을 모듈별로 정리했다.
+
+<details>
+<summary><strong>root · resources</strong> — 앱 부팅과 설정</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `FuturesPaperTradingApplication.java` | Spring Boot 애플리케이션 진입점. `main()`에서 전체 서버를 부팅한다. |
+| `application.yaml` | 앱 이름, R2DBC PostgreSQL 접속 정보, `schema.sql` 실행 모드 같은 런타임 설정을 둔다. Docker에서는 환경변수로 DB 주소를 덮어쓴다. |
+| `schema.sql` | R2DBC는 자동 DDL을 쓰지 않으므로, 서버 부팅 시 `users`, `paper_orders`, `paper_fills`, `paper_accounts` 테이블을 만든다. |
+
+</details>
+
+<details>
+<summary><strong>auth</strong> — 회원가입·로그인·세션 인증</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `auth/config/SecurityConfig.java` | Spring Security WebFlux 설정. 공개 API와 세션이 필요한 API를 나누고, JSON 로그인에 맞게 form login/basic/csrf를 끈다. |
+| `auth/config/PasswordEncoderConfig.java` | 비밀번호 해시와 검증에 사용할 BCrypt `PasswordEncoder` 빈을 등록한다. |
+| `auth/controller/AuthController.java` | 회원가입, 로그인, 로그아웃, 내 정보 조회 API 입구. 로그인 성공 시 SecurityContext를 세션에 저장한다. |
+| `auth/controller/AuthExceptionHandler.java` | 인증 모듈 예외를 HTTP 응답으로 번역한다. 예: 중복 이메일 `409 Conflict`. |
+| `auth/domain/User.java` | `users` 테이블과 매핑되는 사용자 엔티티. 비밀번호는 원문이 아니라 BCrypt 해시로 저장한다. |
+| `auth/dto/SignupRequest.java` | 회원가입 요청 본문 DTO. 이메일, 비밀번호, 표시 이름 입력값을 받는다. |
+| `auth/dto/LoginRequest.java` | 로그인 요청 본문 DTO. 이메일과 비밀번호를 받는다. |
+| `auth/dto/UserResponse.java` | 사용자 응답 DTO. `passwordHash`를 제외하고 클라이언트에 보여줄 값만 담는다. |
+| `auth/repository/UserRepository.java` | `users` 테이블 접근 계층. 이메일 중복 검사와 로그인 사용자 조회에 사용한다. |
+| `auth/service/AuthService.java` | 회원가입 비즈니스 로직. 이메일 중복 검사, 비밀번호 해싱, 사용자 저장을 담당한다. |
+| `auth/service/SecurityUserDetailsService.java` | Spring Security 로그인 과정에서 이메일로 사용자를 조회하고 인증용 `UserDetails`로 변환한다. |
+
+</details>
+
+<details>
+<summary><strong>market</strong> — Binance 호가 수신·파싱·SSE 노출</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `market/controller/BinanceFuturesDepthController.java` | 최신 호가 snapshot 조회 API와 SSE 스트림 API를 제공한다. 프론트 호가창/차트가 이 스트림을 구독한다. |
+| `market/domain/OrderBookLevel.java` | 호가 한 레벨의 가격과 수량을 표현하는 값 객체. |
+| `market/domain/OrderBookSnapshot.java` | 한 시점의 BTCUSDT 호가창 snapshot. bids/asks와 이벤트 시간을 담는다. |
+| `market/domain/OrderBookQuotes.java` | snapshot에서 best bid, best ask, mid price를 뽑는 호가 파생 계산 유틸리티. |
+| `market/stream/BinanceFuturesRawDepthStreamer.java` | Binance Futures WebSocket에 연결해 raw depth 메시지를 수신한다. 부팅 시 1개 upstream 연결을 유지한다. |
+| `market/stream/OrderBookSnapshotParser.java` | Binance raw JSON 메시지를 `OrderBookSnapshot` 도메인 객체로 파싱한다. |
+| `market/stream/LatestOrderBookSnapshotStore.java` | 최신 snapshot을 메모리에 보관하고, 여러 구독자에게 hot stream으로 전달한다. SSE, 지정가 matcher, 청산 모니터가 같은 데이터 축을 공유한다. |
+
+</details>
+
+<details>
+<summary><strong>paper/controller</strong> — 주문·계좌 HTTP 입구</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `paper/controller/PaperOrderController.java` | 주문 생성, 내 주문 목록, 대기 주문 취소 API. 현재 세션 사용자 id를 확인한 뒤 서비스에 위임한다. |
+| `paper/controller/PortfolioController.java` | 내 계좌, 체결 내역, 레버리지 변경 API. 포트폴리오 화면에 필요한 데이터를 제공한다. |
+| `paper/controller/PaperExceptionHandler.java` | paper 도메인 예외를 HTTP 상태코드와 `{"message": ...}` 응답으로 번역한다. 컨트롤러마다 try-catch를 반복하지 않게 한다. |
+
+</details>
+
+<details>
+<summary><strong>paper/domain</strong> — 순수 거래 계산과 엔티티</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `paper/domain/PaperTradingEngine.java` | 호가창 기준 체결 엔진. 시장가/지정가 주문이 어떤 호가 레벨에서 얼마나 체결되는지 계산한다. |
+| `paper/domain/PositionCalculator.java` | 체결 내역을 시간순으로 재생해 포지션, 평균진입가, 실현 PnL, 포지션 레버리지를 계산한다. |
+| `paper/domain/MarginCalculator.java` | 명목금액, 사용 증거금, 청산가, 청산 여부를 계산한다. |
+| `paper/domain/Position.java` | 현재 포지션 상태를 담는 값 객체. 부호 수량, 평균진입가, 실현 PnL을 가진다. |
+| `paper/domain/PaperOrder.java` | `paper_orders` 테이블과 매핑되는 주문 엔티티. 주문 시점 레버리지와 누적 체결 수량을 저장한다. |
+| `paper/domain/PaperFill.java` | `paper_fills` 테이블과 매핑되는 체결 엔티티. 한 주문이 여러 가격 레벨에서 체결되면 여러 fill이 생긴다. |
+| `paper/domain/PaperAccount.java` | `paper_accounts` 테이블과 매핑되는 계좌 엔티티. 시드 현금과 신규 주문용 계좌 레버리지를 저장한다. |
+| `paper/domain/OrderSide.java` | 주문 방향 enum. `BUY`, `SELL`. |
+| `paper/domain/OrderType.java` | 주문 종류 enum. `MARKET`, `LIMIT`. |
+| `paper/domain/OrderStatus.java` | 주문 상태 enum. `NEW`, `OPEN`, `FILLED`, `CANCELED`, `REJECTED`. |
+
+</details>
+
+<details>
+<summary><strong>paper/service</strong> — 주문 처리·포트폴리오·백그라운드 작업</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `paper/service/PaperOrderService.java` | 주문 생성/조회/취소의 핵심 비즈니스 로직. 증거금 검증, 체결 판정, 주문 저장, fill 저장을 조립한다. |
+| `paper/service/PortfolioService.java` | 계좌, 체결, 주문 레버리지를 모아 포지션/PnL/equity/마진/가용잔고 응답을 만든다. |
+| `paper/service/PendingOrderMatcher.java` | 새 호가 snapshot마다 OPEN 지정가 주문을 재평가하고, 가격이 닿으면 체결 처리한다. |
+| `paper/service/OpenOrderCounter.java` | OPEN 주문 수를 메모리에 들고 있어, OPEN이 0건일 때 matcher가 DB 조회를 건너뛰게 한다. 앱 준비 후 DB 값으로 재시작 보정한다. |
+| `paper/service/LiquidationMonitor.java` | 호가 snapshot을 샘플링해 강제청산 검사를 주기적으로 트리거한다. |
+| `paper/service/LiquidationService.java` | 청산가에 도달한 포지션을 찾아 반대 방향 체결을 생성하고 포지션을 닫는다. |
+
+</details>
+
+<details>
+<summary><strong>paper/repository</strong> — R2DBC DB 접근</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `paper/repository/PaperOrderRepository.java` | 주문 저장/조회/상태 변경 DB 접근. 사용자별 주문 목록, OPEN 주문 조회, 조건부 체결/취소 UPDATE를 담당한다. |
+| `paper/repository/PaperFillRepository.java` | 체결 저장/조회 DB 접근. 사용자별 체결 내역은 주문 테이블과 JOIN해 가져온다. |
+| `paper/repository/PaperAccountRepository.java` | 사용자별 모의 계좌 조회/저장 DB 접근. 없으면 `PortfolioService`가 lazy 생성한다. |
+
+</details>
+
+<details>
+<summary><strong>paper/dto</strong> — 요청/응답 경계 객체</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `paper/dto/CreateOrderRequest.java` | 주문 생성 요청 DTO. symbol/side/type/quantity/limitPrice를 받고, 시장가/지정가 입력 규칙을 검증한다. |
+| `paper/dto/OrderResponse.java` | 주문 응답 DTO. 주문 상태, 체결 수량, 평균 체결가를 클라이언트에 보여줄 형태로 담는다. |
+| `paper/dto/PortfolioResponse.java` | 계좌 응답 DTO. 현금, 실현/미실현 PnL, equity, 사용 증거금, 가용잔고, 포지션 뷰를 담는다. |
+| `paper/dto/FillResponse.java` | 체결 내역 응답 DTO. `PaperFill` 엔티티 중 화면에 필요한 값만 노출한다. |
+| `paper/dto/SetLeverageRequest.java` | 레버리지 변경 요청 DTO. `@Valid`로 1·3·5·10·20·50x 프리셋만 허용한다. |
+
+</details>
+
+<details>
+<summary><strong>paper/exception</strong> — 도메인 예외 타입</summary>
+
+| 파일 | 역할 |
+|---|---|
+| `paper/exception/OrderNotFoundException.java` | 주문 id가 DB에 없을 때 발생. `PaperExceptionHandler`가 404로 번역한다. |
+| `paper/exception/OrderForbiddenException.java` | 주문은 있지만 현재 사용자의 주문이 아닐 때 발생. 403으로 번역한다. |
+| `paper/exception/OrderNotOpenException.java` | 이미 체결/취소/거부된 주문을 취소하려 할 때 발생. 409로 번역한다. |
+| `paper/exception/QuoteUnavailableException.java` | 아직 호가 snapshot이 없어 시장가 체결을 계산할 수 없을 때 발생. 503으로 번역한다. |
+| `paper/exception/InsufficientMarginException.java` | 새로 여는 주문의 필요 증거금이 가용잔고를 넘을 때 발생. 400으로 번역한다. |
+| `paper/exception/InvalidLeverageException.java` | 허용 프리셋 밖의 레버리지 값이 들어왔을 때 발생. 400으로 번역한다. |
+
+</details>

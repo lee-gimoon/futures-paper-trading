@@ -8,6 +8,7 @@ import com.example.futurespapertrading.paper.domain.PaperFill;
 import com.example.futurespapertrading.paper.domain.PaperOrder;
 import com.example.futurespapertrading.paper.domain.Position;
 import com.example.futurespapertrading.paper.domain.PositionCalculator;
+import com.example.futurespapertrading.paper.exception.InvalidLeverageException;
 import com.example.futurespapertrading.paper.dto.FillResponse;
 import com.example.futurespapertrading.paper.dto.PortfolioResponse;
 import com.example.futurespapertrading.paper.dto.PortfolioResponse.PositionView;
@@ -22,6 +23,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 // 9단계 계좌/포지션/PnL + 레버리지·마진 비즈니스 로직.
 //   포지션·실현/미실현 PnL은 저장하지 않고 paper_fills에서 매번 계산한다(로드맵 9단계 방향).
@@ -36,7 +38,7 @@ public class PortfolioService {
 
     private static final BigDecimal SEED_CASH = new BigDecimal("10000");
     private static final int DEFAULT_LEVERAGE = 10;
-    private static final int MAX_LEVERAGE = 125;
+    private static final Set<Integer> ALLOWED_LEVERAGES = Set.of(1, 3, 5, 10, 20, 50);
     private static final String SYMBOL = "BTCUSDT";
 
     private final PaperAccountRepository accountRepository;
@@ -65,10 +67,10 @@ public class PortfolioService {
                 .map(FillResponse::from);
     }
 
-    // 레버리지 변경 (1 ~ 125 범위). '신규 주문'용 계좌 레버리지만 바꾼다 — 이미 연 포지션의 마진/청산가는 안 바뀐다.
+    // 레버리지 변경 (UI 프리셋 값만 허용). '신규 주문'용 계좌 레버리지만 바꾼다 — 이미 연 포지션의 마진/청산가는 안 바뀐다.
     public Mono<PortfolioResponse> setLeverage(Long userId, int leverage) {
-        if (leverage < 1 || leverage > MAX_LEVERAGE)
-            return Mono.error(new IllegalArgumentException("레버리지는 1 ~ " + MAX_LEVERAGE + " 사이여야 합니다."));
+        if (!ALLOWED_LEVERAGES.contains(leverage))
+            return Mono.error(new InvalidLeverageException("레버리지는 1, 3, 5, 10, 20, 50 중 하나여야 합니다."));
         return getOrCreateAccount(userId)
                 .flatMap(account -> accountRepository.save(
                         new PaperAccount(account.id(), account.userId(), account.cashBalance(), leverage)))

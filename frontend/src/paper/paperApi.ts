@@ -59,7 +59,7 @@ export async function listFills(): Promise<Fill[]> {
   return res.json();
 }
 
-// 레버리지 변경(1~125). 성공 시 갱신된 계좌를 돌려준다.
+// 레버리지 변경(UI 프리셋: 1, 3, 5, 10, 20, 50). 성공 시 갱신된 계좌를 돌려준다.
 export async function setLeverage(leverage: number): Promise<Portfolio> {
   const res = await fetch('/api/paper/account/leverage', {
     method: 'PUT',

@@ -46,7 +46,7 @@ public class PortfolioController {
         return currentUserId().flatMapMany(portfolioService::listFills);
     }
 
-    // PUT /api/paper/account/leverage — 레버리지 변경(1~125). 변경 후 갱신된 계좌 화면을 돌려준다.
+    // PUT /api/paper/account/leverage — 레버리지 변경(1·3·5·10·20·50). 변경 후 갱신된 계좌 화면을 돌려준다.
     @PutMapping("/account/leverage")
     public Mono<PortfolioResponse> setLeverage(@Valid @RequestBody SetLeverageRequest req) {
         return currentUserId().flatMap(userId -> portfolioService.setLeverage(userId, req.leverage()));

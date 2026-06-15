@@ -103,7 +103,7 @@ flowchart LR
 | 항목 | 값 / 규칙 |
 |---|---|
 | 시드 자본 | 10,000 USDT (가입 후 첫 조회 시 1회 적립) |
-| 레버리지 | UI 프리셋 1·3·5·10·20·50x (기본 10x) — API 검증 범위는 1~125 |
+| 레버리지 | UI/API 모두 1·3·5·10·20·50x 프리셋만 허용 (기본 10x) |
 | 마진 방식 | 격리(isolated) 마진, 유지증거금률(MMR) 0, 수수료 0 가정 (MVP) |
 | 명목금액 | 평균진입가 × \|수량\| |
 | 사용 증거금 | 명목금액 / 레버리지 |
@@ -227,7 +227,7 @@ npm run dev
 | DELETE | `/api/paper/orders/{id}` | 세션 | 대기 지정가 주문 취소 |
 | GET | `/api/paper/account` | 세션 | 내 계좌 (잔고·실현/미실현 PnL·equity·마진·포지션) |
 | GET | `/api/paper/fills` | 세션 | 내 체결 내역 |
-| PUT | `/api/paper/account/leverage` | 세션 | 레버리지 변경 (1~125x) |
+| PUT | `/api/paper/account/leverage` | 세션 | 레버리지 변경 (1·3·5·10·20·50x) |
 
 주문 생성 예시:
 

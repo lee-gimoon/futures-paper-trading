@@ -82,7 +82,7 @@ flowchart LR
 
 > 브라우저 실행용 [Sinks 흐름 애니메이션](https://htmlpreview.github.io/?https://github.com/lee-gimoon/futures-paper-trading/blob/main/src/main/resources/static/docs/sink-flow-animation.html)에서 이 구조를 움직이는 화면으로 확인할 수 있다.
 >
-> 핵심 구현 설명은 [Binance 실시간 데이터 파이프라인 포트폴리오 PDF](https://github.com/lee-gimoon/futures-paper-trading/blob/main/docs/portfolio/binance-stream-portfolio.pdf)에서 확인할 수 있다.
+> 핵심 구현 설명은 [Binance 실시간 데이터 파이프라인 포트폴리오 PDF](https://raw.githubusercontent.com/lee-gimoon/futures-paper-trading/main/docs/portfolio/binance-stream-portfolio.pdf)에서 확인할 수 있다.
 >
 > Binance WebSocket 수신부터 `Sinks.many().replay(1)` 기반 fan-out까지의 흐름만 따로 정리했다.
 

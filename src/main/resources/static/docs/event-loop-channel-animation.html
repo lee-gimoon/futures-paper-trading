@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EventLoop Channel 처리 흐름 - 동적 시각화</title>
+<style>
+  :root {
+    --bg: #f4f4f1;
+    --canvas: #fbfbf8;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --rule: #e6e3dc;
+    --socket: #15803d;
+    --socket-bg: #dcfce7;
+    --channel: #1d4ed8;
+    --channel-bg: #dbeafe;
+    --loop: #c2410c;
+    --loop-bg: #ffedd5;
+    --db: #7e22ce;
+    --db-bg: #f3e8ff;
+    --browser: #0891b2;
+    --browser-bg: #cffafe;
+    --warn: #dc2626;
+    --warn-bg: #fee2e2;
+    --queue: #a16207;
+    --queue-bg: #fef3c7;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: max-content 360px;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  .stage-shell {
+    padding: 16px 14px;
+    overflow: auto;
+    width: max-content;
+  }
+
+  .stage {
+    position: relative;
+    width: 1040px;
+    height: 740px;
+    margin: 0 auto;
+    background: var(--canvas);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  }
+
+  .title {
+    position: absolute;
+    left: 28px;
+    top: 22px;
+    right: 28px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 18px;
+    z-index: 6;
+  }
+
+  .title h1 {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  .title .caption {
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .mode-pill {
+    min-width: 176px;
+    text-align: center;
+    padding: 6px 10px;
+    border-radius: 5px;
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .mode-pill.blocking {
+    background: var(--warn-bg);
+    border-color: #fecaca;
+    color: #991b1b;
+  }
+
+  svg.wires {
+    position: absolute;
+    inset: 0;
+    width: 1040px;
+    height: 740px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .wire {
+    fill: none;
+    stroke: #cbd5e1;
+    stroke-width: 2;
+    stroke-dasharray: 7 7;
+  }
+
+  .wire.hot { stroke: #f97316; stroke-width: 2.5; }
+  .wire.write { stroke: #0891b2; }
+  .wire.db { stroke: #7e22ce; }
+
+  .panel, .node, .loop, .queue-panel {
+    position: absolute;
+    z-index: 2;
+  }
+
+  .panel {
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 12px;
+  }
+
+  .panel h2 {
+    margin: 0 0 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+  }
+
+  .panel h2 .hint {
+    display: block;
+    margin-top: 2px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #94a3b8;
+  }
+
+  .socket-panel { left: 24px; top: 92px; width: 220px; height: 560px; }
+  .channel-panel { left: 282px; top: 92px; width: 236px; height: 560px; }
+  .pipeline-panel { left: 806px; top: 92px; width: 210px; height: 560px; }
+
+  .socket-row, .channel-card, .pipe-step {
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: #fff;
+    min-height: 70px;
+    padding: 9px 10px;
+    transition: transform 160ms ease, box-shadow 160ms ease, background 180ms ease, border-color 180ms ease;
+  }
+
+  .socket-row + .socket-row,
+  .channel-card + .channel-card,
+  .pipe-step + .pipe-step { margin-top: 10px; }
+
+  .socket-row {
+    border-color: rgba(21, 128, 61, 0.22);
+    background: var(--socket-bg);
+  }
+
+  .channel-card {
+    border-color: rgba(29, 78, 216, 0.22);
+    background: var(--channel-bg);
+  }
+
+  .pipe-step {
+    border-color: rgba(100, 116, 139, 0.18);
+    background: #fff;
+  }
+
+  .socket-row.active,
+  .channel-card.active,
+  .pipe-step.active {
+    transform: translateY(-1px);
+  }
+
+  .socket-row.active {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16), 0 7px 18px rgba(15, 23, 42, 0.08);
+    border-color: #22c55e;
+    background: #dcfce7;
+  }
+
+  .channel-card.active {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16), 0 7px 18px rgba(15, 23, 42, 0.08);
+    border-color: #60a5fa;
+    background: #dbeafe;
+  }
+
+  .pipe-step.active {
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.14), 0 7px 18px rgba(15, 23, 42, 0.08);
+    border-color: #fb923c;
+  }
+
+  .socket-row .name,
+  .channel-card .name,
+  .pipe-step .name {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .sub {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+
+  .mono {
+    font-family: "Cascadia Mono", "JetBrains Mono", Consolas, ui-monospace, monospace;
+    font-size: 10.5px;
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.08);
+    color: #334155;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .status.est { background: #bbf7d0; color: #14532d; }
+  .status.read { background: #fed7aa; color: #9a3412; }
+  .status.write { background: #a5f3fc; color: #155e75; }
+  .status.wait { background: #e2e8f0; color: #475569; }
+  .status.blocked { background: #fecaca; color: #991b1b; }
+
+  .loop {
+    left: 560px;
+    top: 142px;
+    width: 216px;
+    height: 216px;
+    border-radius: 50%;
+    background: transparent;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 14px 34px rgba(194, 65, 12, 0.16);
+    transition: filter 180ms ease, box-shadow 180ms ease;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .loop::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    border: 2px solid #9a3412;
+    background:
+      radial-gradient(circle at 50% 50%, #fff7ed 0 42%, transparent 43%),
+      conic-gradient(from 0deg, #fb923c, #c2410c, #f59e0b, #fb923c);
+    box-sizing: border-box;
+  }
+
+  .loop.active {
+    box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.16), 0 18px 38px rgba(194, 65, 12, 0.18);
+  }
+
+  .loop.active::before {
+    animation: spinPulse 1.2s linear infinite;
+  }
+
+  .loop.blocked {
+    filter: saturate(0.75);
+    box-shadow: 0 0 0 7px rgba(220, 38, 38, 0.17), 0 18px 38px rgba(127, 29, 29, 0.18);
+  }
+
+  .loop.blocked::before {
+    animation: none;
+    background:
+      radial-gradient(circle at 50% 50%, #fff1f2 0 42%, transparent 43%),
+      conic-gradient(from 0deg, #ef4444, #991b1b, #ef4444);
+    border-color: #991b1b;
+  }
+
+  @keyframes spinPulse {
+    to { transform: rotate(360deg); }
+  }
+
+  .loop-face {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    background: var(--canvas);
+    border: 1px solid rgba(194, 65, 12, 0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .loop.blocked .loop-face { border-color: #fca5a5; }
+
+  .loop-face .thread {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 800;
+    color: #7c2d12;
+  }
+
+  .loop.blocked .loop-face .thread { color: #991b1b; }
+
+  .loop-face .work {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #475569;
+    line-height: 1.3;
+    max-width: 100px;
+  }
+
+  .queue-panel {
+    left: 550px;
+    top: 386px;
+    width: 238px;
+    min-height: 92px;
+    border-radius: 8px;
+    border: 1px solid rgba(161, 98, 7, 0.3);
+    background: var(--queue-bg);
+    padding: 10px 12px;
+  }
+
+  .queue-panel h2 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: #713f12;
+  }
+
+  .queue-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 25px;
+  }
+
+  .q-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 23px;
+    padding: 0 7px;
+    border-radius: 4px;
+    background: #fff7ed;
+    border: 1px solid rgba(161, 98, 7, 0.28);
+    color: #713f12;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .q-chip.hot {
+    background: #fed7aa;
+    border-color: #fb923c;
+  }
+
+  .db-node {
+    position: absolute;
+    left: 552px;
+    top: 520px;
+    width: 242px;
+    height: 100px;
+    z-index: 2;
+    border-radius: 8px;
+    border: 2px solid var(--db);
+    background: var(--db-bg);
+    padding: 11px 13px;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .db-node.active {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 5px rgba(126, 34, 206, 0.15), 0 8px 22px rgba(15, 23, 42, 0.08);
+  }
+
+  .db-node .name {
+    font-size: 12px;
+    font-weight: 800;
+    color: #581c87;
+  }
+
+  .db-node .sub { color: #6b21a8; }
+
+  .packet {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    z-index: 5;
+    transform: translate(-50%, -50%);
+    border: 2px solid #fff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+    pointer-events: none;
+    transition-property: left, top, opacity, transform;
+    transition-timing-function: cubic-bezier(0.22, 0.8, 0.25, 1);
+  }
+
+  .packet::after {
+    content: attr(data-label);
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: rgba(15, 23, 42, 0.78);
+    color: #fff;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .packet.read { background: #f97316; }
+  .packet.write { background: #0891b2; }
+  .packet.db { background: #7e22ce; }
+  .packet.backlog { background: #dc2626; }
+
+  .pulse-ring {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    opacity: 0;
+    z-index: 4;
+    pointer-events: none;
+    animation: ring 900ms ease-out forwards;
+  }
+
+  @keyframes ring {
+    0% { opacity: 0.7; transform: scale(0.4); }
+    100% { opacity: 0; transform: scale(1.9); }
+  }
+
+  .side {
+    border-left: 1px solid var(--rule);
+    padding: 24px 26px;
+    background: #f8fafc;
+    overflow-y: auto;
+    max-height: 100vh;
+  }
+
+  .side h1 {
+    margin: 0 0 5px;
+    font-size: 20px;
+    letter-spacing: 0;
+  }
+
+  .side .lede {
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  .controls, .state, .legend, .log {
+    background: var(--canvas);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .controls {
+    display: grid;
+    gap: 12px;
+  }
+
+  .buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  button {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    border-radius: 5px;
+    border: 1px solid #0f172a;
+    background: #0f172a;
+    color: #fff;
+    height: 34px;
+    cursor: pointer;
+  }
+
+  button.secondary {
+    background: transparent;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+
+  .segmented {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 7px;
+    background: #e2e8f0;
+  }
+
+  .segmented button {
+    height: 30px;
+    border: 0;
+    background: transparent;
+    color: #475569;
+  }
+
+  .segmented button.on {
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.10);
+  }
+
+  .range-row {
+    display: grid;
+    grid-template-columns: 48px 1fr 40px;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  input[type="range"] { accent-color: #0f172a; }
+
+  .side h2 {
+    margin: 20px 0 9px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+  }
+
+  .state {
+    display: grid;
+    gap: 8px;
+  }
+
+  .kv {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .kv .key {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .kv .value {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .legend {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .legend-row {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 8px;
+    align-items: center;
+    font-size: 11.5px;
+    color: #334155;
+  }
+
+  .swatch {
+    width: 18px;
+    height: 11px;
+    border-radius: 3px;
+  }
+
+  .log {
+    height: 210px;
+    overflow: auto;
+    background: #0b1220;
+    color: #e2e8f0;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 10.5px;
+    line-height: 1.6;
+  }
+
+  .log-line .t { color: #64748b; margin-right: 6px; }
+  .log-line .read { color: #fdba74; }
+  .log-line .write { color: #67e8f9; }
+  .log-line .db { color: #d8b4fe; }
+  .log-line .bad { color: #fca5a5; }
+  .log-line .ok { color: #86efac; }
+
+  .note {
+    margin-top: 14px;
+    padding: 11px 12px;
+    border-left: 3px solid #0f172a;
+    background: #fff;
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #334155;
+  }
+
+  @media (max-width: 1180px) {
+    .app { grid-template-columns: 1fr; }
+    .side {
+      border-left: 0;
+      border-top: 1px solid var(--rule);
+      max-height: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loop.active::before { animation: none !important; }
+    .packet, .socket-row, .channel-card, .pipe-step { transition-duration: 1ms !important; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <section class="stage-shell" aria-label="event loop channel animation">
+    <div class="stage" id="stage">
+      <div class="title">
+        <div>
+          <h1>EventLoop가 Channel 이벤트를 처리하는 흐름</h1>
+          <div class="caption">연결은 OS socket과 Netty Channel로 유지되고, 스레드는 이벤트가 생긴 순간만 실행된다.</div>
+        </div>
+        <div class="mode-pill" id="modePill">NON-BLOCKING PATH</div>
+      </div>
+
+      <svg class="wires" viewBox="0 0 1040 740" aria-hidden="true">
+        <path class="wire hot" d="M244 180 C270 180 260 180 282 180" />
+        <path class="wire hot" d="M518 180 C548 180 540 220 560 250" />
+        <path class="wire write" d="M666 358 C666 414 638 418 638 386" />
+        <path class="wire write" d="M666 250 C750 250 742 200 806 190" />
+        <path class="wire write" d="M666 250 C750 250 742 340 806 330" />
+        <path class="wire write" d="M806 190 C760 190 562 310 518 310" />
+        <path class="wire write" d="M806 330 C760 330 562 440 518 440" />
+        <path class="wire db" d="M668 358 C668 470 668 470 668 520" />
+        <path class="wire db" d="M552 570 C482 570 490 526 518 492" />
+      </svg>
+
+      <section class="panel socket-panel">
+        <h2>OS TCP sockets <span class="hint">초록불 = socket read/write 가능 상태</span></h2>
+        <div class="socket-row" id="sock-binance">
+          <div class="name">Binance WebSocket <span class="status est">ESTABLISHED</span></div>
+          <div class="sub">연결 상태는 OS 커널이 유지</div>
+          <div class="mono sub">wss://...depth20@100ms</div>
+        </div>
+        <div class="socket-row" id="sock-a">
+          <div class="name">Browser A SSE <span class="status est">ESTABLISHED</span></div>
+          <div class="sub">응답은 닫지 않고 text/event-stream 유지</div>
+          <div class="mono sub">GET /depth/stream</div>
+        </div>
+        <div class="socket-row" id="sock-b">
+          <div class="name">Browser B SSE <span class="status est">ESTABLISHED</span></div>
+          <div class="sub">idle이어도 스레드를 붙잡지 않음</div>
+          <div class="mono sub">GET /depth/stream</div>
+        </div>
+        <div class="socket-row" id="sock-db">
+          <div class="name">PostgreSQL TCP <span class="status est">ESTABLISHED</span></div>
+          <div class="sub">R2DBC 드라이버가 DB socket I/O 처리</div>
+          <div class="mono sub">db channel read/write</div>
+        </div>
+      </section>
+
+      <section class="panel channel-panel">
+        <h2>Netty Channels <span class="hint">파란불 = 해당 Channel 이벤트가 ready</span></h2>
+        <div class="channel-card" id="ch-binance">
+          <div class="name">Channel #WS <span class="status wait" id="st-ch-binance">idle</span></div>
+          <div class="sub">Binance frame read 이벤트</div>
+          <div class="mono sub">channelRead(WebSocketFrame)</div>
+        </div>
+        <div class="channel-card" id="ch-a">
+          <div class="name">Channel #A <span class="status wait" id="st-ch-a">idle</span></div>
+          <div class="sub">Browser A SSE write 이벤트</div>
+          <div class="mono sub">write(ServerSentEvent)</div>
+        </div>
+        <div class="channel-card" id="ch-b">
+          <div class="name">Channel #B <span class="status wait" id="st-ch-b">idle</span></div>
+          <div class="sub">Browser B SSE write 이벤트</div>
+          <div class="mono sub">write(ServerSentEvent)</div>
+        </div>
+        <div class="channel-card" id="ch-db">
+          <div class="name">Channel #DB <span class="status wait" id="st-ch-db">idle</span></div>
+          <div class="sub">PostgreSQL 응답 read 이벤트</div>
+          <div class="mono sub">Mono completion signal</div>
+        </div>
+      </section>
+
+      <div class="loop" id="loop">
+        <div class="loop-face">
+          <div class="thread">reactor-http-nio-1</div>
+          <div class="work" id="loopWork">selector 대기</div>
+        </div>
+      </div>
+
+      <section class="queue-panel">
+        <h2>ready event queue</h2>
+        <div class="queue-list" id="queueList"></div>
+      </section>
+
+      <div class="db-node" id="dbNode">
+        <div class="name">R2DBC PostgreSQL driver</div>
+        <div class="sub">DB 요청을 걸고 현재 event loop 콜스택은 빠져나온다.</div>
+        <div class="mono sub" id="dbState">registered async request</div>
+      </div>
+
+      <section class="panel pipeline-panel">
+        <h2>Reactive pipeline <span class="hint">주황불 = event loop가 Java 단계 실행</span></h2>
+        <div class="pipe-step" id="pipe-read">
+          <div class="name">1. read <span class="status read">onNext</span></div>
+          <div class="sub">Binance frame 수신</div>
+        </div>
+        <div class="pipe-step" id="pipe-parse">
+          <div class="name">2. parse <span class="status wait">CPU</span></div>
+          <div class="sub">payload -> snapshot</div>
+        </div>
+        <div class="pipe-step" id="pipe-fanout">
+          <div class="name">3. fan-out <span class="status read">Sink</span></div>
+          <div class="sub">snapshot을 SSE 구독자에게 emit</div>
+        </div>
+        <div class="pipe-step" id="pipe-write">
+          <div class="name">4. write <span class="status write">SSE</span></div>
+          <div class="sub">각 Browser Channel에 write 예약</div>
+        </div>
+        <div class="pipe-step" id="pipe-db">
+          <div class="name">5. DB I/O <span class="status wait">R2DBC</span></div>
+          <div class="sub">응답 대기 중 event loop를 붙잡지 않음</div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <aside class="side">
+    <h1>Channel 처리 시각화</h1>
+    <p class="lede">같은 event loop에 등록된 여러 Channel 중 ready 이벤트가 생긴 것만 짧게 실행되는 모습을 보여준다.</p>
+
+    <section class="controls">
+      <div class="buttons">
+        <button id="toggleBtn" title="애니메이션 재생 또는 일시정지">Pause</button>
+        <button class="secondary" id="stepBtn" title="다음 이벤트 단계 실행">Step</button>
+      </div>
+      <div class="segmented" aria-label="scenario">
+        <button id="modeNormal" class="on">Non-blocking</button>
+        <button id="modeBlocking">JDBC blocking</button>
+      </div>
+      <label class="range-row">
+        <span>Speed</span>
+        <input id="speed" type="range" min="0.65" max="1.65" step="0.05" value="1" />
+        <span class="mono" id="speedVal">1.00x</span>
+      </label>
+    </section>
+
+    <h2>State</h2>
+    <section class="state">
+      <div class="kv"><div class="key">Thread</div><div class="value" id="stateThread">reactor-http-nio-1</div></div>
+      <div class="kv"><div class="key">Current</div><div class="value" id="stateCurrent">selector 대기</div></div>
+      <div class="kv"><div class="key">Connection</div><div class="value">OS TCP socket + Netty Channel</div></div>
+      <div class="kv"><div class="key">Channel</div><div class="value">socket을 앱에서 다루기 좋게 감싼 Netty 객체</div></div>
+      <div class="kv"><div class="key">Queue</div><div class="value" id="stateQueue">empty</div></div>
+    </section>
+
+    <h2>Legend</h2>
+    <section class="legend">
+      <div class="legend-row"><span class="swatch" style="background:#dcfce7;border:1px solid #22c55e"></span><span>초록불: OS socket 레벨의 read/write 가능 상태</span></div>
+      <div class="legend-row"><span class="swatch" style="background:#dbeafe;border:1px solid #60a5fa"></span><span>파란불: 해당 socket에 대응하는 Netty Channel 이벤트</span></div>
+      <div class="legend-row"><span class="swatch" style="background:var(--loop-bg);border:1px solid var(--loop)"></span><span>주황불: event loop 스레드가 Java 코드 실행</span></div>
+      <div class="legend-row"><span class="swatch" style="background:var(--queue-bg);border:1px solid var(--queue)"></span><span>노란 큐: ready지만 아직 실행 전인 이벤트</span></div>
+      <div class="legend-row"><span class="swatch" style="background:var(--warn-bg);border:1px solid var(--warn)"></span><span>빨간불: blocking 때문에 event loop가 못 움직임</span></div>
+    </section>
+
+    <h2>Event log</h2>
+    <section class="log" id="log" aria-live="polite"></section>
+
+    <div class="note">
+      핵심 구분: TCP 연결은 OS socket으로 유지되고, Netty Channel은 그 socket을 애플리케이션에서 다루기 좋게 감싼 객체다.
+      Step에서 socket과 Channel이 같이 켜져도 같은 연결을 서로 다른 레벨에서 보는 것이고, 실제 Java 실행은 event loop가 켜질 때만 일어난다.
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage");
+  const loop = $("loop");
+  const queueList = $("queueList");
+  const log = $("log");
+  const modePill = $("modePill");
+  const toggleBtn = $("toggleBtn");
+  const stepBtn = $("stepBtn");
+  const speed = $("speed");
+  const speedVal = $("speedVal");
+  const normalBtn = $("modeNormal");
+  const blockingBtn = $("modeBlocking");
+  const stateCurrent = $("stateCurrent");
+  const stateQueue = $("stateQueue");
+  const dbState = $("dbState");
+  const loopWork = $("loopWork");
+
+  const nodes = [
+    "sock-binance", "sock-a", "sock-b", "sock-db",
+    "ch-binance", "ch-a", "ch-b", "ch-db",
+    "pipe-read", "pipe-parse", "pipe-fanout", "pipe-write", "pipe-db",
+    "dbNode"
+  ];
+
+  const statuses = {
+    "st-ch-binance": "idle",
+    "st-ch-a": "idle",
+    "st-ch-b": "idle",
+    "st-ch-db": "idle"
+  };
+
+  const points = {
+    sockBinance: [246, 180],
+    chBinance: [400, 180],
+    loopTop: [666, 196],
+    loopMid: [666, 250],
+    loopBottom: [666, 356],
+    pipeRead: [808, 190],
+    pipeFanout: [808, 328],
+    chA: [520, 310],
+    chB: [520, 440],
+    sockA: [246, 310],
+    sockB: [246, 440],
+    db: [668, 520],
+    chDb: [520, 492],
+    sockDb: [246, 570]
+  };
+
+  let playing = true;
+  let blocking = false;
+  let stepIndex = 0;
+  let timer = null;
+  let seq = 1001;
+
+  const normalSteps = [
+    {
+      ms: 950,
+      current: "selector가 ready socket을 기다림",
+      queue: [],
+      work: "selector 대기",
+      log: ["ok", "OS socket/Channel은 열린 상태, event loop는 대기"],
+      active: [],
+      packets: []
+    },
+    {
+      ms: 950,
+      current: "Binance socket readable",
+      queue: ["WS read"],
+      work: "ready 감지",
+      log: ["read", "Binance TCP socket readable -> Channel #WS"],
+      active: ["sock-binance", "ch-binance"],
+      statuses: { "st-ch-binance": ["read", "read"] },
+      packets: [["read", "frame", "sockBinance", "chBinance"]]
+    },
+    {
+      ms: 1000,
+      current: "Channel #WS read 이벤트 실행",
+      queue: ["WS read"],
+      work: "channelRead",
+      log: ["read", "event loop executes channelRead(WebSocketFrame)"],
+      active: ["ch-binance", "pipe-read"],
+      loop: "active",
+      statuses: { "st-ch-binance": ["read", "read"] },
+      packets: [["read", "onNext", "chBinance", "loopMid"], ["read", "payload", "loopMid", "pipeRead"]]
+    },
+    {
+      ms: 950,
+      current: "snapshot 파싱 후 Sink fan-out",
+      queue: ["fan-out"],
+      work: "parse + emit",
+      log: ["read", "payload -> snapshot -> sink.tryEmitNext(snapshot)"],
+      active: ["pipe-parse", "pipe-fanout"],
+      loop: "active",
+      packets: [["read", "snapshot", "pipeRead", "pipeFanout"]]
+    },
+    {
+      ms: 1000,
+      current: "SSE write 이벤트 예약",
+      queue: ["A write", "B write"],
+      work: "schedule writes",
+      log: ["write", "Browser A/B Channel에 SSE write 예약"],
+      active: ["pipe-write", "ch-a", "ch-b"],
+      loop: "active",
+      statuses: { "st-ch-a": ["write", "write"], "st-ch-b": ["write", "write"] },
+      packets: [["write", "SSE", "pipeFanout", "chA"], ["write", "SSE", "pipeFanout", "chB"]]
+    },
+    {
+      ms: 980,
+      current: "열린 SSE socket으로 write",
+      queue: ["A write", "B write"],
+      work: "channel.write",
+      log: ["write", "event loop가 writable Channel만 짧게 처리"],
+      active: ["ch-a", "ch-b", "sock-a", "sock-b"],
+      loop: "active",
+      statuses: { "st-ch-a": ["write", "write"], "st-ch-b": ["write", "write"] },
+      packets: [["write", "bytes", "chA", "sockA"], ["write", "bytes", "chB", "sockB"]]
+    },
+    {
+      ms: 1050,
+      current: "R2DBC 요청 등록 후 event loop 반환",
+      queue: ["DB write"],
+      work: "register DB I/O",
+      log: ["db", "R2DBC save 요청 등록, 현재 event loop 콜스택 return"],
+      active: ["pipe-db", "dbNode"],
+      loop: "active",
+      db: "DB request registered; thread is free",
+      packets: [["db", "SQL", "loopBottom", "db"]]
+    },
+    {
+      ms: 980,
+      current: "DB 응답이 나중에 read 이벤트로 도착",
+      queue: ["DB read"],
+      work: "DB read",
+      log: ["db", "PostgreSQL 응답 -> Channel #DB read -> Mono 완료 신호"],
+      active: ["sock-db", "ch-db", "dbNode"],
+      loop: "active",
+      statuses: { "st-ch-db": ["read", "read"] },
+      db: "Mono completed from DB read event",
+      packets: [["db", "row", "sockDb", "chDb"], ["db", "complete", "chDb", "loopBottom"]]
+    }
+  ];
+
+  const blockingSteps = [
+    normalSteps[0],
+    normalSteps[1],
+    normalSteps[2],
+    normalSteps[3],
+    normalSteps[4],
+    {
+      ms: 2600,
+      current: "JDBC blocking call이 event loop를 점유",
+      queue: ["A write", "B write", "WS read", "HTTP read"],
+      work: "BLOCKED",
+      log: ["bad", "JDBC 호출이 DB 응답을 기다리며 event loop 스레드를 붙잡음"],
+      active: ["pipe-db"],
+      loop: "blocked",
+      statuses: {
+        "st-ch-a": ["write", "queued"],
+        "st-ch-b": ["write", "queued"],
+        "st-ch-binance": ["read", "queued"]
+      },
+      db: "blocking wait inside event loop thread",
+      packets: [["backlog", "queued", "pipeFanout", "loopBottom"], ["backlog", "backlog", "sockBinance", "chBinance"]]
+    },
+    {
+      ms: 1000,
+      current: "DB 응답 후 밀린 이벤트 처리 시작",
+      queue: ["A write", "B write", "WS read"],
+      work: "drain queue",
+      log: ["bad", "DB 응답 뒤에야 SSE write와 다음 WS read를 처리"],
+      active: ["ch-a", "ch-b", "ch-binance"],
+      loop: "active",
+      statuses: { "st-ch-a": ["write", "late"], "st-ch-b": ["write", "late"], "st-ch-binance": ["read", "late"] },
+      packets: [["write", "late SSE", "loopMid", "chA"], ["write", "late SSE", "loopMid", "chB"]]
+    }
+  ];
+
+  function resetVisual() {
+    nodes.forEach((id) => $(id)?.classList.remove("active"));
+    loop.classList.remove("active", "blocked");
+    Object.entries(statuses).forEach(([id, text]) => {
+      const el = $(id);
+      el.className = "status wait";
+      el.textContent = text;
+    });
+    dbState.textContent = "registered async request";
+  }
+
+  function applyStatus(map = {}) {
+    Object.entries(map).forEach(([id, [klass, text]]) => {
+      const el = $(id);
+      if (!el) return;
+      el.className = `status ${klass}`;
+      el.textContent = text;
+    });
+  }
+
+  function setQueue(items) {
+    queueList.innerHTML = "";
+    if (!items.length) {
+      stateQueue.textContent = "empty";
+      return;
+    }
+    stateQueue.textContent = items.join(", ");
+    items.forEach((item, idx) => {
+      const chip = document.createElement("span");
+      chip.className = `q-chip ${idx === 0 ? "hot" : ""}`;
+      chip.textContent = item;
+      queueList.appendChild(chip);
+    });
+  }
+
+  function addLog(kind, text) {
+    const line = document.createElement("div");
+    line.className = "log-line";
+    line.innerHTML = `<span class="t">${String(seq++).slice(-4)}</span><span class="${kind}">${escapeHtml(text)}</span>`;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+    while (log.childElementCount > 18) log.removeChild(log.firstElementChild);
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, (m) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    }[m]));
+  }
+
+  function pulse(pointName, color = "#f97316") {
+    const [x, y] = points[pointName];
+    const ring = document.createElement("div");
+    ring.className = "pulse-ring";
+    ring.style.left = `${x}px`;
+    ring.style.top = `${y}px`;
+    ring.style.color = color;
+    stage.appendChild(ring);
+    setTimeout(() => ring.remove(), 920);
+  }
+
+  function packet(kind, label, fromName, toName, duration) {
+    const [x1, y1] = points[fromName];
+    const [x2, y2] = points[toName];
+    const el = document.createElement("div");
+    el.className = `packet ${kind}`;
+    el.dataset.label = label;
+    el.style.left = `${x1}px`;
+    el.style.top = `${y1}px`;
+    el.style.opacity = "0";
+    el.style.transitionDuration = `${duration}ms`;
+    stage.appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.opacity = "1";
+      el.style.left = `${x2}px`;
+      el.style.top = `${y2}px`;
+      el.style.transform = "translate(-50%, -50%) scale(1.08)";
+    });
+    setTimeout(() => {
+      el.style.opacity = "0";
+      el.style.transform = "translate(-50%, -50%) scale(0.7)";
+    }, duration + 70);
+    setTimeout(() => el.remove(), duration + 420);
+  }
+
+  function renderStep(manual = false) {
+    const steps = blocking ? blockingSteps : normalSteps;
+    const s = steps[stepIndex % steps.length];
+    resetVisual();
+
+    s.active?.forEach((id) => $(id)?.classList.add("active"));
+    if (s.loop === "active") loop.classList.add("active");
+    if (s.loop === "blocked") loop.classList.add("blocked");
+    setQueue(s.queue || []);
+    applyStatus(s.statuses || {});
+
+    loopWork.textContent = s.work;
+    stateCurrent.textContent = s.current;
+    if (s.db) dbState.textContent = s.db;
+
+    const [kind, message] = s.log;
+    addLog(kind, message);
+
+    const packetDuration = Math.max(420, 720 / Number(speed.value));
+    s.packets?.forEach(([pKind, label, from, to], idx) => {
+      setTimeout(() => packet(pKind, label, from, to, packetDuration), idx * 120);
+      setTimeout(() => pulse(to, pKind === "write" ? "#0891b2" : pKind === "db" ? "#7e22ce" : pKind === "backlog" ? "#dc2626" : "#f97316"), idx * 120 + packetDuration - 80);
+    });
+
+    stepIndex = (stepIndex + 1) % steps.length;
+    if (!manual && playing) scheduleNext(s.ms);
+  }
+
+  function scheduleNext(baseMs) {
+    clearTimeout(timer);
+    timer = setTimeout(() => renderStep(false), baseMs / Number(speed.value));
+  }
+
+  function setMode(nextBlocking) {
+    blocking = nextBlocking;
+    stepIndex = 0;
+    modePill.textContent = blocking ? "BLOCKING JDBC PATH" : "NON-BLOCKING PATH";
+    modePill.classList.toggle("blocking", blocking);
+    normalBtn.classList.toggle("on", !blocking);
+    blockingBtn.classList.toggle("on", blocking);
+    addLog(blocking ? "bad" : "ok", blocking ? "scenario switched: blocking JDBC call" : "scenario switched: non-blocking R2DBC flow");
+    renderStep(true);
+    if (playing) scheduleNext(900);
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    playing = !playing;
+    toggleBtn.textContent = playing ? "Pause" : "Play";
+    if (playing) renderStep(false);
+    else clearTimeout(timer);
+  });
+
+  stepBtn.addEventListener("click", () => {
+    clearTimeout(timer);
+    playing = false;
+    toggleBtn.textContent = "Play";
+    renderStep(true);
+  });
+
+  normalBtn.addEventListener("click", () => setMode(false));
+  blockingBtn.addEventListener("click", () => setMode(true));
+
+  speed.addEventListener("input", () => {
+    speedVal.textContent = `${Number(speed.value).toFixed(2)}x`;
+  });
+
+  renderStep(true);
+  scheduleNext(900);
+})();
+</script>
+</body>
+</html>

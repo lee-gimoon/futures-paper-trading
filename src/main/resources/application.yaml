@@ -1,0 +1,16 @@
+server:
+  # 로컬에서는 기존처럼 8080, 배포 환경에서는 Railway가 지정한 PORT를 사용한다.
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: futures-paper-trading
+  r2dbc:
+    # 로컬 Postgres. DB 이름/계정은 환경변수로 덮어쓸 수 있다(없으면 기본값 사용).
+    # 나중에 Docker로 바꿔도 이 url만 바꾸면 됨(자바 코드 변경 없음).
+    url: r2dbc:postgresql://localhost:5432/${DB_NAME:futures_paper_trading}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  sql:
+    init:
+      mode: always   # 부팅 시 schema.sql 실행 (R2DBC는 자동 DDL이 없음)

@@ -1,0 +1,345 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 980" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">
+
+  <defs>
+    <marker id="arr-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0891b2"/>
+    </marker>
+  </defs>
+
+  <!-- ===== TITLE ===== -->
+  <rect x="0" y="0" width="1200" height="52" fill="#1e293b"/>
+  <text x="600" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="white">
+    2단계 코드 실행 흐름 — raw JSON에서 OrderBookSnapshot 객체까지 (1단계 + 파싱 가지)
+  </text>
+
+  <!-- ===== Phase A header ===== -->
+  <text x="20" y="82" font-size="14" font-weight="700" fill="#475569">
+    Phase A — 앱 부팅 (대부분 1단계와 동일, 신규는 박스 2의 Parser 빈 하나)
+  </text>
+
+  <!-- ===== Row 1: 4 boxes ===== -->
+
+  <!-- Step 1: JVM start + Spring boot -->
+  <g transform="translate(55, 95)">
+    <rect width="250" height="290" fill="#ffedd5" stroke="#ea580c" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#ea580c"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">1</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7c2d12">JVM 시작 + Spring 부팅</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#7c2d12">트리거:</text>
+    <text x="14" y="78" font-size="10" fill="#334155">./gradlew.bat bootRun</text>
+    <text x="14" y="92" font-size="10" fill="#334155">또는 java -jar app.jar</text>
+
+    <text x="14" y="115" font-size="10" font-weight="700" fill="#7c2d12">main 스레드가:</text>
+    <text x="22" y="131" font-size="10" fill="#334155">- SpringApplication.run()</text>
+    <text x="22" y="145" font-size="10" fill="#334155">- @Component / @RestController</text>
+    <text x="22" y="159" font-size="10" fill="#334155">  스캔 시작</text>
+
+    <rect x="14" y="172" width="222" height="68" fill="white" stroke="#fdba74" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="186">@SpringBootApplication</text>
+      <text x="18" y="199">class FuturesPaperTrading...</text>
+      <text x="18" y="212">  public static void</text>
+      <text x="18" y="225" fill="#16a34a" font-weight="700">  main(String[] args)</text>
+      <text x="18" y="236" fill="#16a34a" font-weight="700">    { SpringApplication.run }</text>
+    </g>
+
+    <text x="125" y="262" text-anchor="middle" font-size="10" font-style="italic" fill="#9a3412">→ 빈 스캔으로 진행</text>
+    <text x="125" y="278" text-anchor="middle" font-size="10" font-style="italic" fill="#9a3412">(1단계와 동일)</text>
+  </g>
+
+  <line x1="305" y1="240" x2="335" y2="240" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 2: NEW Parser bean -->
+  <g transform="translate(335, 95)">
+    <rect width="250" height="290" fill="#cffafe" stroke="#0891b2" stroke-width="3" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#0891b2"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">2</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#155e75">★ 2단계 NEW: 빈 추가 ★</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#155e75">Spring이 IoC 컨테이너에 만드는 빈:</text>
+
+    <rect x="14" y="72" width="222" height="80" fill="white" stroke="#67e8f9" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="86">@Component</text>
+      <text x="18" y="100" fill="#0891b2" font-weight="700">OrderBookSnapshotParser  ★NEW</text>
+      <text x="18" y="113">  ↑ 생성자에 ObjectMapper 주입</text>
+      <text x="18" y="127" fill="#94a3b8">    (Spring Boot 자동 구성 빈)</text>
+      <text x="18" y="143">@Component</text>
+    </g>
+    <rect x="14" y="148" width="222" height="36" fill="white" stroke="#67e8f9" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="162">BinanceFuturesRawDepthStreamer</text>
+      <text x="18" y="176" fill="#0891b2" font-weight="700">  ↑ 생성자에 Parser 주입 ★</text>
+    </g>
+
+    <text x="14" y="202" font-size="10" font-weight="700" fill="#155e75">record는 빈이 아님:</text>
+    <text x="22" y="218" font-size="10" fill="#334155">- OrderBookLevel (값 묶음)</text>
+    <text x="22" y="232" font-size="10" fill="#334155">- OrderBookSnapshot (값 묶음)</text>
+    <text x="14" y="248" font-size="10" font-style="italic" fill="#0e7490">→ 매 메시지마다 new로 즉석 생성</text>
+
+    <line x1="14" y1="258" x2="236" y2="258" stroke="#0891b2" stroke-dasharray="3,2"/>
+    <text x="125" y="275" text-anchor="middle" font-size="10" font-weight="700" fill="#155e75">1단계에는 없던 가게 도구</text>
+  </g>
+
+  <line x1="585" y1="240" x2="615" y2="240" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 3: event loops + 8080 listen -->
+  <g transform="translate(615, 95)">
+    <rect width="250" height="290" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#16a34a"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">3</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#14532d">event loop N개 + 8080 listen</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">Reactor Netty 초기화 →</text>
+    <text x="14" y="78" font-size="10" fill="#334155">main이 OS에게</text>
+    <text x="14" y="94" font-size="10" font-family="ui-monospace, monospace" fill="#14532d">  new Thread().start() × N</text>
+    <text x="14" y="110" font-size="10" fill="#334155">요청.</text>
+
+    <g transform="translate(14, 122)">
+      <g transform="translate(15, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(50, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(85, 25)">
+        <circle r="10" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+        <path d="M5,-5 L12,-11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7,0 L14,0" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M5,5 L12,11" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <text x="115" y="30" font-size="11" fill="#ea580c" font-weight="700">×N(≈8)</text>
+    </g>
+
+    <text x="14" y="192" font-size="10" fill="#475569">스레드 이름 예시:</text>
+    <rect x="14" y="199" width="222" height="32" fill="white" stroke="#cbd5e1" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="212">reactor-http-nio-1</text>
+      <text x="18" y="224">reactor-http-nio-2  ...</text>
+    </g>
+
+    <text x="14" y="252" font-size="10" font-weight="700" fill="#14532d">selector가 8080에 도착할</text>
+    <text x="14" y="266" font-size="10" font-weight="700" fill="#14532d">요청 무한 감시.</text>
+    <text x="125" y="282" text-anchor="middle" font-size="10" font-style="italic" fill="#15803d">(1단계와 동일)</text>
+  </g>
+
+  <line x1="865" y1="240" x2="895" y2="240" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 4: idle + POST arrival -->
+  <g transform="translate(895, 95)">
+    <rect width="250" height="290" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">4</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">POST → connect() → Binance 연결</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">자동 connect 없음 → 사용자가</text>
+    <text x="14" y="78" font-size="10" fill="#334155">POST 보내면 비로소 동작.</text>
+
+    <rect x="14" y="88" width="222" height="50" fill="white" stroke="#fca5a5" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="102" font-weight="700" fill="#dc2626">POST</text>
+      <text x="18" y="115">/api/binance-futures/</text>
+      <text x="18" y="128">btcusdt/depth/raw/start</text>
+    </g>
+
+    <text x="14" y="158" font-size="10" fill="#334155">→ event loop이 깨어남.</text>
+    <text x="14" y="174" font-size="10" fill="#334155">→ WebFlux 라우팅 → start()</text>
+    <text x="14" y="190" font-size="10" fill="#334155">→ Streamer.connect()</text>
+    <text x="14" y="206" font-size="10" font-family="ui-monospace, monospace" fill="#581c87">  webSocketClient.execute(...)</text>
+    <text x="14" y="222" font-size="10" font-family="ui-monospace, monospace" fill="#581c87">  ...subscribe()</text>
+
+    <line x1="14" y1="234" x2="236" y2="234" stroke="#dc2626" stroke-dasharray="3,2"/>
+
+    <text x="14" y="252" font-size="10" font-weight="700" fill="#7f1d1d">같은 event loop이 클라이언트로</text>
+    <text x="14" y="268" font-size="10" font-weight="700" fill="#7f1d1d">변신 → fstream.binance.com과</text>
+    <text x="14" y="282" font-size="10" font-weight="700" fill="#7f1d1d">WebSocket 연결 성공.</text>
+  </g>
+
+  <!-- ===== Phase divider ===== -->
+  <line x1="20" y1="410" x2="1180" y2="410" stroke="#0891b2" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="600" y="430" text-anchor="middle" font-size="12" font-weight="700" fill="#0891b2">
+    ⬇ 여기서부터가 2단계의 진짜 신규 — Binance 메시지가 도착했을 때 doOnNext 가지가 "raw 로그 + 파싱" 2개로 갈라진다
+  </text>
+
+  <!-- Phase B header -->
+  <text x="20" y="455" font-size="14" font-weight="700" fill="#475569">
+    Phase B — 메시지 흐름 (100ms마다 1회 / 같은 메시지 1개가 박스 5→6→7→8을 통과)
+  </text>
+
+  <!-- ===== Row 2: 4 boxes ===== -->
+
+  <!-- Step 5: message arrives → Flux pipe entry -->
+  <g transform="translate(55, 470)">
+    <rect width="250" height="290" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#16a34a"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">5</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#14532d">Binance 메시지 도착 → Flux 진입</text>
+
+    <text x="14" y="62" font-size="10" fill="#334155">100ms마다 raw JSON 1줄 푸시:</text>
+    <rect x="14" y="70" width="222" height="60" fill="white" stroke="#86efac" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="84">{"e":"depthUpdate",</text>
+      <text x="18" y="96"> "E":1715900000000,</text>
+      <text x="18" y="108"> "s":"BTCUSDT",</text>
+      <text x="18" y="120"> "b":[["67000.10","1.234"]...]</text>
+    </g>
+
+    <text x="14" y="148" font-size="10" font-weight="700" fill="#14532d">event loop이 깨어나 처리:</text>
+
+    <rect x="14" y="156" width="222" height="80" fill="white" stroke="#86efac" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="170">session.receive()</text>
+      <text x="18" y="183" fill="#94a3b8">  // Flux&lt;WebSocketMessage&gt;</text>
+      <text x="18" y="197">  .map(</text>
+      <text x="18" y="209">    WebSocketMessage</text>
+      <text x="18" y="221">      ::getPayloadAsText)</text>
+      <text x="18" y="232" fill="#94a3b8">  // → Flux&lt;String&gt;</text>
+    </g>
+
+    <text x="14" y="258" font-size="10" font-style="italic" fill="#15803d">메시지가 이제 String 한 줄로</text>
+    <text x="14" y="274" font-size="10" font-style="italic" fill="#15803d">파이프 다음 단계로 흘러감.</text>
+  </g>
+
+  <line x1="305" y1="615" x2="335" y2="615" stroke="#334155" stroke-width="3" marker-end="url(#arr-dark)"/>
+
+  <!-- Step 6: ★ doOnNext fork ★ -->
+  <g transform="translate(335, 470)">
+    <rect width="250" height="290" fill="#fef9c3" stroke="#dc2626" stroke-width="3" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#dc2626"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">6</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#7f1d1d">★ doOnNext가 2개로 갈라짐 ★</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#7f1d1d">같은 String 1개가</text>
+    <text x="14" y="78" font-size="10" font-weight="700" fill="#7f1d1d">차례로 두 doOnNext를 통과:</text>
+
+    <rect x="14" y="90" width="222" height="58" fill="white" stroke="#94a3b8" rx="3"/>
+    <text x="18" y="103" font-size="9" font-weight="700" fill="#64748b">가지 1 (1단계 그대로):</text>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="118">.doOnNext(message -&gt;</text>
+      <text x="18" y="130">  log.info("Binance...raw</text>
+      <text x="18" y="142">    depth JSON: {}", message))</text>
+    </g>
+
+    <text x="125" y="166" text-anchor="middle" font-size="11" font-weight="700" fill="#dc2626">▼ 그 다음 ▼</text>
+
+    <rect x="14" y="174" width="222" height="58" fill="white" stroke="#0891b2" stroke-width="2" rx="3"/>
+    <text x="18" y="187" font-size="9" font-weight="700" fill="#155e75">가지 2 (★ 2단계 NEW ★):</text>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="202">.doOnNext(</text>
+      <text x="18" y="214" fill="#0891b2" font-weight="700">  this::logParsedSnapshot)</text>
+      <text x="18" y="226" fill="#94a3b8">  // → 박스 7로 점프</text>
+    </g>
+
+    <text x="14" y="252" font-size="10" font-style="italic" fill="#7f1d1d">두 가지는 fork가 아니라 직렬</text>
+    <text x="14" y="268" font-size="10" font-style="italic" fill="#7f1d1d">— 파싱 실패도 raw 로그는 떨어짐</text>
+    <text x="14" y="282" font-size="10" font-style="italic" fill="#7f1d1d">(parse 안에서 try/catch).</text>
+  </g>
+
+  <line x1="585" y1="615" x2="615" y2="615" stroke="#0891b2" stroke-width="3" marker-end="url(#arr-teal)"/>
+
+  <!-- Step 7: parser.parse() internals -->
+  <g transform="translate(615, 470)">
+    <rect width="250" height="290" fill="#cffafe" stroke="#0891b2" stroke-width="3" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#0891b2"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">7</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#155e75">parser.parse() 내부 (NEW)</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#155e75">① ObjectMapper.readTree(json)</text>
+    <text x="22" y="78" font-size="10" fill="#334155">JSON 문자열 → JsonNode 트리</text>
+
+    <rect x="14" y="86" width="222" height="68" fill="white" stroke="#67e8f9" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="102">root</text>
+      <text x="18" y="114">├ "s" → JsonNode("BTCUSDT")</text>
+      <text x="18" y="126">├ "E" → JsonNode(171590...)</text>
+      <text x="18" y="138">├ "b" → 배열[20]</text>
+      <text x="18" y="150">└ "a" → 배열[20]</text>
+    </g>
+
+    <text x="14" y="172" font-size="10" font-weight="700" fill="#155e75">② 필드 탐색 + 타입 변환</text>
+    <rect x="14" y="180" width="222" height="56" fill="white" stroke="#67e8f9" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="194">root.get("s").asString()</text>
+      <text x="18" y="206">root.get("E").asLong()</text>
+      <text x="18" y="218" fill="#dc2626" font-weight="700">levelNode.get(0).asString()</text>
+      <text x="18" y="230" fill="#94a3b8">  // → new BigDecimal(...)</text>
+    </g>
+
+    <text x="14" y="254" font-size="10" font-weight="700" fill="#dc2626">★ 절대 double 안 거침 ★</text>
+    <text x="14" y="268" font-size="10" fill="#334155">"67000.10" 문자열 그대로</text>
+    <text x="14" y="282" font-size="10" fill="#334155">BigDecimal 생성자로 직행.</text>
+  </g>
+
+  <line x1="865" y1="615" x2="895" y2="615" stroke="#0891b2" stroke-width="3" marker-end="url(#arr-teal)"/>
+
+  <!-- Step 8: OrderBookSnapshot built → log -->
+  <g transform="translate(895, 470)">
+    <rect width="250" height="290" fill="#cffafe" stroke="#0891b2" stroke-width="3" rx="6"/>
+    <circle cx="25" cy="28" r="14" fill="#0891b2"/>
+    <text x="25" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="white">8</text>
+    <text x="48" y="32" font-size="11" font-weight="700" fill="#155e75">OrderBookSnapshot 생성 → 로그</text>
+
+    <text x="14" y="62" font-size="10" font-weight="700" fill="#155e75">③ record 인스턴스 생성:</text>
+
+    <rect x="14" y="70" width="222" height="78" fill="white" stroke="#67e8f9" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="84">new OrderBookSnapshot(</text>
+      <text x="18" y="96">  "BTCUSDT",</text>
+      <text x="18" y="108">  1715900000000L,</text>
+      <text x="18" y="120">  List&lt;OrderBookLevel&gt;[20],</text>
+      <text x="18" y="132">  List&lt;OrderBookLevel&gt;[20])</text>
+      <text x="18" y="142" fill="#94a3b8">  // 한 번 만들면 못 바꿈</text>
+    </g>
+
+    <text x="14" y="168" font-size="10" font-weight="700" fill="#155e75">④ 로그 라인 1줄 추가:</text>
+    <rect x="14" y="176" width="222" height="46" fill="white" stroke="#cbd5e1" rx="3"/>
+    <g font-family="ui-monospace, monospace" font-size="9" fill="#475569">
+      <text x="18" y="189">log.info("Parsed</text>
+      <text x="18" y="201">  OrderBookSnapshot: {}",</text>
+      <text x="18" y="213">  snapshot);</text>
+    </g>
+
+    <line x1="14" y1="232" x2="236" y2="232" stroke="#0891b2" stroke-dasharray="3,2"/>
+
+    <text x="14" y="250" font-size="10" font-weight="700" fill="#155e75">즉 로그에 라인 2개가 짝지어 나옴:</text>
+    <text x="22" y="264" font-size="9" fill="#64748b">- Binance...raw depth JSON: {…}</text>
+    <text x="22" y="276" font-size="9" fill="#155e75" font-weight="700">- Parsed OrderBookSnapshot: …</text>
+  </g>
+
+  <!-- ===== Bottom summary ===== -->
+  <rect x="30" y="785" width="1140" height="170" fill="#ecfeff" stroke="#0891b2" stroke-width="2" rx="8"/>
+  <text x="600" y="810" text-anchor="middle" font-size="14" font-weight="700" fill="#155e75">★ 2단계 흐름 한 문장으로 ★</text>
+
+  <text x="600" y="838" text-anchor="middle" font-size="13" fill="#334155">
+    부팅·POST·WebSocket 연결까지는 <tspan font-weight="700" fill="#ea580c">1단계와 완전히 동일</tspan>. 신규는 단 두 곳 —
+    <tspan font-weight="700" fill="#155e75">박스 2의 OrderBookSnapshotParser 빈</tspan>과
+  </text>
+  <text x="600" y="861" text-anchor="middle" font-size="13" fill="#334155">
+    <tspan font-weight="700" fill="#dc2626">박스 6의 두 번째 doOnNext</tspan>(this::logParsedSnapshot). 같은 메시지 String 1개가 첫 doOnNext에서 raw 로그를 찍은 뒤
+  </text>
+  <text x="600" y="884" text-anchor="middle" font-size="13" fill="#334155">
+    그대로 두 번째 doOnNext로 흘러가 <tspan font-family="ui-monospace, monospace" font-weight="700" fill="#155e75">parser.parse()</tspan>를 통과한다.
+    parse() 안에서는 <tspan font-weight="700" fill="#0891b2">readTree → JsonNode 트리</tspan> →
+  </text>
+  <text x="600" y="907" text-anchor="middle" font-size="13" fill="#334155">
+    <tspan font-family="ui-monospace, monospace" font-weight="700" fill="#0891b2">get("s")/get("E")/get(0)/get(1)</tspan>으로 필드 탐색 →
+    문자열 그대로 <tspan font-weight="700" fill="#dc2626">BigDecimal</tspan>(double 절대 거치지 않음) → record 2종 즉석 생성.
+  </text>
+  <text x="600" y="935" text-anchor="middle" font-size="13" fill="#334155">
+    결과: 100ms마다 로그가 <tspan font-weight="700" fill="#64748b">"raw JSON"</tspan> + <tspan font-weight="700" fill="#155e75">"Parsed OrderBookSnapshot"</tspan> 2줄씩 짝지어 떨어진다. 메모리 보관·diff 적용은 3단계 이후.
+  </text>
+
+</svg>

@@ -1,0 +1,15 @@
+.git
+.gradle
+.idea
+.vscode
+.claude
+build
+out
+docs
+
+frontend/node_modules
+frontend/dist
+frontend/vite-dev.*.log
+
+*.iml
+*.log

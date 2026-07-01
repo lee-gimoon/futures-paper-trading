@@ -92,6 +92,8 @@ flowchart LR
 >
 > 핵심 구현 설명은 [Binance 실시간 데이터 파이프라인 포트폴리오 PDF](https://raw.githubusercontent.com/lee-gimoon/futures-paper-trading/main/docs/portfolio/binance-stream-portfolio.pdf)에서 확인할 수 있다.
 >
+> 데이터베이스 테이블 관계는 [ERD 문서](docs/backend/erd.md)에서 확인할 수 있다.
+>
 > Binance WebSocket 수신부터 `Sinks.many().replay(1)` 기반 fan-out까지의 흐름만 따로 정리했다.
 
 - Binance 수신은 `@PostConstruct`로 서버 부팅 시 1회 시작되고, 브라우저가 0명이어도 계속 돈다. 브라우저 SSE 구독은 `Sinks.asFlux()` 아래쪽에만 생기므로 **수신 생명주기와 구독 생명주기가 분리**되어 있다.
@@ -287,8 +289,6 @@ docs/          문서와 시각 자료
 | `FuturesPaperTradingApplication.java` | Spring Boot 애플리케이션 진입점. `main()`에서 전체 서버를 부팅한다. |
 | `application.yaml` | 앱 이름, R2DBC PostgreSQL 접속 정보, `schema.sql` 실행 모드 같은 런타임 설정을 둔다. Docker에서는 환경변수로 DB 주소를 덮어쓴다. |
 | `schema.sql` | R2DBC는 자동 DDL을 쓰지 않으므로, 서버 부팅 시 `users`, `paper_orders`, `paper_fills`, `paper_accounts` 테이블을 만든다. |
-
-테이블 관계는 [ERD 문서](docs/backend/erd.md)에 따로 정리했다.
 
 </details>
 

@@ -21,9 +21,9 @@ Binance 선물 호가 스트림은 서버가 부팅 시 **단 1개 연결로만*
 
 전 구간 **논블로킹 리액티브 스택**(WebFlux + Reactor + R2DBC)이며, 돈 계산은 전부 `BigDecimal` / `NUMERIC(38,8)`로 다룹니다.
 
-![Futures Paper Trading 실행 화면](docs/images/hero.gif)
+![Futures Paper Trading 배포 화면 5초 캡처](docs/images/hero-readme.gif)
 
-<p align="center"><sub>실시간 호가창 · 캔들 차트 · 레버리지/포지션/PnL 거래 패널 (BTCUSDT)</sub></p>
+<p align="center"><sub>배포 환경의 실시간 호가창 · 캔들 차트 · 대기 주문 · 체결 내역 · 레버리지/포지션/PnL 거래 패널 (BTCUSDT)</sub></p>
 
 ---
 

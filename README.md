@@ -225,7 +225,8 @@ npm run dev
 ./gradlew test
 ```
 
-`contextLoads`가 Spring Boot 전체 컨텍스트와 R2DBC 연결을 함께 띄우므로, 로컬 실행 시에는 `application.yaml` 기준의 PostgreSQL(`localhost:5432`, 기본 DB/계정)이 준비되어 있어야 한다.
+테스트에서는 H2 내장 DB와 테스트 전용 schema를 사용하고 Binance WebSocket 연결 빈만 mock 처리해서, 로컬 PostgreSQL 없이도 도메인 단위 테스트와 Spring context 테스트를 실행할 수 있다.
+실제 애플리케이션을 로컬에서 실행할 때는 위의 `application.yaml` 기준 PostgreSQL(`localhost:5432`, 기본 DB/계정)이 필요하다.
 
 ## API
 

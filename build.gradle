@@ -29,6 +29,7 @@ dependencies {
 	runtimeOnly 'org.postgresql:r2dbc-postgresql'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-webflux-test'
+	testRuntimeOnly 'io.r2dbc:r2dbc-h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

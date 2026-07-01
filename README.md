@@ -15,6 +15,9 @@
 
 **Live App**: [futures-paper-trading-production.up.railway.app](https://futures-paper-trading-production.up.railway.app/)
 
+프로젝트 구조를 빠르게 파악하려면 [ERD 문서](docs/backend/erd.md)에서 데이터베이스 테이블 관계를 먼저 보고,
+[Paper 요청 흐름 문서](docs/backend/paper-request-flow.md)에서 주문 생성부터 포지션 계산까지 Controller·DTO·Service·Domain·Repository가 어떻게 연결되는지 확인할 수 있습니다.
+
 마지막 체결가(last price) 한 줄로 체결하는 모의투자와 달리, **현재 호가창의 잔량을 레벨 단위로 소진하며** 평균 체결가를 만드는 paper trading 엔진입니다.
 그 위에 선물 거래소의 핵심인 **레버리지·격리 마진·롱/숏 포지션·실현/미실현 PnL·강제청산**을 얹었습니다.
 Binance 선물 호가 스트림은 서버가 부팅 시 **단 1개 연결로만** 구독하고, 접속한 모든 브라우저에는 SSE로 fan-out 합니다.
@@ -91,8 +94,6 @@ flowchart LR
 > 브라우저 실행용 [EventLoop/Channel 애니메이션](https://htmlpreview.github.io/?https://github.com/lee-gimoon/futures-paper-trading/blob/main/src/main/resources/static/docs/event-loop-channel-animation.html)에서 Netty event loop가 Binance WebSocket, 브라우저 SSE, DB ready 이벤트를 번갈아 처리하는 흐름을 확인할 수 있다.
 >
 > 핵심 구현 설명은 [Binance 실시간 데이터 파이프라인 포트폴리오 PDF](https://raw.githubusercontent.com/lee-gimoon/futures-paper-trading/main/docs/portfolio/binance-stream-portfolio.pdf)에서 확인할 수 있다.
->
-> 데이터베이스 테이블 관계는 [ERD 문서](docs/backend/erd.md)에서 확인할 수 있다.
 >
 > Binance WebSocket 수신부터 `Sinks.many().replay(1)` 기반 fan-out까지의 흐름만 따로 정리했다.
 
@@ -270,7 +271,7 @@ src/main/java/com/example/futurespapertrading/
 frontend/      React 화면 — 호가창, 캔들 차트, 거래 패널(주문·계좌·포지션), 회원가입/로그인
 docs/          문서와 시각 자료
 ├── roadmap.md     단계별 로드맵 (설계 배경과 결정 이유 포함)
-├── backend/       인증·모의거래 백엔드 설계 노트와 ERD
+├── backend/       인증·모의거래 백엔드 설계 노트, ERD, 요청 흐름
 ├── study/         WebFlux/Reactor 학습 노트
 ├── portfolio/     포트폴리오 PDF/HTML 자료
 ├── images/        README와 문서에서 쓰는 이미지

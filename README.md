@@ -268,7 +268,7 @@ src/main/java/com/example/futurespapertrading/
 frontend/      React 화면 — 호가창, 캔들 차트, 거래 패널(주문·계좌·포지션), 회원가입/로그인
 docs/          문서와 시각 자료
 ├── roadmap.md     단계별 로드맵 (설계 배경과 결정 이유 포함)
-├── backend/       인증·모의거래 백엔드 설계 노트
+├── backend/       인증·모의거래 백엔드 설계 노트와 ERD
 ├── study/         WebFlux/Reactor 학습 노트
 ├── portfolio/     포트폴리오 PDF/HTML 자료
 ├── images/        README와 문서에서 쓰는 이미지
@@ -287,6 +287,8 @@ docs/          문서와 시각 자료
 | `FuturesPaperTradingApplication.java` | Spring Boot 애플리케이션 진입점. `main()`에서 전체 서버를 부팅한다. |
 | `application.yaml` | 앱 이름, R2DBC PostgreSQL 접속 정보, `schema.sql` 실행 모드 같은 런타임 설정을 둔다. Docker에서는 환경변수로 DB 주소를 덮어쓴다. |
 | `schema.sql` | R2DBC는 자동 DDL을 쓰지 않으므로, 서버 부팅 시 `users`, `paper_orders`, `paper_fills`, `paper_accounts` 테이블을 만든다. |
+
+테이블 관계는 [ERD 문서](docs/backend/erd.md)에 따로 정리했다.
 
 </details>
 

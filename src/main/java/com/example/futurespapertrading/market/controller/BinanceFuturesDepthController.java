@@ -77,7 +77,7 @@ public class BinanceFuturesDepthController {
 
 	// 4단계 — SSE(Server-Sent Events)로 latest snapshot을 브라우저에 push.
 	// 구현 방식: 폴링(A). 100ms마다 store를 들여다보고, eventTime이 바뀌었으면 보낸다.
-	// 6/7단계에서 Store에 Sinks.Many를 박고 store.stream()으로 갈아끼울 예정 (roadmap.md 참고).
+	// 6/7단계에서 Store에 Sinks.Many를 박고 store.stream()으로 갈아끼울 예정 (docs/roadmap.md 참고).
 	//
 	// produces = TEXT_EVENT_STREAM_VALUE 가 있어야 응답 Content-Type이 "text/event-stream"이 되고,
 	// 브라우저의 EventSource가 한 줄(`data: ...\n\n`)씩 받아서 onmessage로 풀어 쓴다.

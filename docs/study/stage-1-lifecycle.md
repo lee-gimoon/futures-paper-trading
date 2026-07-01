@@ -4,7 +4,7 @@
 
 1단계 코드가 `java -jar`부터 raw JSON 로그까지 시간 축으로 어떻게 흐르는지 한 장에 정리.
 
-기준 그림은 [`three-roles-webflux-netty-thread.svg`](study-mvc-vs-webflux.md)의 5단계 흐름. 거기에 1단계만의 반전 — 사용자 POST 이후 우리 앱이 outbound WebSocket **클라이언트**로 변신 — 을 4박스 더 붙인 버전.
+기준 그림은 [`three-roles-webflux-netty-thread.svg`](mvc-vs-webflux.md)의 5단계 흐름. 거기에 1단계만의 반전 — 사용자 POST 이후 우리 앱이 outbound WebSocket **클라이언트**로 변신 — 을 4박스 더 붙인 버전.
 
 ![stage1-execution-flow](https://raw.githubusercontent.com/lee-gimoon/futures-paper-trading/b2c97f5/docs/images/stage1-execution-flow.svg)
 
@@ -14,7 +14,7 @@
 
 점선 위쪽 (**Phase A**, 박스 1~4) — 표준 흐름. JVM이 뜨고 main 스레드가 Netty를 부팅해서 event loop 스레드 N개가 8080을 듣는다. 여기까지는 우리 코드가 **한 줄도 안 돈다.**
 
-점선 아래쪽 (**Phase B**, 박스 5~8) — 1단계만의 반전. `roadmap.md`의 "앱 시작 시 자동 연결하지 않는다" 원칙 때문에, 사용자가 `POST /api/binance-futures/btcusdt/depth/raw/start`를 보내야 비로소 `BinanceFuturesRawDepthStreamer.connect()`가 호출되고, 같은 Netty event loop이 이번엔 Binance로 outbound WebSocket을 띄운다.
+점선 아래쪽 (**Phase B**, 박스 5~8) — 1단계만의 반전. [`docs/roadmap.md`](../roadmap.md)의 "앱 시작 시 자동 연결하지 않는다" 원칙 때문에, 사용자가 `POST /api/binance-futures/btcusdt/depth/raw/start`를 보내야 비로소 `BinanceFuturesRawDepthStreamer.connect()`가 호출되고, 같은 Netty event loop이 이번엔 Binance로 outbound WebSocket을 띄운다.
 
 ## 손(= OS가 띄운 Netty event loop 스레드 1개, 예: `reactor-http-nio-3` — 코드가 아닌, 코드를 실제로 실행하는 주체)이 똑같다
 

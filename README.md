@@ -265,8 +265,13 @@ src/main/java/com/example/futurespapertrading/
     ├── controller/ 주문 · 계좌 HTTP 입구
     └── dto/       요청/응답 경계 객체
 frontend/      React 화면 — 호가창, 캔들 차트, 거래 패널(주문·계좌·포지션), 회원가입/로그인
-docs/          학습 노트, 실행 흐름 다이어그램
-roadmap.md     단계별 로드맵 (설계 배경과 결정 이유 포함)
+docs/          문서와 시각 자료
+├── roadmap.md     단계별 로드맵 (설계 배경과 결정 이유 포함)
+├── backend/       인증·모의거래 백엔드 설계 노트
+├── study/         WebFlux/Reactor 학습 노트
+├── portfolio/     포트폴리오 PDF/HTML 자료
+├── images/        README와 문서에서 쓰는 이미지
+└── reference/     외부 공식 문서 참고 링크
 ```
 
 ### 백엔드 파일 역할 상세

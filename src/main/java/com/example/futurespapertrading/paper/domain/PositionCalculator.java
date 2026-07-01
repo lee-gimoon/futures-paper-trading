@@ -17,7 +17,7 @@ import java.util.Map;
 //     ① 포지션이 없거나 같은 방향 → '증가': 평균 진입가(VWAP)를 수량가중으로 다시 잡는다.
 //     ② 반대 방향 → '축소/청산/뒤집기': 닿는 만큼 기존 포지션을 닫아 실현 PnL을 확정하고,
 //        남는 수량이 있으면 그 가격으로 반대 포지션을 새로 연다.
-//   (자세한 단계별 예시·증명은 STAGE9-PORTFOLIO.md 참고.)
+//   (자세한 단계별 예시·증명은 docs/backend/stage9-portfolio.md 참고.)
 //
 // 수수료(fill.fee)는 8·9단계 MVP라 0이므로 PnL에 넣지 않는다(로드맵: 수수료/펀딩비는 나중 단계).
 public final class PositionCalculator {

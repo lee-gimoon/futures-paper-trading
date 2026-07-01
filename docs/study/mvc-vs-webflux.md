@@ -46,7 +46,7 @@ Reactor Netty는 보통 CPU 코어 수만큼(8코어면 8개) 이벤트 루프 =
 비유로는 API가 **식당의 메뉴판**(주방이 어떻게 돌아가는지 몰라도 "비빔밥 주세요" 가능),
 인터페이스가 **"통역사 자격증 요건 명세"**(어떤 능력을 갖춰야 하는지만 적혀있고, 실제 그 능력자는 따로 와야 함)에 가깝다.
 
-자바에서 둘은 자주 짝으로 쓰인다: **API의 모양은 인터페이스로 정의하고, 실제 동작은 구현 클래스가 채운다.** [BinanceFuturesRawDepthStreamer.java:24](../src/main/java/com/example/futurespapertrading/market/stream/BinanceFuturesRawDepthStreamer.java:24)에서 `WebSocketClient`가 인터페이스, `ReactorNettyWebSocketClient`가 구현체인 것이 이 패턴. 변수 타입을 인터페이스로 잡으면 나중에 다른 구현체로 바꿔도 한 줄만 수정하면 된다. "Servlet API"라는 단어도 같은 패턴 — Servlet API는 인터페이스 모음, Tomcat이 그 구현체.
+자바에서 둘은 자주 짝으로 쓰인다: **API의 모양은 인터페이스로 정의하고, 실제 동작은 구현 클래스가 채운다.** [BinanceFuturesRawDepthStreamer.java:24](../../src/main/java/com/example/futurespapertrading/market/stream/BinanceFuturesRawDepthStreamer.java:24)에서 `WebSocketClient`가 인터페이스, `ReactorNettyWebSocketClient`가 구현체인 것이 이 패턴. 변수 타입을 인터페이스로 잡으면 나중에 다른 구현체로 바꿔도 한 줄만 수정하면 된다. "Servlet API"라는 단어도 같은 패턴 — Servlet API는 인터페이스 모음, Tomcat이 그 구현체.
 
 핵심 한 줄: **인터페이스 = 약속의 모양, 구현체 = 그 약속을 지키는 실체. API = 그 약속을 외부에 메뉴판으로 노출한 것.**
 
@@ -56,7 +56,7 @@ Reactor Netty는 보통 CPU 코어 수만큼(8코어면 8개) 이벤트 루프 =
 
 같은 5개 요청을 두 프레임워크가 어떻게 다루는지 한 그림에 펼쳐 본 것.
 
-![MVC vs WebFlux 요청 처리 방식 비교](images/mvc-vs-webflux-request-handling.svg)
+![MVC vs WebFlux 요청 처리 방식 비교](../images/mvc-vs-webflux-request-handling.svg)
 
 **눈으로 봐야 할 포인트:**
 
@@ -386,7 +386,7 @@ MVC로 같은 걸 하려면 SSE/스레드/큐 직접 다뤄야 해서 코드가 
 - 100개 심볼을 구독하면 → 스레드 100개가 그냥 대기 상태.
 - WebFlux + Reactor Netty면 → 이벤트 루프 스레드 몇 개가 모든 연결을 다중 처리.
 
-게다가 [stage-1.md](stage-1.md)의 [BinanceFuturesRawDepthStreamer.java](../src/main/java/com/example/futurespapertrading/market/stream/BinanceFuturesRawDepthStreamer.java)에서 보듯이, 메시지가 자연스럽게 `Flux<WebSocketMessage>`로 들어와서 `.map().filter()` 같은 연산자로 변환·집계가 직관적이다.
+게다가 [stage-1.md](stage-1-lifecycle.md)의 [BinanceFuturesRawDepthStreamer.java](../../src/main/java/com/example/futurespapertrading/market/stream/BinanceFuturesRawDepthStreamer.java)에서 보듯이, 메시지가 자연스럽게 `Flux<WebSocketMessage>`로 들어와서 `.map().filter()` 같은 연산자로 변환·집계가 직관적이다.
 
 호가창 → 체결 → 포지션 관리로 가면서도 **"흐르는 데이터"** 사고방식이 계속 살아있어야 해서 WebFlux가 적합하다.
 

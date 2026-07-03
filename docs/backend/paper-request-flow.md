@@ -164,19 +164,27 @@ return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
    → User 객체에서 id만 꺼낸다.
 ```
 
-결과 타입은 `Mono<Long>`이다.
+`currentUserId()`의 결과 타입은 `Mono<Long>`이다.
 
 ```text
 아직 Long 값이 바로 있는 것이 아니라,
 나중에 userId Long 하나를 흘려보낼 비동기 파이프라인이다.
 ```
 
-그래서 `create()`에서 `flatMap`을 쓴다.
+다만 `create()`에서 `map`이 아니라 `flatMap`을 쓰는 이유는 `Mono<Long>` 자체 때문만은 아니다.
+
+`flatMap` 안에서 호출하는 `orderService.placeOrder(req, userId)`도 `Mono<OrderResponse>`를 반환하기 때문이다.
 
 ```text
-userId가 실제로 나오면
-→ 그 userId로 orderService.placeOrder(req, userId)를 호출한다.
+map을 쓰면:
+Mono<Long> → Mono<Mono<OrderResponse>>
+
+flatMap을 쓰면:
+Mono<Long> → Mono<OrderResponse>
 ```
+
+즉 `flatMap`은 `placeOrder(...)`가 반환한 안쪽 `Mono`를 한 겹 펼쳐서,
+컨트롤러의 최종 반환 타입을 `Mono<OrderResponse>`로 이어준다.
 
 ## 4. placeOrder(req, userId)
 

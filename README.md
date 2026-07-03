@@ -13,10 +13,17 @@
 
 즉, 단순 CRUD 서버가 아니라 실시간 호가 스트림을 받아 여러 브라우저와 내부 주문 매칭 로직에 동시에 흘려보내는 스트림 서버에 가깝기 때문에 WebFlux + Reactor + R2DBC를 선택했습니다.
 
+---
+
+## 꼭 봐야 할 부분
+
 **Live App**: [futures-paper-trading-production.up.railway.app](https://futures-paper-trading-production.up.railway.app/)
 
-프로젝트 구조를 빠르게 파악하려면 [ERD 문서](docs/backend/erd.md)에서 데이터베이스 테이블 관계를 먼저 보고,
-[Paper 요청 흐름 문서](docs/backend/paper-request-flow.md)에서 주문 생성부터 포지션 계산까지 Controller·DTO·Service·Domain·Repository가 어떻게 연결되는지 확인할 수 있습니다.
+**ERD 문서**: [데이터베이스 테이블 관계 보기](docs/backend/erd.md)
+
+**API 한 개 요청 흐름**: [POST 주문 생성 요청 흐름 보기](docs/backend/paper-request-flow.md)
+
+---
 
 마지막 체결가(last price) 한 줄로 체결하는 모의투자와 달리, **현재 호가창의 잔량을 레벨 단위로 소진하며** 평균 체결가를 만드는 paper trading 엔진입니다.
 그 위에 선물 거래소의 핵심인 **레버리지·격리 마진·롱/숏 포지션·실현/미실현 PnL·강제청산**을 얹었습니다.

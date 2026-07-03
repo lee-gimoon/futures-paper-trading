@@ -171,9 +171,10 @@ return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
 나중에 userId Long 하나를 흘려보낼 비동기 파이프라인이다.
 ```
 
-다만 `create()`에서 `map`이 아니라 `flatMap`을 쓰는 이유는 `Mono<Long>` 자체 때문만은 아니다.
+그래서 userId를 바로 꺼내 쓰지 않고, `map`이나 `flatMap` 같은 `Mono` 연산자 안에서 받아 다음 단계로 넘긴다.
 
-`flatMap` 안에서 호출하는 `orderService.placeOrder(req, userId)`도 `Mono<OrderResponse>`를 반환하기 때문이다.
+여기서 `map`이 아니라 `flatMap`을 쓰는 직접적인 이유는,
+userId를 받은 뒤 호출하는 `orderService.placeOrder(req, userId)`가 일반 `OrderResponse`가 아니라 `Mono<OrderResponse>`를 반환하기 때문이다.
 
 ```text
 map을 쓰면:

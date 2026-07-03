@@ -303,7 +303,7 @@ return portfolioService.accountState(userId).flatMap(state -> {
 7. toState(account, fills, orderLeverage)로 AccountState를 만든다.
 ```
 
-`PaperOrderService` 클래스의 `placeOrder()` 메서드가 필요한 값은 여기서 나온다.
+여기서 만든 값들은 `PaperOrderService` 클래스의 `placeOrder()` 메서드에서 사용된다.
 
 | 값 | 어디에 쓰이나 |
 |---|---|

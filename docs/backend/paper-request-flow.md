@@ -142,7 +142,7 @@ private Mono<Long> currentUserId() {
 }
 ```
 
-`create()`에서 이 부분이다.
+`PaperOrderController` 클래스의 `create()` 메서드에서 이 부분이다.
 
 ```java
 return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
@@ -211,7 +211,7 @@ public Mono<OrderResponse> placeOrder(CreateOrderRequest req, Long userId) {
 }
 ```
 
-`create()`에서 이 부분이다.
+`PaperOrderController` 클래스의 `create()` 메서드에서 이 부분이다.
 
 ```java
 return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
@@ -272,7 +272,7 @@ public Mono<AccountState> accountState(Long userId) {
 }
 ```
 
-`placeOrder()`의 첫 줄에서 호출된다.
+`PaperOrderService` 클래스의 `placeOrder()` 메서드 첫 줄에서 호출된다.
 
 ```java
 return portfolioService.accountState(userId).flatMap(state -> {
@@ -418,7 +418,7 @@ private AccountState toState(PaperAccount account, List<PaperFill> fills, Map<Lo
 }
 ```
 
-`accountState()`의 마지막에서 호출된다.
+`PortfolioService` 클래스의 `accountState()` 메서드 마지막에서 호출된다.
 
 ```java
 ).map(t -> toState(account, t.getT1(), t.getT2())));
@@ -497,7 +497,7 @@ public static Position compute(List<PaperFill> fills) {
 }
 ```
 
-`toState()`에서 이 부분이다.
+`PortfolioService` 클래스의 `toState()` 메서드에서 이 부분이다.
 
 ```java
 Position pos = PositionCalculator.compute(fills);
@@ -577,7 +577,7 @@ public static int openPositionLeverage(List<PaperFill> fills, Map<Long, Integer>
 }
 ```
 
-`toState()`에서 이 부분이다.
+`PortfolioService` 클래스의 `toState()` 메서드에서 이 부분이다.
 
 ```java
 int positionLeverage = PositionCalculator.openPositionLeverage(fills, orderLeverage, account.leverage());
@@ -619,7 +619,7 @@ private BigDecimal midPrice() {
 }
 ```
 
-`toState()`에서 호출된다.
+`PortfolioService` 클래스의 `toState()` 메서드에서 호출된다.
 
 ```java
 BigDecimal mark = midPrice();
@@ -660,7 +660,7 @@ public static BigDecimal bestAsk(OrderBookSnapshot snapshot) {
 }
 ```
 
-`midPrice()`에서 이 부분이다.
+`PortfolioService` 클래스의 `midPrice()` 메서드에서 이 부분이다.
 
 ```java
 BigDecimal bestBid = OrderBookQuotes.bestBid(snapshot);
@@ -696,7 +696,7 @@ public static BigDecimal usedMargin(Position pos, int leverage) {
 }
 ```
 
-`toState()`에서 호출된다.
+`PortfolioService` 클래스의 `toState()` 메서드에서 호출된다.
 
 ```java
 BigDecimal usedMargin = MarginCalculator.usedMargin(pos, positionLeverage);
@@ -734,13 +734,13 @@ public record AccountState(
 }
 ```
 
-`toState()`의 마지막에서 만들어 반환하는 객체다.
+`PortfolioService` 클래스의 `toState()` 메서드 마지막에서 만들어 반환하는 객체다.
 
 ```java
 return new AccountState(account, pos, positionLeverage, mark, unrealized, walletBalance, usedMargin, available);
 ```
 
-그리고 `accountState()`의 최종 결과이기도 하다.
+그리고 `PortfolioService` 클래스의 `accountState()` 메서드 최종 결과이기도 하다.
 
 `placeOrder()`에서는 이 값을 받아서 주문 가능 여부를 검증한다.
 
@@ -775,7 +775,7 @@ private static BigDecimal requiredAdditionalMargin(CreateOrderRequest req, Portf
 }
 ```
 
-`placeOrder()`에서 호출된다.
+`PaperOrderService` 클래스의 `placeOrder()` 메서드에서 호출된다.
 
 ```java
 BigDecimal requiredAdditionalMargin = requiredAdditionalMargin(req, state);
@@ -892,7 +892,7 @@ private Mono<OrderResponse> placeOrderAfterMarginCheck(CreateOrderRequest req, L
 }
 ```
 
-`placeOrder()`에서 증거금 검사를 통과하면 이 부분으로 호출된다.
+`PaperOrderService` 클래스의 `placeOrder()` 메서드에서 증거금 검사를 통과하면 이 부분으로 호출된다.
 
 ```java
 return placeOrderAfterMarginCheck(req, userId, state.account().leverage());
@@ -922,7 +922,7 @@ if (maybeSnapshot.isEmpty()) {
 }
 ```
 
-이 코드는 `placeOrderAfterMarginCheck()`에서 `latestStore.latest()`로 최신 호가를 꺼낸 직후의 분기다.
+이 코드는 `PaperOrderService` 클래스의 `placeOrderAfterMarginCheck()` 메서드에서 `latestStore.latest()`로 최신 호가를 꺼낸 직후의 분기다.
 
 분기 의미:
 
@@ -952,7 +952,7 @@ PaperOrder probe = new PaperOrder(
         req.limitPrice(), req.quantity(), BigDecimal.ZERO, leverage);
 ```
 
-`placeOrderAfterMarginCheck()`에서 호가 snapshot이 있을 때 이 부분으로 내려온다.
+`PaperOrderService` 클래스의 `placeOrderAfterMarginCheck()` 메서드에서 호가 snapshot이 있을 때 이 부분으로 내려온다.
 
 `probe`는 DB에 저장할 최종 주문이 아니다.
 
@@ -1032,7 +1032,7 @@ private static List<OrderBookLevel> sortedDescending(List<OrderBookLevel> levels
 }
 ```
 
-`placeOrderAfterMarginCheck()`에서 호출된다.
+`PaperOrderService` 클래스의 `placeOrderAfterMarginCheck()` 메서드에서 호출된다.
 
 ```java
 List<PaperFill> fills = engine.tryFill(probe, maybeSnapshot.get());
@@ -1091,7 +1091,7 @@ private static BigDecimal totalQuantity(List<PaperFill> fills) {
 }
 ```
 
-`placeOrderAfterMarginCheck()`에서 호출된다.
+`PaperOrderService` 클래스의 `placeOrderAfterMarginCheck()` 메서드에서 호출된다.
 
 ```java
 BigDecimal filledQty = totalQuantity(fills);
@@ -1115,7 +1115,7 @@ if (isLimit)  status = fullyFilled ? OrderStatus.FILLED.name() : OrderStatus.OPE
 else          status = fills.isEmpty() ? OrderStatus.REJECTED.name() : OrderStatus.FILLED.name();
 ```
 
-`placeOrderAfterMarginCheck()`에서 `filledQty`를 구한 다음 이 부분으로 상태를 정한다.
+`PaperOrderService` 클래스의 `placeOrderAfterMarginCheck()` 메서드에서 `filledQty`를 구한 다음 이 부분으로 상태를 정한다.
 
 상태 결정표:
 
@@ -1157,7 +1157,7 @@ private Mono<OrderResponse> saveOrder(CreateOrderRequest req, Long userId,
 }
 ```
 
-`placeOrderAfterMarginCheck()`의 마지막에서 호출된다.
+`PaperOrderService` 클래스의 `placeOrderAfterMarginCheck()` 메서드 마지막에서 호출된다.
 
 ```java
 return saveOrder(req, userId, status, filledQty, fills, leverage);
@@ -1206,7 +1206,7 @@ private Mono<Void> saveFills(Long orderId, List<PaperFill> fills) {
 }
 ```
 
-`saveOrder()` 안에서 호출된다.
+`PaperOrderService` 클래스의 `saveOrder()` 메서드 안에서 호출된다.
 
 ```java
 saveFills(saved.id(), fills)
@@ -1247,7 +1247,7 @@ public interface PaperFillRepository extends ReactiveCrudRepository<PaperFill, L
 }
 ```
 
-`saveFills()`에서 이 부분이다.
+`PaperOrderService` 클래스의 `saveFills()` 메서드에서 이 부분이다.
 
 ```java
 return fillRepository.saveAll(withOrderId).then();
@@ -1307,7 +1307,7 @@ public record OrderResponse(
 }
 ```
 
-`saveOrder()`의 마지막 응답 생성 코드다.
+`PaperOrderService` 클래스의 `saveOrder()` 메서드 마지막 응답 생성 코드다.
 
 ```java
 .thenReturn(OrderResponse.from(saved, fills))

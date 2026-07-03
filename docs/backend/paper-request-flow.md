@@ -11,43 +11,43 @@
 4. 저장과 응답까지 같은 방식으로 따라간다.
 ```
 
-즉 이 문서는 `create()` 요청의 실행 흐름을 코드 순서대로 펼쳐 놓은 것이다.
+즉 이 문서는 `PaperOrderController` 클래스의 `create()` 메서드로 들어온 요청의 실행 흐름을 코드 순서대로 펼쳐 놓은 것이다.
 
 ## 전체 호출 순서
 
 ```text
-PaperOrderController.create(req)
+PaperOrderController 클래스의 create(req) 메서드
 ├─ req: CreateOrderRequest
-├─ currentUserId()
+├─ PaperOrderController 클래스의 currentUserId() 메서드
 │  └─ userRepository.findByEmail(email)
-└─ orderService.placeOrder(req, userId)
-   ├─ portfolioService.accountState(userId)
-   │  ├─ getOrCreateAccount(userId)
+└─ PaperOrderService 클래스의 placeOrder(req, userId) 메서드
+   ├─ PortfolioService 클래스의 accountState(userId) 메서드
+   │  ├─ PortfolioService 클래스의 getOrCreateAccount(userId) 메서드
    │  ├─ fillRepository.findByUserIdOrderByIdAsc(userId)
    │  ├─ orderRepository.findByUserIdOrderByIdDesc(userId)
-   │  └─ toState(account, fills, orderLeverage)
+   │  └─ PortfolioService 클래스의 toState(account, fills, orderLeverage) 메서드
    │     ├─ PositionCalculator.compute(fills)
    │     ├─ PositionCalculator.openPositionLeverage(...)
-   │     ├─ midPrice()
+   │     ├─ PortfolioService 클래스의 midPrice() 메서드
    │     │  ├─ latestStore.latest()
    │     │  ├─ OrderBookQuotes.bestBid(snapshot)
    │     │  └─ OrderBookQuotes.bestAsk(snapshot)
    │     └─ MarginCalculator.usedMargin(pos, positionLeverage)
-   ├─ requiredAdditionalMargin(req, state)
-   └─ placeOrderAfterMarginCheck(req, userId, leverage)
+   ├─ PaperOrderService 클래스의 requiredAdditionalMargin(req, state) 메서드
+   └─ PaperOrderService 클래스의 placeOrderAfterMarginCheck(req, userId, leverage) 메서드
       ├─ latestStore.latest()
       ├─ engine.tryFill(probe, snapshot)
-      ├─ totalQuantity(fills)
-      ├─ saveOrder(req, userId, status, filledQty, fills, leverage)
+      ├─ PaperOrderService 클래스의 totalQuantity(fills) 메서드
+      ├─ PaperOrderService 클래스의 saveOrder(req, userId, status, filledQty, fills, leverage) 메서드
       │  ├─ orderRepository.save(toSave)
       │  ├─ openOrderCounter.increment()
-      │  ├─ saveFills(saved.id(), fills)
+      │  ├─ PaperOrderService 클래스의 saveFills(saved.id(), fills) 메서드
       │  │  └─ fillRepository.saveAll(withOrderId)
-      │  └─ OrderResponse.from(saved, fills)
+      │  └─ OrderResponse record의 from(saved, fills) 메서드
       └─ OrderResponse
 ```
 
-## 1. 시작점: create()
+## 1. 시작점: PaperOrderController 클래스의 create() 메서드
 
 파일: [`PaperOrderController.java`](../../src/main/java/com/example/futurespapertrading/paper/controller/PaperOrderController.java)
 
@@ -64,20 +64,20 @@ public Mono<OrderResponse> create(@Valid @RequestBody CreateOrderRequest req) {
 | 코드 | 무엇인가 |
 |---|---|
 | `CreateOrderRequest req` | 요청 JSON이 변환된 주문 생성 DTO |
-| `currentUserId()` | 현재 로그인 사용자의 DB id를 꺼내는 메서드 |
-| `orderService.placeOrder(req, userId)` | 주문 생성 유스케이스의 서비스 진입점 |
+| `currentUserId()` | `PaperOrderController` 클래스에서 현재 로그인 사용자의 DB id를 꺼내는 메서드 |
+| `orderService.placeOrder(req, userId)` | `PaperOrderService` 클래스의 `placeOrder()` 메서드로 이어지는 주문 생성 유스케이스의 서비스 진입점 |
 
 실행 순서는 이렇다.
 
 ```text
 1. 요청 body가 CreateOrderRequest로 변환된다.
 2. @Valid가 CreateOrderRequest 검증을 수행한다.
-3. 검증 통과 후 create() 본문에 들어온다.
-4. currentUserId()로 userId를 구하는 Mono를 만든다.
-5. userId가 나오면 flatMap(userId -> ...) 형태로 orderService.placeOrder(req, userId)를 호출한다.
+3. 검증 통과 후 `PaperOrderController` 클래스의 `create()` 메서드 본문에 들어온다.
+4. 같은 클래스의 `currentUserId()` 메서드로 userId를 구하는 Mono를 만든다.
+5. userId가 나오면 flatMap(userId -> ...) 형태로 `PaperOrderService` 클래스의 `placeOrder()` 메서드를 호출한다.
 ```
 
-`create()`는 주문을 직접 저장하지 않는다. HTTP 입구 역할만 하고, 실제 주문 처리는 `PaperOrderService`로 넘긴다.
+`PaperOrderController` 클래스의 `create()` 메서드는 주문을 직접 저장하지 않는다. HTTP 입구 역할만 하고, 실제 주문 처리는 `PaperOrderService`로 넘긴다.
 
 ## 2. req: CreateOrderRequest
 
@@ -99,7 +99,7 @@ public record CreateOrderRequest(
 }
 ```
 
-`create()`의 매개변수 `req`는 이 record 객체다.
+`PaperOrderController` 클래스의 `create()` 메서드 매개변수 `req`는 이 record 객체다.
 
 ```java
 public Mono<OrderResponse> create(@Valid @RequestBody CreateOrderRequest req)
@@ -117,7 +117,7 @@ public Mono<OrderResponse> create(@Valid @RequestBody CreateOrderRequest req)
 7. type이 LIMIT이면 limitPrice도 null이 아니고 양수여야 한다.
 ```
 
-`isLimitPriceValid()`는 지정가 주문의 추가 규칙이다.
+`CreateOrderRequest` record의 `isLimitPriceValid()` 메서드는 지정가 주문의 추가 규칙이다.
 
 ```text
 MARKET 주문
@@ -127,9 +127,9 @@ LIMIT 주문
 → limitPrice != null && limitPrice.signum() > 0 이어야 true
 ```
 
-검증 실패 시에는 `create()` 본문이 끝까지 실행되지 않고 400 응답으로 막힌다.
+검증 실패 시에는 `PaperOrderController` 클래스의 `create()` 메서드 본문이 끝까지 실행되지 않고 400 응답으로 막힌다.
 
-## 3. currentUserId()
+## 3. PaperOrderController 클래스의 currentUserId() 메서드
 
 파일: [`PaperOrderController.java`](../../src/main/java/com/example/futurespapertrading/paper/controller/PaperOrderController.java)
 
@@ -148,7 +148,7 @@ private Mono<Long> currentUserId() {
 return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
 ```
 
-`currentUserId()` 흐름:
+`PaperOrderController` 클래스의 `currentUserId()` 메서드 흐름:
 
 ```text
 1. ReactiveSecurityContextHolder.getContext()
@@ -164,7 +164,7 @@ return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
    → User 객체에서 id만 꺼낸다.
 ```
 
-`currentUserId()`의 결과 타입은 `Mono<Long>`이다.
+`PaperOrderController` 클래스의 `currentUserId()` 메서드 결과 타입은 `Mono<Long>`이다.
 
 ```text
 아직 Long 값이 바로 있는 것이 아니라,
@@ -173,11 +173,11 @@ return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
 
 그래서 `Long userId = currentUserId()`처럼 바로 꺼내 쓸 수 없다.
 대신 `flatMap(userId -> ...)` 형태로 작성한다.
-여기서 `userId`는 `currentUserId()`가 나중에 만들어 낸 Long 값이다.
-그 값을 사용해 `orderService.placeOrder(req, userId)`를 호출한다.
+여기서 `userId`는 `PaperOrderController` 클래스의 `currentUserId()` 메서드가 나중에 만들어 낸 Long 값이다.
+그 값을 사용해 `PaperOrderService` 클래스의 `placeOrder()` 메서드를 호출한다.
 
 여기서 `map`이 아니라 `flatMap`을 쓰는 직접적인 이유는,
-userId를 받은 뒤 호출하는 `orderService.placeOrder(req, userId)`가 일반 `OrderResponse`가 아니라 `Mono<OrderResponse>`를 반환하기 때문이다.
+userId를 받은 뒤 호출하는 `PaperOrderService` 클래스의 `placeOrder()` 메서드가 일반 `OrderResponse`가 아니라 `Mono<OrderResponse>`를 반환하기 때문이다.
 
 ```text
 map을 쓰면:
@@ -217,13 +217,13 @@ public Mono<OrderResponse> placeOrder(CreateOrderRequest req, Long userId) {
 return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
 ```
 
-`currentUserId()`가 만든 userId로 이 서비스 메서드를 호출한다.
+`PaperOrderController` 클래스의 `currentUserId()` 메서드가 만든 userId로 이 서비스 메서드를 호출한다.
 
-`placeOrder()`에서 봐야 하는 내부 호출은 3개다.
+`PaperOrderService` 클래스의 `placeOrder()` 메서드에서 봐야 하는 내부 호출은 3개다.
 
 | 코드 | 역할 |
 |---|---|
-| `portfolioService.accountState(userId)` | 계좌, 포지션, mark, 가용잔고 계산 |
+| `portfolioService.accountState(userId)` | `PortfolioService` 클래스의 `accountState()` 메서드로 계좌, 포지션, mark, 가용잔고 계산 |
 | `requiredAdditionalMargin(req, state)` | 이번 주문에 필요한 추가 증거금 계산 |
 | `placeOrderAfterMarginCheck(...)` | 증거금 통과 후 체결 판정과 저장 |
 
@@ -303,7 +303,7 @@ return portfolioService.accountState(userId).flatMap(state -> {
 7. toState(account, fills, orderLeverage)로 AccountState를 만든다.
 ```
 
-`placeOrder()`가 필요한 값은 여기서 나온다.
+`PaperOrderService` 클래스의 `placeOrder()` 메서드가 필요한 값은 여기서 나온다.
 
 | 값 | 어디에 쓰이나 |
 |---|---|
@@ -324,7 +324,7 @@ private Mono<PaperAccount> getOrCreateAccount(Long userId) {
 }
 ```
 
-`accountState()`에서 가장 먼저 호출된다.
+`PortfolioService` 클래스의 `accountState()` 메서드에서 가장 먼저 호출된다.
 
 ```java
 return getOrCreateAccount(userId).flatMap(account -> ...)
@@ -368,7 +368,7 @@ Flux<PaperFill> findByUserIdOrderByIdAsc(Long userId);
 Flux<PaperOrder> findByUserIdOrderByIdDesc(Long userId);
 ```
 
-`accountState()` 안에서는 이렇게 쓰인다.
+`PortfolioService` 클래스의 `accountState()` 메서드 안에서는 이렇게 쓰인다.
 
 ```java
 Mono.zip(
@@ -435,7 +435,7 @@ private AccountState toState(PaperAccount account, List<PaperFill> fills, Map<Lo
 2. PositionCalculator.openPositionLeverage(...)
    → 현재 열린 포지션의 레버리지를 계산한다.
 
-3. midPrice()
+3. `PortfolioService` 클래스의 `midPrice()` 메서드
    → 현재 호가의 중간 가격을 mark로 계산한다.
 
 4. flat 판단
@@ -456,7 +456,7 @@ private AccountState toState(PaperAccount account, List<PaperFill> fills, Map<Lo
 9. AccountState로 묶어 반환한다.
 ```
 
-`placeOrder()`에서는 이 중 특히 `mark`, `availableBalance`, `position`, `account.leverage`를 사용한다.
+`PaperOrderService` 클래스의 `placeOrder()` 메서드에서는 이 중 특히 `mark`, `availableBalance`, `position`, `account.leverage`를 사용한다.
 
 ## 9. PositionCalculator.compute(fills)
 
@@ -604,7 +604,7 @@ int positionLeverage = PositionCalculator.openPositionLeverage(fills, orderLever
 7. 마지막 lev가 현재 열린 포지션의 레버리지다.
 ```
 
-## 11. midPrice()
+## 11. PortfolioService 클래스의 midPrice() 메서드
 
 파일: [`PortfolioService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PortfolioService.java)
 
@@ -638,7 +638,7 @@ BigDecimal mark = midPrice();
 6. 둘 다 있으면 (bestBid + bestAsk) / 2를 반환한다.
 ```
 
-이 값이 `placeOrder()`의 시장가 증거금 계산 기준가로 쓰인다.
+이 값이 `PaperOrderService` 클래스의 `placeOrder()` 메서드에서 시장가 증거금 계산 기준가로 쓰인다.
 
 ## 12. OrderBookQuotes.bestBid / bestAsk
 
@@ -679,7 +679,7 @@ bestAsk
 → 지금 가장 싸게 팔겠다는 매도호가
 ```
 
-`midPrice()`는 이 둘의 중간값을 mark로 쓴다.
+`PortfolioService` 클래스의 `midPrice()` 메서드는 이 둘의 중간값을 mark로 쓴다.
 
 ## 13. MarginCalculator.usedMargin(...)
 
@@ -742,7 +742,7 @@ return new AccountState(account, pos, positionLeverage, mark, unrealized, wallet
 
 그리고 `PortfolioService` 클래스의 `accountState()` 메서드 최종 결과이기도 하다.
 
-`placeOrder()`에서는 이 값을 받아서 주문 가능 여부를 검증한다.
+`PaperOrderService` 클래스의 `placeOrder()` 메서드에서는 이 값을 받아서 주문 가능 여부를 검증한다.
 
 특히 create 흐름에서 쓰는 필드는 이렇다.
 
@@ -835,7 +835,7 @@ SELL 5 주문
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
-`placeOrder()`의 이 부분이다.
+`PaperOrderService` 클래스의 `placeOrder()` 메서드의 이 부분이다.
 
 ```java
 if (requiredAdditionalMargin.compareTo(state.availableBalance()) > 0)
@@ -1171,7 +1171,7 @@ return saveOrder(req, userId, status, filledQty, fills, leverage);
 3. DB가 id를 채운 saved 주문을 반환한다.
 4. status가 OPEN이면 openOrderCounter를 증가시킨다.
 5. saved.id()를 가지고 saveFills(saved.id(), fills)를 호출한다.
-6. saveFills가 끝나면 OrderResponse.from(saved, fills)를 반환한다.
+6. `PaperOrderService` 클래스의 `saveFills()` 메서드가 끝나면 `OrderResponse` record의 `from(saved, fills)` 메서드를 호출해 반환한다.
 ```
 
 여기서 저장되는 주문 상태는 앞 단계에서 이미 정해진 값이다.
@@ -1268,7 +1268,7 @@ fillRepository.saveAll(withOrderId)
 → paper_fills에 체결 기록들을 INSERT
 ```
 
-## 26. OrderResponse.from(saved, fills)
+## 26. OrderResponse record의 from(saved, fills) 메서드
 
 파일: [`OrderResponse.java`](../../src/main/java/com/example/futurespapertrading/paper/dto/OrderResponse.java)
 
@@ -1323,7 +1323,7 @@ public record OrderResponse(
 5. OrderResponse를 만든다.
 ```
 
-`averagePrice(fills)`:
+`OrderResponse` record의 `averagePrice(fills)` 메서드:
 
 ```text
 체결이 없으면 null
@@ -1375,35 +1375,35 @@ avgPrice = Σ(체결가 × 체결수량) / Σ체결수량
 ## 28. 한 번에 다시 읽기
 
 ```text
-create(req)
+PaperOrderController 클래스의 create(req) 메서드
 → req는 CreateOrderRequest이고 @Valid로 먼저 검증된다.
-→ currentUserId()로 현재 로그인 사용자의 userId를 구한다.
-→ userId가 나오면 placeOrder(req, userId)를 호출한다.
+→ `PaperOrderController` 클래스의 `currentUserId()` 메서드로 현재 로그인 사용자의 userId를 구한다.
+→ userId가 나오면 `PaperOrderService` 클래스의 `placeOrder(req, userId)` 메서드를 호출한다.
 
-placeOrder(req, userId)
-→ accountState(userId)로 계좌 상태를 만든다.
+PaperOrderService 클래스의 placeOrder(req, userId) 메서드
+→ `PortfolioService` 클래스의 `accountState(userId)` 메서드로 계좌 상태를 만든다.
 → 시장가인데 mark가 없으면 거부한다.
-→ requiredAdditionalMargin(req, state)로 필요 증거금을 계산한다.
+→ `PaperOrderService` 클래스의 `requiredAdditionalMargin(req, state)` 메서드로 필요 증거금을 계산한다.
 → 가용잔고보다 필요 증거금이 크면 거부한다.
-→ 통과하면 placeOrderAfterMarginCheck(...)로 간다.
+→ 통과하면 `PaperOrderService` 클래스의 `placeOrderAfterMarginCheck(...)` 메서드로 간다.
 
-placeOrderAfterMarginCheck(...)
+PaperOrderService 클래스의 placeOrderAfterMarginCheck(...) 메서드
 → latestStore.latest()로 최신 호가 snapshot을 본다.
 → 호가가 없고 시장가면 거부한다.
 → 호가가 없고 지정가면 OPEN 주문으로 저장한다.
 → 호가가 있으면 probe 주문을 만든다.
-→ engine.tryFill(probe, snapshot)으로 fills를 계산한다.
-→ totalQuantity(fills)로 filledQty를 계산한다.
+→ `PaperTradingEngine` 클래스의 `tryFill(probe, snapshot)` 메서드로 fills를 계산한다.
+→ `PaperOrderService` 클래스의 `totalQuantity(fills)` 메서드로 filledQty를 계산한다.
 → 주문 상태를 FILLED / OPEN / REJECTED 중 하나로 정한다.
-→ saveOrder(...)로 주문을 저장한다.
-→ saveFills(...)로 체결을 저장한다.
-→ OrderResponse.from(saved, fills)로 응답을 만든다.
+→ `PaperOrderService` 클래스의 `saveOrder(...)` 메서드로 주문을 저장한다.
+→ `PaperOrderService` 클래스의 `saveFills(...)` 메서드로 체결을 저장한다.
+→ `OrderResponse` record의 `from(saved, fills)` 메서드로 응답을 만든다.
 ```
 
 이 문서에서 기준은 하나다.
 
 ```text
-create()에서 보이는 내가 만든 코드가 무엇을 호출하는지,
+`PaperOrderController` 클래스의 `create()` 메서드에서 보이는 내가 만든 코드가 무엇을 호출하는지,
 그 호출 내부에서 다시 내가 만든 코드가 무엇을 호출하는지,
 그 순서를 끝까지 따라간다.
 ```

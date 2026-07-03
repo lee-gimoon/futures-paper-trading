@@ -74,7 +74,7 @@ public Mono<OrderResponse> create(@Valid @RequestBody CreateOrderRequest req) {
 2. @Valid가 CreateOrderRequest 검증을 수행한다.
 3. 검증 통과 후 create() 본문에 들어온다.
 4. currentUserId()로 userId를 구하는 Mono를 만든다.
-5. userId가 나오면 flatMap 안에서 orderService.placeOrder(req, userId)를 호출한다.
+5. userId가 나오면 flatMap(userId -> ...) 형태로 orderService.placeOrder(req, userId)를 호출한다.
 ```
 
 `create()`는 주문을 직접 저장하지 않는다. HTTP 입구 역할만 하고, 실제 주문 처리는 `PaperOrderService`로 넘긴다.
@@ -171,7 +171,10 @@ return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
 나중에 userId Long 하나를 흘려보낼 비동기 파이프라인이다.
 ```
 
-그래서 userId를 바로 꺼내 쓰지 않고, `map`이나 `flatMap` 같은 `Mono` 연산자 안에서 받아 다음 단계로 넘긴다.
+그래서 `Long userId = currentUserId()`처럼 바로 꺼내 쓸 수 없다.
+대신 `flatMap(userId -> ...)` 형태로 작성한다.
+여기서 `userId`는 `currentUserId()`가 나중에 만들어 낸 Long 값이다.
+그 값을 사용해 `orderService.placeOrder(req, userId)`를 호출한다.
 
 여기서 `map`이 아니라 `flatMap`을 쓰는 직접적인 이유는,
 userId를 받은 뒤 호출하는 `orderService.placeOrder(req, userId)`가 일반 `OrderResponse`가 아니라 `Mono<OrderResponse>`를 반환하기 때문이다.
@@ -207,6 +210,14 @@ public Mono<OrderResponse> placeOrder(CreateOrderRequest req, Long userId) {
     });
 }
 ```
+
+`create()`에서 이 부분이다.
+
+```java
+return currentUserId().flatMap(userId -> orderService.placeOrder(req, userId));
+```
+
+`currentUserId()`가 만든 userId로 이 서비스 메서드를 호출한다.
 
 `placeOrder()`에서 봐야 하는 내부 호출은 3개다.
 
@@ -486,6 +497,12 @@ public static Position compute(List<PaperFill> fills) {
 }
 ```
 
+`toState()`에서 이 부분이다.
+
+```java
+Position pos = PositionCalculator.compute(fills);
+```
+
 이 메서드는 `fills`를 시간순으로 누적해서 현재 포지션을 만든다.
 
 핵심 변수:
@@ -558,6 +575,12 @@ public static int openPositionLeverage(List<PaperFill> fills, Map<Long, Integer>
 
     return lev;
 }
+```
+
+`toState()`에서 이 부분이다.
+
+```java
+int positionLeverage = PositionCalculator.openPositionLeverage(fills, orderLeverage, account.leverage());
 ```
 
 이 메서드는 현재 열린 포지션의 레버리지를 찾는다.
@@ -637,6 +660,13 @@ public static BigDecimal bestAsk(OrderBookSnapshot snapshot) {
 }
 ```
 
+`midPrice()`에서 이 부분이다.
+
+```java
+BigDecimal bestBid = OrderBookQuotes.bestBid(snapshot);
+BigDecimal bestAsk = OrderBookQuotes.bestAsk(snapshot);
+```
+
 의미:
 
 ```text
@@ -704,7 +734,13 @@ public record AccountState(
 }
 ```
 
-`accountState()`의 최종 결과다.
+`toState()`의 마지막에서 만들어 반환하는 객체다.
+
+```java
+return new AccountState(account, pos, positionLeverage, mark, unrealized, walletBalance, usedMargin, available);
+```
+
+그리고 `accountState()`의 최종 결과이기도 하다.
 
 `placeOrder()`에서는 이 값을 받아서 주문 가능 여부를 검증한다.
 
@@ -856,6 +892,12 @@ private Mono<OrderResponse> placeOrderAfterMarginCheck(CreateOrderRequest req, L
 }
 ```
 
+`placeOrder()`에서 증거금 검사를 통과하면 이 부분으로 호출된다.
+
+```java
+return placeOrderAfterMarginCheck(req, userId, state.account().leverage());
+```
+
 이 메서드는 증거금 검증을 다시 하지 않는다.
 
 여기서 하는 일은 3개다.
@@ -879,6 +921,8 @@ if (maybeSnapshot.isEmpty()) {
     return saveOrder(req, userId, OrderStatus.OPEN.name(), BigDecimal.ZERO, List.of(), leverage);
 }
 ```
+
+이 코드는 `placeOrderAfterMarginCheck()`에서 `latestStore.latest()`로 최신 호가를 꺼낸 직후의 분기다.
 
 분기 의미:
 
@@ -907,6 +951,8 @@ PaperOrder probe = new PaperOrder(
         req.side(), req.type(), OrderStatus.NEW.name(),
         req.limitPrice(), req.quantity(), BigDecimal.ZERO, leverage);
 ```
+
+`placeOrderAfterMarginCheck()`에서 호가 snapshot이 있을 때 이 부분으로 내려온다.
 
 `probe`는 DB에 저장할 최종 주문이 아니다.
 
@@ -1069,6 +1115,8 @@ if (isLimit)  status = fullyFilled ? OrderStatus.FILLED.name() : OrderStatus.OPE
 else          status = fills.isEmpty() ? OrderStatus.REJECTED.name() : OrderStatus.FILLED.name();
 ```
 
+`placeOrderAfterMarginCheck()`에서 `filledQty`를 구한 다음 이 부분으로 상태를 정한다.
+
 상태 결정표:
 
 | 상황 | 상태 |
@@ -1197,6 +1245,12 @@ public interface PaperFillRepository extends ReactiveCrudRepository<PaperFill, L
     @Query("SELECT f.* FROM paper_fills f JOIN paper_orders o ON f.order_id = o.id WHERE o.user_id = :userId ORDER BY f.id")
     Flux<PaperFill> findByUserIdOrderByIdAsc(Long userId);
 }
+```
+
+`saveFills()`에서 이 부분이다.
+
+```java
+return fillRepository.saveAll(withOrderId).then();
 ```
 
 `saveAll(...)`은 이 인터페이스에 직접 적은 메서드는 아니다.

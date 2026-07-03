@@ -163,6 +163,7 @@ public class PortfolioService {
     }
 
     // 계좌 상태를 담는 record. API 응답 DTO가 아니라 서비스 내부 마진(포지션을 열기 위해 계좌에서 묶어둔 투입 증거금) 계산용 중간 DTO/상태 스냅샷이다.
+    // PortfolioService.accountState(...)가 만든 내부 계산 결과라 별도 DTO/domain 파일이 아니라 이 서비스 안에 둔다.
     // placeOrder의 매수가능 검증, LiquidationService의 청산 판정이 함께 쓴다.
     //   positionLeverage = 열린 포지션이 진입 시점에 박아 둔 레버리지 — 사용증거금·청산가·가용잔고가 이 값 기준.
     public record AccountState(

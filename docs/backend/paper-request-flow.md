@@ -303,14 +303,15 @@ return portfolioService.accountState(userId).flatMap(state -> {
 7. toState(account, fills, orderLeverage)로 AccountState를 만든다.
 ```
 
-여기서 만든 값들은 `PaperOrderService` 클래스의 `placeOrder()` 메서드에서 사용된다.
+여기서 만든 값들은 `PaperOrderService` 클래스의 `placeOrder()` 메서드와,
+그 안에서 호출하는 `requiredAdditionalMargin(req, state)` 메서드에서 사용된다.
 
 | 값 | 어디에 쓰이나 |
 |---|---|
-| `state.mark()` | 시장가 주문의 증거금 기준가 |
-| `state.availableBalance()` | 필요 증거금과 비교 |
-| `state.account().leverage()` | 이번 주문에 저장할 레버리지 |
-| `state.position()` | 이번 주문이 포지션을 늘리는지 줄이는지 판단 |
+| `state.mark()` | `placeOrder()`에서 시장가 주문의 mark 존재 여부 확인, `requiredAdditionalMargin(req, state)`에서 시장가 주문의 증거금 기준가로 사용 |
+| `state.availableBalance()` | `placeOrder()`에서 필요 증거금과 비교 |
+| `state.account().leverage()` | `requiredAdditionalMargin(req, state)`에서 필요 증거금 계산, `placeOrderAfterMarginCheck(...)`에 넘겨 주문에 저장 |
+| `state.position()` | `requiredAdditionalMargin(req, state)` 안에서 현재 포지션 방향/수량을 확인할 때 사용 |
 
 ## 6. getOrCreateAccount(userId)
 

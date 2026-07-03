@@ -71,16 +71,16 @@ public class PaperOrderService {
     //   증거금 검증을 통과하면 placeOrderAfterMarginCheck(...)에 실제 주문 접수·체결 판정·저장을 맡긴다.
     //   반환값은 Mono<OrderResponse>라 여기서는 파이프라인만 만들고, 실제 실행은 WebFlux가 구독할 때 시작된다.
     public Mono<OrderResponse> placeOrder(CreateOrderRequest req, Long userId) {
-        // 시장가인데 mark가 없으면 증거금 기준가가 없어 주문을 거부한다(503).
-        // 새로 여는/늘리는 주문의 필요 증거금이 가용잔고를 넘으면 거부한다(400).
-        //   축소/청산만 하는 주문은 필요 증거금 0이라 항상 통과.
         return portfolioService.accountState(userId).flatMap(state -> {
             boolean isLimit = OrderType.LIMIT.name().equals(req.type());
             // 시장가 주문은 주문 가격이 없으므로 mark 가격이 있어야 증거금을 계산할 수 있다.
+            //   mark가 없으면 증거금 기준가가 없어 주문을 거부한다(503).
             if (!isLimit && state.mark() == null)
                 return Mono.<OrderResponse>error(new QuoteUnavailableException("호가 수신 전이라 증거금을 계산할 수 없습니다."));
 
             BigDecimal requiredAdditionalMargin = requiredAdditionalMargin(req, state);
+            // 새로 여는/늘리는 주문의 필요 증거금이 가용잔고를 넘으면 거부한다(400).
+            //   축소/청산만 하는 주문은 requiredAdditionalMargin이 0이라 통과한다.
             if (requiredAdditionalMargin.compareTo(state.availableBalance()) > 0)
                 return Mono.<OrderResponse>error(new InsufficientMarginException(
                         "가용 증거금 부족: 필요 " + requiredAdditionalMargin + " > 가용 " + state.availableBalance()

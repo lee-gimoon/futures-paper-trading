@@ -1,9 +1,10 @@
 package com.example.futurespapertrading.paper.exception;
 
-// 도메인 예외(F-2) — 호가 수신 전이라 체결 기준이 없음(시장가 즉시 체결 불가). PaperExceptionHandler가 HTTP 503으로 번역한다.
-//   C단계에선 서비스가 웹 계층 타입인 ResponseStatusException(503)을 직접 던졌는데 F-2에서 이걸로 정리 —
-//   서비스는 HTTP를 모르게 하고, 예외→상태코드 번역은 핸들러 한 곳으로 모은다. (컨트롤러=HTTP, 서비스=비즈니스 분리의 마무리)
-//   (unchecked인 이유는 OrderNotFoundException 주석 참고)
+// 호가(quote)가 아직 준비되지 않았을 때 쓰는 도메인 예외.
+//   Quote = 주문 체결이나 증거금 계산에 필요한 현재 호가/가격 정보.
+//   Unavailable = 지금 사용할 수 없음. 즉, 최신 호가를 아직 받지 못해 시장가 주문을 처리할 기준 가격이 없는 상태다.
+//   이름이 QuoteUnavailableException인 이유도 "호가 정보가 없어서 지금은 처리할 수 없는 예외"라는 뜻을 드러내기 위해서다.
+//   서비스는 이 예외만 던지고 HTTP 상태코드는 모르며, PaperExceptionHandler가 503 Service Unavailable로 번역한다.
 public class QuoteUnavailableException extends RuntimeException {
     public QuoteUnavailableException(String message) {
         super(message);

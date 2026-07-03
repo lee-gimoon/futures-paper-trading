@@ -12,11 +12,9 @@ import jakarta.validation.constraints.Positive; // 0과 음수 금지 (양수만
 //  - 왜 record인가: 컨트롤러가 req.symbol()·req.quantity()를 '꺼내 읽기만' 하고 값을 바꾸지 않아서,
 //    요청 본문은 "한 번 만들어지면 안 바뀌는 데이터 묶음"이다 → 불변(immutable)인 record가 딱 맞다.
 //  - record·DTO·@Valid 검증 흐름의 자세한 설명은 auth/dto/SignupRequest.java 참고. (여기선 주문 고유 규칙만)
-//  - 검증 규칙을 어기면 컨트롤러 로직에 닿기 전에 스프링이 자동으로 HTTP 400으로 막는다.
-//
-// type은 MARKET/LIMIT 둘 다 받는다. 시장가는 즉시 체결, 지정가는 닿으면 FILLED·아니면 OPEN 등록(컨트롤러가 분기, E단계).
+//  - 검증 규칙을 어기면 컨트롤러 로직에 닿기 전에 스프링이 자동으로 HTTP 400(요청 형식이나 값이 잘못돼서 서버가 처리할 수 없음)으로 막는다.
 public record CreateOrderRequest(
-        // 종목. 8단계는 BTCUSDT 하나만 지원 — 다른 symbol을 받으면 전부 BTCUSDT 호가로 체결해버리므로 여기서 400으로 막는다.
+        // 종목. 현재는 BTCUSDT 하나만 지원 — 다른 symbol을 받으면 전부 BTCUSDT 호가로 체결해버리므로 여기서 400으로 막는다.
         @NotBlank @Pattern(regexp = "BTCUSDT", message = "지원하는 symbol은 BTCUSDT 뿐입니다") String symbol,
 
         // 주문 방향. @Pattern = 이 side 문자열이 주어진 정규식(regexp)과 맞는지 검사하는 제약.
@@ -24,7 +22,7 @@ public record CreateOrderRequest(
         //   오타("buy")는 여기서 400으로 걸러, 엔진의 OrderSide.valueOf가 IllegalArgumentException을 던지기 전에 막는다.
         @Pattern(regexp = "BUY|SELL", message = "side는 BUY 또는 SELL 이어야 합니다") String side,
 
-        // 주문 종류. "MARKET" / "LIMIT" 형식 검사. (C단계 컨트롤러는 이 중 MARKET만 받아들임)
+        // 주문 종류. "MARKET" / "LIMIT" 형식 검사.
         @Pattern(regexp = "MARKET|LIMIT", message = "type은 MARKET 또는 LIMIT 이어야 합니다") String type,
 
         // 주문 수량. null 금지 + 양수만(@Positive: 0·음수 거부). 가격/수량은 double 아닌 BigDecimal.
@@ -33,16 +31,11 @@ public record CreateOrderRequest(
         // 지정가 한도. 시장가면 null(안 씀). 지정가(LIMIT)일 때만 필수+양수 — 아래 @AssertTrue(isLimitPriceValid)가 검사.
         BigDecimal limitPrice
 ) {
-    // 이 메서드 = 'type이 LIMIT면 limitPrice가 필수+양수'를 검사하는 검증 메서드. 위반이면 @Valid 게이트에서 400으로 막는다.
-    //   왜 (필드 애너테이션 말고) 메서드인가: 시장가·지정가가 '같은 DTO'를 써서, limitPrice에 붙인 애너테이션은 시장가 요청에도 적용된다.
-    //     근데 애너테이션은 옆 필드 type을 못 봐 "지정가일 때만"으로 켜고 끌 수 없다 — 그래서 한-필드 애너테이션은 둘 다 실패한다:
-    //       · @NotNull limitPrice → limitPrice가 null인 '시장가'까지 거부(시장가는 null이 정상인데). ✗
-    //       · @Positive limitPrice → null을 '통과'로 봐서(null 막는 건 @NotNull뿐) '지정가인데 limitPrice 누락'을 못 잡음. ✗
-    //     → 그래서 type·limitPrice를 함께 읽는 메서드 + @AssertTrue("true여야 통과")로 짠다. (아래 if가 '시장가면 검사 건너뛰기' 역할)
-    //   트리거 = create()의 @Valid. 본문 바인딩 직후 검증기(Hibernate Validator)가 돌고, fail-fast가 아니라 '모든 제약'을 다 평가한다
-    //     → 이 메서드는 type·다른 필드와 무관하게 '무조건 1회' 호출된다. (type==MARKET이어도 호출은 되고, 안의 if가 true를 돌려 통과시킬 뿐 — if는 호출 여부가 아니라 반환값만 정함)
-    //     단, '검증 단계에 도달했을 때'만이다 — 401(비로그인)·본문 파싱 실패면 그 전에 끊겨 안 불린다. (이 메서드가 false면 → 컨트롤러 전에 400)
-    //   ※ 우리가 직접 호출 안 함 → IDE '사용처 없음'은 정상(프레임워크가 부르는 콜백, SecurityUserDetailsService.findByUsername처럼). 이름이 isXxx여야 검증 대상으로 인식.
+    // record의 괄호(...)는 이 DTO 객체가 실제로 담는 값 목록이고,
+    // 본문({})은 그 값들을 이용한 추가 규칙/동작을 넣는 곳이다.
+    // 이 메서드는 새 값을 담는 칸이 아니라, type·limitPrice 조합이 유효한지 계산하는 검증용 메서드다.
+    // @AssertTrue가 붙은 메서드는 @Valid 검증 때 Validator가 자동 호출한다.
+    // 이 메서드가 true를 돌려줘야 검증 통과, false면 @Valid 검증 실패 → 400 Bad Request.
     @AssertTrue(message = "지정가(LIMIT)는 limitPrice가 양수여야 합니다")
     private boolean isLimitPriceValid() {
         if (!"LIMIT".equals(type)) return true;                 // 시장가면 limitPrice를 안 쓰므로 통과(null이어도 OK)

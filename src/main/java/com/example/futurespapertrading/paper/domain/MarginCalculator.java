@@ -9,7 +9,7 @@ import java.math.RoundingMode;
 //   진입 명목금액 = 평균진입가(VWAP) × |수량|. 여러 호가 레벨 체결은 VWAP에 이미 반영된다.
 //   레버리지 = 진입 명목금액을 마진보다 몇 배 크게 잡는지.
 //   청산가 = 손실이 마진을 다 먹어버리는 가격.
-//   격리(isolated) 마진 · 유지증거금률(MMR) 0 · 수수료 0 가정 (MVP). 자세한 모델은 docs/backend/stage9-portfolio.md 참고.
+//   격리(isolated) 마진 · 유지증거금률(MMR) 0 · 수수료 0 가정 (MVP).
 //   PaperTradingEngine·PositionCalculator처럼 DB·웹을 모르는 순수 함수라 단위 테스트가 쉽다.
 public final class MarginCalculator {
 

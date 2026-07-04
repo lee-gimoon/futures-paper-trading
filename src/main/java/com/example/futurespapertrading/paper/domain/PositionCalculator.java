@@ -33,38 +33,36 @@ public final class PositionCalculator {
             // 체결 수량에 방향 부호를 붙인다: BUY는 +수량, SELL은 -수량.
             BigDecimal signedFillQuantity = OrderSide.BUY.name().equals(f.side()) ? f.quantity() : f.quantity().negate();
             BigDecimal price = f.price();
+            BigDecimal existingOpenQuantity = signedQty.abs(); // 기존 포지션 수량의 절대값(롱/숏 부호 제거).
+            BigDecimal fillQuantity = signedFillQuantity.abs(); // 이번 체결 수량의 절대값(BUY/SELL 부호 제거).
+            BigDecimal updatedSignedQty = signedQty.add(signedFillQuantity); // 이번 체결을 반영한 순포지션 수량.
 
             // signum()은 부호만 반환한다: 양수면 1, 0이면 0, 음수면 -1.
+            // ① 포지션 없음(flat) 또는 현재 포지션과 같은 방향 체결 → 새 진입/같은 방향 추가 진입.
+            // 이 경우 실현손익은 발생하지 않고, 현재 열린 포지션의 평균 진입가(VWAP)만 수량가중평균으로 다시 계산한다.
             if (signedQty.signum() == 0 || signedQty.signum() == signedFillQuantity.signum()) {
-                // ① 이 if 분기 = 포지션 없음(flat) 또는 현재 포지션과 같은 방향 체결 → 새 진입/같은 방향 추가 진입.
-                // 이 경우 실현손익은 발생하지 않고, 현재 열린 포지션의 평균 진입가(VWAP)만 수량가중평균으로 다시 계산한다.
-                BigDecimal absSignedQty = signedQty.abs(); // 기존 포지션 수량의 절대값(롱/숏 부호 제거). (absolute value)
-                BigDecimal absSignedFillQuantity = signedFillQuantity.abs(); // 이번 체결 수량의 절대값(BUY/SELL 부호 제거).
-                BigDecimal totalAbs = absSignedQty.add(absSignedFillQuantity); // 증가 후 총 포지션 수량.
-                avgEntry = absSignedQty.multiply(avgEntry).add(absSignedFillQuantity.multiply(price))
-                        .divide(totalAbs, 8, RoundingMode.HALF_UP); // 새 평균 진입가(VWAP) = 총 진입금액 / 총수량.
-                signedQty = signedQty.add(signedFillQuantity); // 현재 순포지션 수량에 이번 체결 수량을 반영.
+                BigDecimal updatedOpenQuantity = existingOpenQuantity.add(fillQuantity); // 증가 후 총 포지션 수량.
+                avgEntry = existingOpenQuantity.multiply(avgEntry).add(fillQuantity.multiply(price))
+                        .divide(updatedOpenQuantity, 8, RoundingMode.HALF_UP); // 새 평균 진입가(VWAP) = 총 진입금액 / 총수량.
+                signedQty = updatedSignedQty; // 현재 순포지션 수량에 이번 체결 수량을 반영.
             } else {
                 // ② 반대 방향 체결 → 기존 포지션을 줄이거나 닫고, 체결 수량이 더 크면 반대 포지션으로 뒤집는다.
-                // signedFillQuantity.abs() = 이번 반대 방향 체결 전체 수량.
-                // signedQty.abs() = 기존 포지션 전체 수량.
-                // closeQty = 이번 체결 중 기존 포지션을 실제로 닫는 수량 = 둘 중 작은 값(a.min(b)).
-                BigDecimal closeQty = signedFillQuantity.abs().min(signedQty.abs());
-                // direction = 기존 포지션 방향. 롱은 +1, 숏은 -1. 손익 부호를 맞추기 위한 값이다.
-                BigDecimal direction = BigDecimal.valueOf(signedQty.signum());
+                // closedQuantity = 이번 체결 중 기존 포지션을 실제로 닫는 수량 = 둘 중 작은 값(a.min(b)).
+                BigDecimal closedQuantity = fillQuantity.min(existingOpenQuantity);
+                // existingPositionDirection = 기존 포지션 방향. 롱은 +1, 숏은 -1. 손익 부호를 맞추기 위한 값이다.
+                BigDecimal existingPositionDirection = BigDecimal.valueOf(signedQty.signum());
                 // 이번에 닫힌 수량의 실현손익.
                 //   롱: (매도 체결가 - 평균진입가) × 닫은수량. 비싸게 팔수록 이익.
                 //   숏: (매수 체결가 - 평균진입가) × 닫은수량 × -1. 싸게 살수록 이익.
-                realized = realized.add(price.subtract(avgEntry).multiply(closeQty).multiply(direction));
+                realized = realized.add(price.subtract(avgEntry).multiply(closedQuantity).multiply(existingPositionDirection));
 
-                BigDecimal newSignedQty = signedQty.add(signedFillQuantity);
-                if (newSignedQty.signum() == 0) {
+                if (updatedSignedQty.signum() == 0) {
                     avgEntry = BigDecimal.ZERO;        // 정확히 청산 → flat
-                } else if (signedQty.signum() != newSignedQty.signum()) {
+                } else if (signedQty.signum() != updatedSignedQty.signum()) {
                     avgEntry = price;                  // 다 닫고 남은 수량이 반대 포지션을 새로 엶 → 진입가 = 이 체결가
                 }
                 // 그 외(부분 청산, 방향 유지) → 평균 진입가(VWAP) 그대로.
-                signedQty = newSignedQty;
+                signedQty = updatedSignedQty;
             }
         }
         // signedQty = 체결 기록을 누적 계산해 나온 부호 있는 순포지션 수량(롱 +, 숏 -, flat 0).
@@ -78,10 +76,10 @@ public final class PositionCalculator {
     // orderLeverage는 orderId별 주문 당시 레버리지다.
     public static int openPositionLeverage(List<PaperFill> fills, Map<Long, Integer> orderLeverage, int fallback) {
         BigDecimal signedQty = BigDecimal.ZERO; // 누적 순포지션 수량. 부호로 롱(+), 숏(-), flat(0)을 판단한다.
-        int lev = fallback; // 열린 포지션이 없으면 계좌의 현재 레버리지를 기본값으로 본다.
+        int positionLeverage = fallback; // 열린 포지션이 없으면 계좌의 현재 레버리지를 기본값으로 본다.
 
         for (PaperFill f : fills) {
-            int before = signedQty.signum(); // 이번 체결 전 포지션 방향.
+            int positionDirectionBeforeFill = signedQty.signum(); // 이번 체결 전 포지션 방향.
 
             signedQty = signedQty.add(
                     OrderSide.BUY.name().equals(f.side())
@@ -89,15 +87,15 @@ public final class PositionCalculator {
                             : f.quantity().negate()
             );
 
-            int after = signedQty.signum(); // 이번 체결 후 포지션 방향.
+            int positionDirectionAfterFill = signedQty.signum(); // 이번 체결 후 포지션 방향.
 
-            if (after == 0) { // 이번 체결 후 순포지션 수량이 0이다.
-                lev = fallback; // 완전히 닫힌 상태면 다음 진입 전까지 기본 레버리지로 되돌린다.
-            } else if (before != after) { // 이번 체결 전후로 포지션 방향 상태가 바뀌었다.
-                lev = orderLeverage.getOrDefault(f.orderId(), fallback); // fill의 orderId로 orderLeverage에서 주문 당시 레버리지를 찾아 새 포지션 run에 적용한다.
+            if (positionDirectionAfterFill == 0) { // 이번 체결 후 순포지션 수량이 0이다.
+                positionLeverage = fallback; // 완전히 닫힌 상태면 다음 진입 전까지 기본 레버리지로 되돌린다.
+            } else if (positionDirectionBeforeFill != positionDirectionAfterFill) { // 이번 체결 전후로 포지션 방향 상태가 바뀌었다.
+                positionLeverage = orderLeverage.getOrDefault(f.orderId(), fallback); // fill의 orderId로 orderLeverage에서 주문 당시 레버리지를 찾아 새 포지션 run에 적용한다.
             }
         }
 
-        return lev; // 마지막 체결까지 재생했을 때의 현재 포지션 레버리지.
+        return positionLeverage; // 마지막 체결까지 재생했을 때의 현재 포지션 레버리지.
     }
 }

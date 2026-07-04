@@ -473,26 +473,26 @@ public static Position compute(List<PaperFill> fills) {
     for (PaperFill f : fills) {
         BigDecimal signedFillQuantity = OrderSide.BUY.name().equals(f.side()) ? f.quantity() : f.quantity().negate();
         BigDecimal price = f.price();
+        BigDecimal existingOpenQuantity = signedQty.abs();
+        BigDecimal fillQuantity = signedFillQuantity.abs();
+        BigDecimal updatedSignedQty = signedQty.add(signedFillQuantity);
 
         if (signedQty.signum() == 0 || signedQty.signum() == signedFillQuantity.signum()) {
-            BigDecimal absSignedQty = signedQty.abs();
-            BigDecimal absSignedFillQuantity = signedFillQuantity.abs();
-            BigDecimal totalAbs = absSignedQty.add(absSignedFillQuantity);
-            avgEntry = absSignedQty.multiply(avgEntry).add(absSignedFillQuantity.multiply(price))
-                    .divide(totalAbs, 8, RoundingMode.HALF_UP);
-            signedQty = signedQty.add(signedFillQuantity);
+            BigDecimal updatedOpenQuantity = existingOpenQuantity.add(fillQuantity);
+            avgEntry = existingOpenQuantity.multiply(avgEntry).add(fillQuantity.multiply(price))
+                    .divide(updatedOpenQuantity, 8, RoundingMode.HALF_UP);
+            signedQty = updatedSignedQty;
         } else {
-            BigDecimal closeQty = signedFillQuantity.abs().min(signedQty.abs());
-            BigDecimal direction = BigDecimal.valueOf(signedQty.signum());
-            realized = realized.add(price.subtract(avgEntry).multiply(closeQty).multiply(direction));
+            BigDecimal closedQuantity = fillQuantity.min(existingOpenQuantity);
+            BigDecimal existingPositionDirection = BigDecimal.valueOf(signedQty.signum());
+            realized = realized.add(price.subtract(avgEntry).multiply(closedQuantity).multiply(existingPositionDirection));
 
-            BigDecimal newSignedQty = signedQty.add(signedFillQuantity);
-            if (newSignedQty.signum() == 0) {
+            if (updatedSignedQty.signum() == 0) {
                 avgEntry = BigDecimal.ZERO;
-            } else if (signedQty.signum() != newSignedQty.signum()) {
+            } else if (signedQty.signum() != updatedSignedQty.signum()) {
                 avgEntry = price;
             }
-            signedQty = newSignedQty;
+            signedQty = updatedSignedQty;
         }
     }
     return new Position(signedQty, avgEntry, realized);
@@ -555,10 +555,10 @@ public record Position(
 ```java
 public static int openPositionLeverage(List<PaperFill> fills, Map<Long, Integer> orderLeverage, int fallback) {
     BigDecimal signedQty = BigDecimal.ZERO;
-    int lev = fallback;
+    int positionLeverage = fallback;
 
     for (PaperFill f : fills) {
-        int before = signedQty.signum();
+        int positionDirectionBeforeFill = signedQty.signum();
 
         signedQty = signedQty.add(
                 OrderSide.BUY.name().equals(f.side())
@@ -566,16 +566,16 @@ public static int openPositionLeverage(List<PaperFill> fills, Map<Long, Integer>
                         : f.quantity().negate()
         );
 
-        int after = signedQty.signum();
+        int positionDirectionAfterFill = signedQty.signum();
 
-        if (after == 0) {
-            lev = fallback;
-        } else if (before != after) {
-            lev = orderLeverage.getOrDefault(f.orderId(), fallback);
+        if (positionDirectionAfterFill == 0) {
+            positionLeverage = fallback;
+        } else if (positionDirectionBeforeFill != positionDirectionAfterFill) {
+            positionLeverage = orderLeverage.getOrDefault(f.orderId(), fallback);
         }
     }
 
-    return lev;
+    return positionLeverage;
 }
 ```
 
@@ -598,12 +598,12 @@ int positionLeverage = PositionCalculator.openPositionLeverage(fills, orderLever
 
 ```text
 1. fills를 시간순으로 다시 재생한다.
-2. 체결 전 방향 before를 본다.
+2. 체결 전 방향 positionDirectionBeforeFill을 본다.
 3. 이번 체결을 signedQty에 반영한다.
-4. 체결 후 방향 after를 본다.
-5. after == 0이면 포지션이 완전히 닫힌 것이므로 fallback으로 되돌린다.
-6. before != after이면 새 포지션 run이 시작된 것이므로 해당 fill의 orderId로 주문 당시 레버리지를 찾는다.
-7. 마지막 lev가 현재 열린 포지션의 레버리지다.
+4. 체결 후 방향 positionDirectionAfterFill을 본다.
+5. positionDirectionAfterFill == 0이면 포지션이 완전히 닫힌 것이므로 fallback으로 되돌린다.
+6. positionDirectionBeforeFill != positionDirectionAfterFill이면 새 포지션 run이 시작된 것이므로 해당 fill의 orderId로 주문 당시 레버리지를 찾는다.
+7. 마지막 positionLeverage가 현재 열린 포지션의 레버리지다.
 ```
 
 ## 11. PortfolioService 클래스의 midPrice() 메서드

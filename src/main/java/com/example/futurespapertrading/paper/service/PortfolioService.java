@@ -177,9 +177,9 @@ public class PortfolioService {
             int positionLeverage,
             BigDecimal mark,             // 현재 mid (null 가능)
             BigDecimal unrealizedPnl,
-            BigDecimal walletBalance,    // 현금 + 실현PnL
+            BigDecimal walletBalance,    // 초기 계좌 현금 + 이미 확정된 실현PnL. 미실현PnL은 포함하지 않는다.
             BigDecimal usedMargin,
-            BigDecimal availableBalance  // walletBalance − usedMargin (0 미만이면 0)
+            BigDecimal availableBalance  // 신규 주문 검증용 단순화 가용잔고 = walletBalance − usedMargin (0 미만이면 0)
     ) {
         // 예시 스냅샷:
         // new AccountState(

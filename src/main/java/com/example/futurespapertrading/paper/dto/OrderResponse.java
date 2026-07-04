@@ -26,7 +26,7 @@ public record OrderResponse(
         BigDecimal limitPrice,     // 지정가 주문이면 사용자가 걸어둔 가격, 시장가면 null.
         BigDecimal quantity,       // 주문 수량
         BigDecimal filledQuantity, // 실제 체결된 누적 수량 (시장가 부분체결이면 quantity보다 작을 수 있음)
-        BigDecimal avgPrice        // 가중평균 체결가 = Σ(price×qty)/Σqty. 0건 체결이면 null.
+        BigDecimal avgPrice        // 가중평균 체결가 = Σ(price×quantity)/Σquantity. 0건 체결이면 null.
 ) {
 
     // ── from/averagePrice 두 메서드는 record가 자동 생성한 게 아니라, 본문 {}에 직접 추가한 static 메서드다. ──
@@ -57,20 +57,20 @@ public record OrderResponse(
 
         // BigDecimal.ZERO = 미리 만들어둔 '0' 상수. BigDecimal.valueOf(0)이나 new BigDecimal("0")로 써도 되지만 ZERO가 제일 깔끔.
         //   ※ 그냥 0(int)은 못 넣는다 — BigDecimal은 객체라 타입이 다르고, 다음 줄 .add()도 못 부른다.
-        BigDecimal notional = BigDecimal.ZERO; // Σ(price×qty) — 총 체결 '금액' 누적칸 (0에서 시작)
-        BigDecimal qty = BigDecimal.ZERO;      // Σqty        — 총 체결 '수량' 누적칸 (0에서 시작)
+        BigDecimal notional = BigDecimal.ZERO;      // Σ(price×quantity) — 총 체결 '금액' 누적칸 (0에서 시작)
+        BigDecimal totalQuantity = BigDecimal.ZERO; // Σquantity         — 총 체결 '수량' 누적칸 (0에서 시작)
         // fill을 하나씩 돌며 두 합계를 누적한다. (multiply/add는 ×/+ 의 BigDecimal판 — 연산자를 못 써서 메서드로)
         for (PaperFill f : fills) {
-            notional = notional.add(f.price().multiply(f.quantity())); // 이 체결의 금액(가격×수량)을 총금액에 더함
-            qty = qty.add(f.quantity());                               // 이 체결의 수량을 총수량에 더함
+            notional = notional.add(f.price().multiply(f.quantity()));  // 이 체결의 금액(가격×수량)을 총금액에 더함
+            totalQuantity = totalQuantity.add(f.quantity());            // 이 체결의 수량을 총수량에 더함
         }
 
-        if (qty.signum() == 0) return null;    // 방어: 총수량이 0이면 0으로 나누게 되니 막는다(나눗셈 불가)
+        if (totalQuantity.signum() == 0) return null;    // 방어: 총수량이 0이면 0으로 나누게 되니 막는다(나눗셈 불가)
         // divide(나눌수, scale, 반올림모드) = ÷ 의 BigDecimal판. 인자 3개의 뜻:
-        //   qty     = 나누는 수(divisor)        → notional ÷ qty
-        //   8       = scale: 결과를 소수점 아래 8자리까지 유지 (DB NUMERIC(38,8) 정밀도와 맞춤)
-        //   HALF_UP = 반올림 방식: 버릴 자리가 5 이상이면 올린다 (우리가 아는 보통 반올림. 예: ...5 → 올림)
-        return notional.divide(qty, 8, RoundingMode.HALF_UP); // 총금액 ÷ 총수량 = 가중평균가
+        //   totalQuantity = 나누는 수(divisor) → notional ÷ totalQuantity
+        //   8             = scale: 결과를 소수점 아래 8자리까지 유지 (DB NUMERIC(38,8) 정밀도와 맞춤)
+        //   HALF_UP       = 반올림 방식: 버릴 자리가 5 이상이면 올린다 (우리가 아는 보통 반올림. 예: ...5 → 올림)
+        return notional.divide(totalQuantity, 8, RoundingMode.HALF_UP); // 총금액 ÷ 총수량 = 가중평균가
     }
 }
 

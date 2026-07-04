@@ -466,7 +466,7 @@ private AccountState toState(PaperAccount account, List<PaperFill> fills, Map<Lo
 
 ```java
 public static Position compute(List<PaperFill> fills) {
-    BigDecimal qty = BigDecimal.ZERO;
+    BigDecimal signedQty = BigDecimal.ZERO;
     BigDecimal avgEntry = BigDecimal.ZERO;
     BigDecimal realized = BigDecimal.ZERO;
 
@@ -474,28 +474,28 @@ public static Position compute(List<PaperFill> fills) {
         BigDecimal signedFillQuantity = OrderSide.BUY.name().equals(f.side()) ? f.quantity() : f.quantity().negate();
         BigDecimal price = f.price();
 
-        if (qty.signum() == 0 || qty.signum() == signedFillQuantity.signum()) {
-            BigDecimal absQty = qty.abs();
+        if (signedQty.signum() == 0 || signedQty.signum() == signedFillQuantity.signum()) {
+            BigDecimal absSignedQty = signedQty.abs();
             BigDecimal absSignedFillQuantity = signedFillQuantity.abs();
-            BigDecimal totalAbs = absQty.add(absSignedFillQuantity);
-            avgEntry = absQty.multiply(avgEntry).add(absSignedFillQuantity.multiply(price))
+            BigDecimal totalAbs = absSignedQty.add(absSignedFillQuantity);
+            avgEntry = absSignedQty.multiply(avgEntry).add(absSignedFillQuantity.multiply(price))
                     .divide(totalAbs, 8, RoundingMode.HALF_UP);
-            qty = qty.add(signedFillQuantity);
+            signedQty = signedQty.add(signedFillQuantity);
         } else {
-            BigDecimal closeQty = signedFillQuantity.abs().min(qty.abs());
-            BigDecimal direction = BigDecimal.valueOf(qty.signum());
+            BigDecimal closeQty = signedFillQuantity.abs().min(signedQty.abs());
+            BigDecimal direction = BigDecimal.valueOf(signedQty.signum());
             realized = realized.add(price.subtract(avgEntry).multiply(closeQty).multiply(direction));
 
-            BigDecimal newQty = qty.add(signedFillQuantity);
-            if (newQty.signum() == 0) {
+            BigDecimal newSignedQty = signedQty.add(signedFillQuantity);
+            if (newSignedQty.signum() == 0) {
                 avgEntry = BigDecimal.ZERO;
-            } else if (qty.signum() != newQty.signum()) {
+            } else if (signedQty.signum() != newSignedQty.signum()) {
                 avgEntry = price;
             }
-            qty = newQty;
+            signedQty = newSignedQty;
         }
     }
-    return new Position(qty, avgEntry, realized);
+    return new Position(signedQty, avgEntry, realized);
 }
 ```
 
@@ -511,7 +511,7 @@ Position pos = PositionCalculator.compute(fills);
 
 | 변수 | 의미 |
 |---|---|
-| `qty` | 현재 보유 수량. 롱은 양수, 숏은 음수, 없으면 0 |
+| `signedQty` | 부호 있는 순포지션 수량. 양수면 롱, 음수면 숏, 0이면 flat |
 | `avgEntry` | 현재 열린 포지션의 평균 진입가 |
 | `realized` | 지금까지 확정된 실현손익 |
 
@@ -554,19 +554,19 @@ public record Position(
 
 ```java
 public static int openPositionLeverage(List<PaperFill> fills, Map<Long, Integer> orderLeverage, int fallback) {
-    BigDecimal qty = BigDecimal.ZERO;
+    BigDecimal signedQty = BigDecimal.ZERO;
     int lev = fallback;
 
     for (PaperFill f : fills) {
-        int before = qty.signum();
+        int before = signedQty.signum();
 
-        qty = qty.add(
+        signedQty = signedQty.add(
                 OrderSide.BUY.name().equals(f.side())
                         ? f.quantity()
                         : f.quantity().negate()
         );
 
-        int after = qty.signum();
+        int after = signedQty.signum();
 
         if (after == 0) {
             lev = fallback;
@@ -599,7 +599,7 @@ int positionLeverage = PositionCalculator.openPositionLeverage(fills, orderLever
 ```text
 1. fills를 시간순으로 다시 재생한다.
 2. 체결 전 방향 before를 본다.
-3. 이번 체결을 qty에 반영한다.
+3. 이번 체결을 signedQty에 반영한다.
 4. 체결 후 방향 after를 본다.
 5. after == 0이면 포지션이 완전히 닫힌 것이므로 fallback으로 되돌린다.
 6. before != after이면 새 포지션 run이 시작된 것이므로 해당 fill의 orderId로 주문 당시 레버리지를 찾는다.
@@ -1297,14 +1297,14 @@ public record OrderResponse(
         if (fills.isEmpty()) return null;
 
         BigDecimal notional = BigDecimal.ZERO;
-        BigDecimal qty = BigDecimal.ZERO;
+        BigDecimal totalQuantity = BigDecimal.ZERO;
         for (PaperFill f : fills) {
             notional = notional.add(f.price().multiply(f.quantity()));
-            qty = qty.add(f.quantity());
+            totalQuantity = totalQuantity.add(f.quantity());
         }
 
-        if (qty.signum() == 0) return null;
-        return notional.divide(qty, 8, RoundingMode.HALF_UP);
+        if (totalQuantity.signum() == 0) return null;
+        return notional.divide(totalQuantity, 8, RoundingMode.HALF_UP);
     }
 }
 ```

@@ -446,7 +446,8 @@ private AccountState toState(PaperAccount account, List<PaperFill> fills, Map<Lo
    → 포지션과 mark가 있으면 미실현손익을 계산한다.
 
 6. walletBalance 계산
-   → 계좌 현금 + 실현손익
+   → 초기 계좌 현금 + 이미 확정된 실현손익
+   → 아직 보유 중인 포지션의 미실현손익은 포함하지 않는다.
 
 7. usedMargin 계산
    → 현재 포지션에 묶인 증거금

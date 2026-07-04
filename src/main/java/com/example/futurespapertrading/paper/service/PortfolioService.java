@@ -101,16 +101,17 @@ public class PortfolioService {
 
     // 계좌가 있으면 그대로, 없으면 시드 현금·기본 레버리지로 새로 만들어 저장한다.
     private Mono<PaperAccount> getOrCreateAccount(Long userId) {
+        // defer = "미루다/연기하다".
+        // switchIfEmpty(...)에 accountRepository.save(new PaperAccount(...))를 바로 넘기면,
+        // 계좌가 있든 없든 이 메서드가 호출되어 리액티브 흐름을 조립하는 순간 new PaperAccount(...)가 먼저 실행된다.
+        // 계좌가 이미 있으면 대체 Mono는 구독되지 않으므로 실제 DB 저장은 되지 않지만,
+        // 필요 없는 새 계좌 객체를 만들고 save(...)가 반환한 "저장용 Mono"까지 미리 준비하게 된다.
+        // Mono.defer(...)로 감싸면 이 준비 작업을 계좌가 없을 때까지 미룬다.
+        // 그래서 findByUserId(userId)가 비어 있을 때만 안쪽 람다가 실행되고,
+        // 그때 새 PaperAccount를 만든 뒤 save(...)가 반환한 Mono로 대체 흐름을 시작한다.
         return accountRepository.findByUserId(userId)
                 .switchIfEmpty(Mono.defer(() ->
                         accountRepository.save(new PaperAccount(null, userId, SEED_CASH, DEFAULT_LEVERAGE))));
-        // defer = "미루다/연기하다": switchIfEmpty(...)가 호출되기 전에 Java는 먼저 인자를 평가한다.
-        // 그래서 defer 없이 accountRepository.save(new PaperAccount(...))를 바로 넘기면
-        // 리액티브 흐름 조립 시점에 새 계좌 객체를 만들고 save(...)까지 호출해 저장용 Mono를 미리 만든다.
-        // 람다(() -> save(...))만 넘기면 지연은 되지만, switchIfEmpty는 람다가 아니라 대체 Mono를 받아야 해서 타입이 맞지 않는다.
-        // Mono.defer(...)는 그 람다를 "나중에 실행해서 대체 Mono를 만들 Mono"로 감싸준다.
-        // 그래서 조립 시점에는 defer Mono만 만들고, 안쪽 람다는 아직 실행하지 않는다.
-        // findByUserId가 비어 있어 switchIfEmpty가 대체 흐름을 구독할 때만 새 계좌 생성과 save(...) 호출을 한다.
     }
 
     // AccountState → 응답 DTO. 마진/청산가는 '포지션 레버리지'로, 화면의 신규주문 레버리지는 '계좌 레버리지'로 보여준다.
@@ -134,7 +135,11 @@ public class PortfolioService {
                 s.account().leverage(), s.usedMargin(), s.availableBalance(), view);
     }
 
-    // 계좌 + 체결 + 주문레버리지맵 → 마진 계산 값 묶음. 사용증거금/가용잔고는 '포지션 레버리지'로 계산한다(고정).
+    // toState(...)의 역할:
+    //   계좌 정보(account), 시간순 체결 목록(fills), 주문별 레버리지 맵(orderLeverage)을 한데 모아
+    //   현재 포지션·미실현손익·지갑잔고·사용증거금·가용잔고를 계산한 AccountState 스냅샷을 만든다.
+    //   화면에 보여줄 포트폴리오 응답과 주문 전 매수가능 검증이 이 AccountState를 공통으로 사용한다.
+    //   사용증거금/가용잔고 계산은 현재 계좌 레버리지가 아니라, 포지션 진입 시점에 고정된 '포지션 레버리지'를 기준으로 한다.
     private AccountState toState(PaperAccount account, List<PaperFill> fills, Map<Long, Integer> orderLeverage) {
         Position pos = PositionCalculator.compute(fills); // 체결 목록으로 현재 포지션(롱/숏 수량, 평균 진입가, 실현손익 등)을 계산한다.
         int positionLeverage = PositionCalculator.openPositionLeverage(fills, orderLeverage, account.leverage()); // 체결/주문 이력에서 열린 포지션의 레버리지를 복원한다.

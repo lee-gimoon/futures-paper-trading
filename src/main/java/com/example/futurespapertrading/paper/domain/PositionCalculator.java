@@ -17,57 +17,62 @@ import java.util.Map;
 //     ① 포지션이 없거나 같은 방향 → '증가': 평균 진입가(VWAP)를 수량가중으로 다시 잡는다.
 //     ② 반대 방향 → '축소/청산/뒤집기': 닿는 만큼 기존 포지션을 닫아 실현 PnL을 확정하고,
 //        남는 수량이 있으면 그 가격으로 반대 포지션을 새로 연다.
+//   반대 방향 체결 후 flat이면 평균 진입가는 0, 뒤집기면 이번 체결가, 부분 청산이면 기존 평균 진입가를 유지한다.
 //   이 계산 모델이 주문 생성 전 증거금 검증과 계좌 화면의 포지션 계산에 함께 쓰인다.
 //
-// 수수료(fill.fee)는 8·9단계 MVP라 0이므로 PnL에 넣지 않는다(로드맵: 수수료/펀딩비는 나중 단계).
+// 수수료(fill.fee)는 현재 PnL 계산에 반영하지 않는다.
 public final class PositionCalculator {
 
     private PositionCalculator() {}   // 상태나 주입받을 의존성이 없는 static 계산 유틸리티라 인스턴스 생성 금지
 
     public static Position compute(List<PaperFill> fills) {
-        BigDecimal signedQty = BigDecimal.ZERO;  // 부호 있는 순포지션 수량 (+롱 / -숏 / 0 flat)
-        BigDecimal avgEntry = BigDecimal.ZERO;   // 현재 열린 포지션의 평균 진입가(VWAP, flat이면 0)
-        BigDecimal realized = BigDecimal.ZERO;   // 확정된 실현 PnL 누적
+        // 아래 세 값을 체결 순서대로 누적 계산해 최종 Position 생성자 인자로 넘긴다.
+        BigDecimal signedQty = BigDecimal.ZERO;  // 누적 계산할 부호 있는 순포지션 수량(롱 +, 숏 -, flat 0).
+        BigDecimal avgEntry = BigDecimal.ZERO;   // 누적 계산할 현재 열린 포지션의 평균 진입가(VWAP, flat이면 0).
+        BigDecimal realized = BigDecimal.ZERO;   // 누적 계산할 실현손익 합계.
 
+        // 체결 목록을 시간순으로 재생하며 포지션 수량, 평균 진입가, 실현손익을 차례대로 갱신한다.
+        // 즉, 포지션 수량(signedQty), 평균 진입가(avgEntry), 누적 실현손익(realized)을 구한다.
         for (PaperFill f : fills) {
             // 체결 수량에 방향 부호를 붙인다: BUY는 +수량, SELL은 -수량.
             BigDecimal signedFillQuantity = OrderSide.BUY.name().equals(f.side()) ? f.quantity() : f.quantity().negate();
             BigDecimal price = f.price();
-            BigDecimal existingOpenQuantity = signedQty.abs(); // 기존 포지션 수량의 절대값(롱/숏 부호 제거).
-            BigDecimal fillQuantity = signedFillQuantity.abs(); // 이번 체결 수량의 절대값(BUY/SELL 부호 제거).
-            BigDecimal updatedSignedQty = signedQty.add(signedFillQuantity); // 이번 체결을 반영한 순포지션 수량.
+            BigDecimal existingAbsQuantity = signedQty.abs(); // 기존 포지션 수량의 절대값(롱/숏 부호 제거).
+            BigDecimal fillAbsQuantity = signedFillQuantity.abs(); // 이번 체결 수량의 절대값(BUY/SELL 부호 제거).
+            BigDecimal signedQtyAfterFill = signedQty.add(signedFillQuantity); // 이번 체결 후 순포지션 수량.
 
             // signum()은 부호만 반환한다: 양수면 1, 0이면 0, 음수면 -1.
+            // 체결 방향에 따라 갱신 방식이 다르므로 같은 방향 진입과 반대 방향 청산/뒤집기를 나눠 처리한다.
             // ① 포지션 없음(flat) 또는 현재 포지션과 같은 방향 체결 → 새 진입/같은 방향 추가 진입.
             // 이 경우 실현손익은 발생하지 않고, 현재 열린 포지션의 평균 진입가(VWAP)만 수량가중평균으로 다시 계산한다.
             if (signedQty.signum() == 0 || signedQty.signum() == signedFillQuantity.signum()) {
-                BigDecimal updatedOpenQuantity = existingOpenQuantity.add(fillQuantity); // 증가 후 총 포지션 수량.
-                avgEntry = existingOpenQuantity.multiply(avgEntry).add(fillQuantity.multiply(price))
-                        .divide(updatedOpenQuantity, 8, RoundingMode.HALF_UP); // 새 평균 진입가(VWAP) = 총 진입금액 / 총수량.
-                signedQty = updatedSignedQty; // 현재 순포지션 수량에 이번 체결 수량을 반영.
+                BigDecimal updatedAbsQuantity = existingAbsQuantity.add(fillAbsQuantity); // 증가 후 총 포지션 수량의 절대값.
+                // 새 평균 진입가(VWAP) = (기존 평균가 × 기존 수량 + 이번 체결가 × 이번 수량) / 전체 수량.
+                avgEntry = existingAbsQuantity.multiply(avgEntry).add(fillAbsQuantity.multiply(price)).divide(updatedAbsQuantity, 8, RoundingMode.HALF_UP);
             } else {
                 // ② 반대 방향 체결 → 기존 포지션을 줄이거나 닫고, 체결 수량이 더 크면 반대 포지션으로 뒤집는다.
                 // closedQuantity = 이번 체결 중 기존 포지션을 실제로 닫는 수량 = 둘 중 작은 값(a.min(b)).
-                BigDecimal closedQuantity = fillQuantity.min(existingOpenQuantity);
+                BigDecimal closedQuantity = fillAbsQuantity.min(existingAbsQuantity);
                 // existingPositionDirection = 기존 포지션 방향. 롱은 +1, 숏은 -1. 손익 부호를 맞추기 위한 값이다.
                 BigDecimal existingPositionDirection = BigDecimal.valueOf(signedQty.signum());
                 // 이번에 닫힌 수량의 실현손익.
                 //   롱: (매도 체결가 - 평균진입가) × 닫은수량. 비싸게 팔수록 이익.
                 //   숏: (매수 체결가 - 평균진입가) × 닫은수량 × -1. 싸게 살수록 이익.
+                // 누적 실현손익 = 기존 누적 실현손익 + (체결가 - 평균진입가) × 닫은수량 × 기존 포지션 방향(롱 +1, 숏 -1).
                 realized = realized.add(price.subtract(avgEntry).multiply(closedQuantity).multiply(existingPositionDirection));
 
-                if (updatedSignedQty.signum() == 0) {
-                    avgEntry = BigDecimal.ZERO;        // 정확히 청산 → flat
-                } else if (signedQty.signum() != updatedSignedQty.signum()) {
-                    avgEntry = price;                  // 다 닫고 남은 수량이 반대 포지션을 새로 엶 → 진입가 = 이 체결가
+                // 반대 방향 체결 후 남은 포지션 상태에 따라 평균 진입가(avgEntry)를 정리한다.
+                if (signedQtyAfterFill.signum() == 0) {
+                    avgEntry = BigDecimal.ZERO;        // 완전 청산 → flat이라 평균 진입가를 0으로 초기화.
+                } else if (signedQty.signum() != signedQtyAfterFill.signum()) {
+                    avgEntry = price;                  // 0은 아니고 방향이 바뀜 → 포지션 뒤집기, 새 진입가 = 이 체결가.
+                } else {
+                    // 0은 아니고 방향도 그대로 → 부분 청산, 기존 포지션 일부가 남으므로 평균 진입가(VWAP)를 유지.
                 }
-                // 그 외(부분 청산, 방향 유지) → 평균 진입가(VWAP) 그대로.
-                signedQty = updatedSignedQty;
             }
+            // if/else 안에서는 이번 체결 전 signedQty가 필요하므로, 분기 처리가 끝난 뒤 이번 체결 결과를 다음 체결 계산의 기준 상태로 확정한다.
+            signedQty = signedQtyAfterFill; // BigDecimal은 불변 객체라 add()가 원본을 바꾸지 않으므로, 새 값을 다시 대입해야 signedQty가 갱신된다.
         }
-        // signedQty = 체결 기록을 누적 계산해 나온 부호 있는 순포지션 수량(롱 +, 숏 -, flat 0).
-        // avgEntry = 현재 열린 포지션의 평균 진입가(VWAP, flat이면 0).
-        // realized = 체결 기록을 누적 계산해 나온 누적 실현손익 값.
         return new Position(signedQty, avgEntry, realized);
     }
 

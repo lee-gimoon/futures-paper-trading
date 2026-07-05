@@ -473,27 +473,28 @@ public static Position compute(List<PaperFill> fills) {
     for (PaperFill f : fills) {
         BigDecimal signedFillQuantity = OrderSide.BUY.name().equals(f.side()) ? f.quantity() : f.quantity().negate();
         BigDecimal price = f.price();
-        BigDecimal existingOpenQuantity = signedQty.abs();
-        BigDecimal fillQuantity = signedFillQuantity.abs();
-        BigDecimal updatedSignedQty = signedQty.add(signedFillQuantity);
+        BigDecimal existingAbsQuantity = signedQty.abs();
+        BigDecimal fillAbsQuantity = signedFillQuantity.abs();
+        BigDecimal signedQtyAfterFill = signedQty.add(signedFillQuantity);
 
         if (signedQty.signum() == 0 || signedQty.signum() == signedFillQuantity.signum()) {
-            BigDecimal updatedOpenQuantity = existingOpenQuantity.add(fillQuantity);
-            avgEntry = existingOpenQuantity.multiply(avgEntry).add(fillQuantity.multiply(price))
-                    .divide(updatedOpenQuantity, 8, RoundingMode.HALF_UP);
-            signedQty = updatedSignedQty;
+            BigDecimal updatedAbsQuantity = existingAbsQuantity.add(fillAbsQuantity);
+            avgEntry = existingAbsQuantity.multiply(avgEntry).add(fillAbsQuantity.multiply(price))
+                    .divide(updatedAbsQuantity, 8, RoundingMode.HALF_UP);
         } else {
-            BigDecimal closedQuantity = fillQuantity.min(existingOpenQuantity);
+            BigDecimal closedQuantity = fillAbsQuantity.min(existingAbsQuantity);
             BigDecimal existingPositionDirection = BigDecimal.valueOf(signedQty.signum());
             realized = realized.add(price.subtract(avgEntry).multiply(closedQuantity).multiply(existingPositionDirection));
 
-            if (updatedSignedQty.signum() == 0) {
+            if (signedQtyAfterFill.signum() == 0) {
                 avgEntry = BigDecimal.ZERO;
-            } else if (signedQty.signum() != updatedSignedQty.signum()) {
+            } else if (signedQty.signum() != signedQtyAfterFill.signum()) {
                 avgEntry = price;
+            } else {
+                // 부분 청산이면 기존 평균 진입가를 유지한다.
             }
-            signedQty = updatedSignedQty;
         }
+        signedQty = signedQtyAfterFill;
     }
     return new Position(signedQty, avgEntry, realized);
 }
@@ -515,6 +516,15 @@ Position pos = PositionCalculator.compute(fills);
 | `avgEntry` | 현재 열린 포지션의 평균 진입가 |
 | `realized` | 지금까지 확정된 실현손익 |
 
+루프 안에서 쓰는 보조 변수:
+
+| 변수 | 의미 |
+|---|---|
+| `signedFillQuantity` | 이번 체결 수량에 방향 부호를 붙인 값. BUY는 양수, SELL은 음수 |
+| `existingAbsQuantity` | 이번 체결 전 포지션 수량의 절대값 |
+| `fillAbsQuantity` | 이번 체결 수량의 절대값 |
+| `signedQtyAfterFill` | 이번 체결 후 순포지션 수량. 분기 판단에 쓰고, 마지막에 `signedQty`로 확정한다 |
+
 체결 방향:
 
 ```text
@@ -535,6 +545,7 @@ SELL fill
 반대 방향 체결
 → 기존 포지션 축소/청산/뒤집기
 → 닫힌 수량만큼 realized PnL 계산
+→ flat이면 avgEntry=0, 뒤집기면 avgEntry=이번 체결가, 부분 청산이면 avgEntry 유지
 ```
 
 결과는 `Position`이다.

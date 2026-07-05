@@ -47,7 +47,7 @@ PaperOrderController 클래스의 create(req) 메서드
       └─ OrderResponse
 ```
 
-## 1. 시작점: PaperOrderController 클래스의 create() 메서드
+## 1. create(req) - 주문 생성 요청의 HTTP 입구
 
 파일: [`PaperOrderController.java`](../../src/main/java/com/example/futurespapertrading/paper/controller/PaperOrderController.java)
 
@@ -79,7 +79,7 @@ public Mono<OrderResponse> create(@Valid @RequestBody CreateOrderRequest req) {
 
 `PaperOrderController` 클래스의 `create()` 메서드는 주문을 직접 저장하지 않는다. HTTP 입구 역할만 하고, 실제 주문 처리는 `PaperOrderService`로 넘긴다.
 
-## 2. req: CreateOrderRequest
+## 2. req: CreateOrderRequest - 주문 생성 입력값
 
 파일: [`CreateOrderRequest.java`](../../src/main/java/com/example/futurespapertrading/paper/dto/CreateOrderRequest.java)
 
@@ -129,7 +129,7 @@ LIMIT 주문
 
 검증 실패 시에는 `PaperOrderController` 클래스의 `create()` 메서드 본문이 끝까지 실행되지 않고 400 응답으로 막힌다.
 
-## 3. PaperOrderController 클래스의 currentUserId() 메서드
+## 3. currentUserId() - 현재 로그인 사용자 id 조회
 
 파일: [`PaperOrderController.java`](../../src/main/java/com/example/futurespapertrading/paper/controller/PaperOrderController.java)
 
@@ -190,7 +190,7 @@ Mono<Long> → Mono<OrderResponse>
 즉 `flatMap`은 `placeOrder(...)`가 반환한 안쪽 `Mono`를 한 겹 펼쳐서,
 컨트롤러의 최종 반환 타입을 `Mono<OrderResponse>`로 이어준다.
 
-## 4. placeOrder(req, userId)
+## 4. placeOrder(req, userId) - 주문 생성 흐름 조율
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -257,7 +257,7 @@ state.mark() == null
 → 시장가인데 가격 기준이 없으므로 증거금 계산 불가
 ```
 
-## 5. accountState(userId)
+## 5. accountState(userId) - 현재 계좌 상태 계산
 
 파일: [`PortfolioService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PortfolioService.java)
 
@@ -313,7 +313,7 @@ return portfolioService.accountState(userId).flatMap(state -> {
 | `state.account().leverage()` | `requiredAdditionalMargin(req, state)`에서 필요 증거금 계산, `placeOrderAfterMarginCheck(...)`에 넘겨 주문에 저장 |
 | `state.position()` | `requiredAdditionalMargin(req, state)` 안에서 현재 포지션 방향/수량을 확인할 때 사용 |
 
-## 6. getOrCreateAccount(userId)
+## 6. getOrCreateAccount(userId) - 계좌 조회 또는 기본 계좌 생성
 
 파일: [`PortfolioService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PortfolioService.java)
 
@@ -353,7 +353,7 @@ cashBalance = SEED_CASH = 10000
 leverage = DEFAULT_LEVERAGE = 10
 ```
 
-## 7. accountState 안의 repository 조회
+## 7. accountState 안의 repository 조회 - 체결/주문 이력 수집
 
 파일:
 
@@ -396,7 +396,7 @@ collectMap(PaperOrder::id, PaperOrder::leverage)
 → 주문 id → 주문 당시 레버리지 Map을 만든다.
 ```
 
-## 8. toState(account, fills, orderLeverage)
+## 8. toState(account, fills, orderLeverage) - DB 재료를 계좌 상태로 변환
 
 파일: [`PortfolioService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PortfolioService.java)
 
@@ -460,7 +460,7 @@ private AccountState toState(PaperAccount account, List<PaperFill> fills, Map<Lo
 
 `PaperOrderService` 클래스의 `placeOrder()` 메서드에서는 이 중 특히 `mark`, `availableBalance`, `position`, `account.leverage`를 사용한다.
 
-## 9. PositionCalculator.compute(fills)
+## 9. PositionCalculator.compute(fills) - 체결 이력으로 현재 포지션 계산
 
 파일: [`PositionCalculator.java`](../../src/main/java/com/example/futurespapertrading/paper/domain/PositionCalculator.java)
 
@@ -559,7 +559,7 @@ public record Position(
 }
 ```
 
-## 10. PositionCalculator.openPositionLeverage(...)
+## 10. PositionCalculator.openPositionLeverage(...) - 열린 포지션 레버리지 찾기
 
 파일: [`PositionCalculator.java`](../../src/main/java/com/example/futurespapertrading/paper/domain/PositionCalculator.java)
 
@@ -617,7 +617,7 @@ int positionLeverage = PositionCalculator.openPositionLeverage(fills, orderLever
 7. 마지막 positionLeverage가 현재 열린 포지션의 레버리지다.
 ```
 
-## 11. PortfolioService 클래스의 midPrice() 메서드
+## 11. midPrice() - 현재 평가 기준가 계산
 
 파일: [`PortfolioService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PortfolioService.java)
 
@@ -653,7 +653,7 @@ BigDecimal mark = midPrice();
 
 이 값이 `PaperOrderService` 클래스의 `placeOrder()` 메서드에서 시장가 증거금 계산 기준가로 쓰인다.
 
-## 12. OrderBookQuotes.bestBid / bestAsk
+## 12. OrderBookQuotes.bestBid / bestAsk - 최우선 매수/매도 호가 선택
 
 파일: [`OrderBookQuotes.java`](../../src/main/java/com/example/futurespapertrading/market/domain/OrderBookQuotes.java)
 
@@ -694,7 +694,7 @@ bestAsk
 
 `PortfolioService` 클래스의 `midPrice()` 메서드는 이 둘의 중간값을 mark로 쓴다.
 
-## 13. MarginCalculator.usedMargin(...)
+## 13. MarginCalculator.usedMargin(...) - 포지션 사용 증거금 계산
 
 파일: [`MarginCalculator.java`](../../src/main/java/com/example/futurespapertrading/paper/domain/MarginCalculator.java)
 
@@ -729,7 +729,7 @@ usedMargin
 
 포지션이 없으면 사용 증거금은 0이다.
 
-## 14. AccountState
+## 14. AccountState - 주문 검증용 계좌 스냅샷
 
 파일: [`PortfolioService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PortfolioService.java)
 
@@ -766,7 +766,7 @@ return new AccountState(account, pos, positionLeverage, mark, unrealized, wallet
 | `mark()` | 시장가 주문의 기준 가격 |
 | `availableBalance()` | 필요 증거금과 비교 |
 
-## 15. requiredAdditionalMargin(req, state)
+## 15. requiredAdditionalMargin(req, state) - 이번 주문의 추가 필요 증거금 계산
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -844,7 +844,7 @@ SELL 5 주문
 추가 필요 증거금 = 추가 증거금 대상 수량 × 기준가 / 계좌 레버리지
 ```
 
-## 16. 증거금 부족 검사
+## 16. 증거금 부족 검사 - 주문 가능 잔고 확인
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -872,7 +872,7 @@ requiredAdditionalMargin > availableBalance
 return placeOrderAfterMarginCheck(req, userId, state.account().leverage());
 ```
 
-## 17. placeOrderAfterMarginCheck(...)
+## 17. placeOrderAfterMarginCheck(...) - 체결 판정과 저장 진행
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -921,7 +921,7 @@ return placeOrderAfterMarginCheck(req, userId, state.account().leverage());
 3. fills 결과로 주문 상태를 정하고 저장한다.
 ```
 
-## 18. 호가 snapshot 없음 분기
+## 18. 호가 snapshot 없음 분기 - 호가 부재 시 처리 결정
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -954,7 +954,7 @@ if (maybeSnapshot.isEmpty()) {
 
 이 경우 프론트엔드 주문 목록에는 `OPEN` 대기 주문으로 보일 수 있다. DB에 주문이 저장되기 때문이다.
 
-## 19. 체결 계산용 probe 주문
+## 19. 체결 계산용 probe 주문 - 엔진에 넘길 임시 주문 생성
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -989,7 +989,7 @@ filledQuantity = 0
 → 아직 체결 계산 전이다.
 ```
 
-## 20. engine.tryFill(probe, snapshot)
+## 20. engine.tryFill(probe, snapshot) - 호가에 주문을 매칭해 체결 계산
 
 파일: [`PaperTradingEngine.java`](../../src/main/java/com/example/futurespapertrading/paper/domain/PaperTradingEngine.java)
 
@@ -1092,7 +1092,7 @@ SELL LIMIT
 → limitPrice보다 싼 bid는 먹지 않는다
 ```
 
-## 21. totalQuantity(fills)
+## 21. totalQuantity(fills) - 총 체결 수량 합산
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -1117,7 +1117,7 @@ fills에 들어있는 모든 체결 수량을 더한다.
 그 결과가 이번 주문의 누적 체결 수량 filledQty다.
 ```
 
-## 22. 주문 상태 결정
+## 22. 주문 상태 결정 - FILLED/OPEN/REJECTED 선택
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -1150,7 +1150,7 @@ else          status = fills.isEmpty() ? OrderStatus.REJECTED.name() : OrderStat
 체결이 0건이면 REJECTED, 1건 이상이면 FILLED다.
 ```
 
-## 23. saveOrder(...)
+## 23. saveOrder(...) - 주문 저장과 응답 생성 준비
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -1204,7 +1204,7 @@ REJECTED
 이 주문은 진입 당시 레버리지로 계산하기 위해서다.
 ```
 
-## 24. saveFills(orderId, fills)
+## 24. saveFills(orderId, fills) - 체결 기록 저장
 
 파일: [`PaperOrderService.java`](../../src/main/java/com/example/futurespapertrading/paper/service/PaperOrderService.java)
 
@@ -1247,7 +1247,7 @@ order_id는 paper_orders에 주문을 저장해야 DB가 만들어준다.
 3. paper_fills 저장
 ```
 
-## 25. fillRepository.saveAll(...)
+## 25. fillRepository.saveAll(...) - 여러 체결 INSERT
 
 파일: [`PaperFillRepository.java`](../../src/main/java/com/example/futurespapertrading/paper/repository/PaperFillRepository.java)
 
@@ -1281,7 +1281,7 @@ fillRepository.saveAll(withOrderId)
 → paper_fills에 체결 기록들을 INSERT
 ```
 
-## 26. OrderResponse record의 from(saved, fills) 메서드
+## 26. OrderResponse.from(saved, fills) - 저장된 주문을 응답 DTO로 변환
 
 파일: [`OrderResponse.java`](../../src/main/java/com/example/futurespapertrading/paper/dto/OrderResponse.java)
 
@@ -1357,7 +1357,7 @@ avgPrice = Σ(체결가 × 체결수량) / Σ체결수량
 
 그래서 평균 체결가는 단순 평균이 아니라 수량 가중 평균이다.
 
-## 27. create 요청의 최종 결과
+## 27. create 요청의 최종 결과 - 상황별 응답 정리
 
 정상 흐름은 `OrderResponse` 하나를 반환한다.
 
@@ -1385,7 +1385,7 @@ avgPrice = Σ(체결가 × 체결수량) / Σ체결수량
 | DTO 검증 실패 | 컨트롤러 본문 실행 전 중단 | 400 |
 | 비로그인 | 컨트롤러 도달 전 중단 | 401 |
 
-## 28. 한 번에 다시 읽기
+## 28. 한 번에 다시 읽기 - 전체 흐름 요약
 
 ```text
 PaperOrderController 클래스의 create(req) 메서드

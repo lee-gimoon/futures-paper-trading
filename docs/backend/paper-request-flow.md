@@ -594,7 +594,8 @@ WebFlux가 기본으로 사용하는 Reactor Netty 이벤트 루프 관점에서
 
 ```text
 1. collectList()
-   전체 데이터를 한 번에 List<PaperFill>로 메모리에 모은다.
+   Flux로 하나씩 emit된 PaperFill을 바로 소비하고 버리는 것이 아니라, 완료될 때까지 전부 List에 누적한다.
+   그래서 체결 내역이 많을수록 JVM 메모리에 오래 들고 있는 객체 수도 같이 늘어난다.
 
 2. compute(fills)
    모인 데이터를 일반 Java for-loop로 동기 계산한다.

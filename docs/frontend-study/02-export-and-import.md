@@ -226,7 +226,24 @@ export function three() {}
 
 ## 6. 함수 자체를 내보내는 것과 호출 결과를 내보내는 것
 
-괄호가 있는지 없는지에 따라 중요한 차이가 있습니다.
+여기서 말하는 괄호는 **함수 이름 뒤에 붙는 호출 괄호 `()`**입니다. 이 괄호가 붙으면 함수를 실행하고, 붙지 않으면 함수 자체를 값으로 다룹니다.
+
+```ts
+createMessage;  // 함수 자체
+createMessage(); // 함수 호출 결과
+```
+
+함수 선언이나 화살표 함수에서 매개변수를 적는 괄호와는 구분해야 합니다.
+
+```ts
+function createMessage(name: string) { // (name): 매개변수 선언
+  return `안녕하세요, ${name}님`;
+}
+
+createMessage('홍길동'); // ('홍길동'): 함수 호출
+```
+
+즉, 함수 이름 뒤의 `()`는 함수 호출을 나타냅니다.
 
 ```ts
 function createMessage() {

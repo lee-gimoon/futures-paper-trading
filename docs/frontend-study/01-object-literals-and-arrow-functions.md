@@ -7,6 +7,47 @@
 
 예제는 JavaScript와 TypeScript에서 모두 볼 수 있습니다. TypeScript에서는 JavaScript 문법에 타입 표기를 추가할 수 있습니다.
 
+## JavaScript와 TypeScript는 브라우저에서 어떻게 실행될까?
+
+브라우저는 기본적으로 JavaScript를 실행합니다.
+
+```html
+<script>
+  const add = (a, b) => a + b;
+  console.log(add(1, 2));
+</script>
+```
+
+이런 JavaScript는 별도 변환 없이 브라우저가 이해할 수 있습니다. 다만 아주 최신 문법을 오래된 브라우저에서 사용한다면 호환성을 위해 변환 도구가 필요할 수 있습니다.
+
+반면 TypeScript는 브라우저가 직접 실행하지 못합니다.
+
+```ts
+const age: number = 20;
+```
+
+브라우저는 `: number`처럼 타입을 표시하는 TypeScript 문법을 이해하지 못합니다. 따라서 실행 전에 JavaScript로 변환해야 합니다.
+
+```js
+const age = 20;
+```
+
+이 변환에는 TypeScript 컴파일러(`tsc`), Vite, Webpack, Babel, esbuild 같은 도구가 사용됩니다. 현재 프로젝트에서는 Vite가 TypeScript와 React 코드를 브라우저가 실행할 수 있는 JavaScript로 처리합니다.
+
+```text
+TypeScript 코드
+      ↓
+Vite / TypeScript 컴파일러
+      ↓
+JavaScript 코드
+      ↓
+브라우저 실행
+```
+
+핵심은 다음과 같습니다.
+
+> JavaScript는 브라우저가 직접 이해하지만, TypeScript는 JavaScript로 변환된 뒤 브라우저에서 실행됩니다.
+
 ---
 
 ## 1. 객체 리터럴(object literal)
@@ -113,7 +154,15 @@ export type OrderBookLevel = {
 };
 ```
 
-이 코드는 실제 객체를 만드는 것이 아니라, 객체가 어떤 모양이어야 하는지 설명하는 **타입 선언**입니다.
+`type OrderBookLevel = { ... }`는 실제 객체를 만드는 것이 아니라, 객체가 어떤 모양이어야 하는지 설명하는 **타입 선언**입니다.
+
+앞의 `export`는 이 타입을 다른 파일에서도 사용할 수 있도록 내보낸다는 뜻입니다. 따라서 다른 파일에서는 다음처럼 가져올 수 있습니다.
+
+```ts
+import type { OrderBookLevel } from './types';
+```
+
+`export`가 없으면 `OrderBookLevel`은 선언한 파일 안에서만 사용할 수 있습니다. `export type`은 실행되는 값이 아니라 TypeScript의 타입 정보만 내보낼 때 사용하는 형태입니다.
 
 ```ts
 const level: OrderBookLevel = {
@@ -121,6 +170,17 @@ const level: OrderBookLevel = {
   quantity: 0.5,
 };
 ```
+
+이 코드는 `level`이라는 이름의 실제 객체를 만들고, 그 객체가 `OrderBookLevel` 타입을 따르도록 지정한 것입니다.
+
+```text
+const              변수 선언
+level              변수 이름
+: OrderBookLevel   변수의 타입
+= { ... }          실제 객체를 대입
+```
+
+따라서 `price`와 `quantity`가 빠지거나, 두 속성에 `number`가 아닌 값을 넣으면 TypeScript가 오류를 알려줍니다.
 
 정리하면 다음과 같습니다.
 

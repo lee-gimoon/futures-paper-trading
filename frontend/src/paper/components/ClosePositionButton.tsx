@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Position } from '../types';
-import * as paperApi from './paperApi';
+import type { Position } from '../../shared/types';
+import * as paperApi from '../api/paperApi';
 
 type Props = {
   position: Position;

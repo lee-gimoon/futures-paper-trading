@@ -1,7 +1,7 @@
 // 백엔드 인증 API 호출 모음.
 // 쿠키 세션 방식이라 토큰을 직접 저장하는 코드는 없다.
 // credentials:'include' 만 붙이면 SESSION 쿠키가 자동으로 오가고, JS는 그 쿠키를 만지지 않는다.
-import type { User } from '../types';
+import type { User } from '../../shared/types';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 

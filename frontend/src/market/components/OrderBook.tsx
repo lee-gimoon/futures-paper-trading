@@ -1,5 +1,5 @@
-import type { OrderBookLevel, OrderBookSnapshot } from './types';
-import { deriveQuote } from './quote';
+import type { OrderBookLevel, OrderBookSnapshot } from '../../shared/types';
+import { deriveQuote } from '../engine/quote';
 
 // 표 한 행에 그릴 값들. quantity와 cumulative는 화면에서 계산해 만든다.
 type Row = {

@@ -1,4 +1,4 @@
-import type { OrderBookSnapshot } from './types';
+import type { OrderBookSnapshot } from '../../shared/types';
 
 // 호가 snapshot에서 파생되는 네 값. 호가창(OrderBook)과 차트(PriceChart)가
 // 똑같은 snapshot에서 똑같은 값을 쓰도록 계산을 여기 한 곳에 모은다.

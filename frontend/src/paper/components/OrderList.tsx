@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Order, Position } from '../types';
-import * as paperApi from './paperApi';
+import type { Order, Position } from '../../shared/types';
+import * as paperApi from '../api/paperApi';
 
 type Props = {
   orders: Order[];

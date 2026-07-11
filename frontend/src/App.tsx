@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react';
-import { useOrderBookStream } from './useOrderBookStream';
-import { OrderBook } from './OrderBook';
-import { CandleChart } from './CandleChart';
-import { deriveQuote } from './quote';
-import { useAuth } from './auth/useAuth';
-import { LoginForm } from './auth/LoginForm';
-import { SignupForm } from './auth/SignupForm';
-import { TradingPanel } from './paper/TradingPanel';
-import { FillHistory } from './paper/FillHistory';
-import { OrderList } from './paper/OrderList';
-import { useTrading } from './paper/useTrading';
-import type { OrderBookSnapshot } from './types';
+import { useOrderBookStream } from './market/hooks/useOrderBookStream';
+import { OrderBook } from './market/components/OrderBook';
+import { CandleChart } from './market/components/CandleChart';
+import { deriveQuote } from './market/engine/quote';
+import { useAuth } from './auth/hooks/useAuth';
+import { LoginForm } from './auth/components/LoginForm';
+import { SignupForm } from './auth/components/SignupForm';
+import { TradingPanel } from './paper/components/TradingPanel';
+import { FillHistory } from './paper/components/FillHistory';
+import { OrderList } from './paper/components/OrderList';
+import { useTrading } from './paper/hooks/useTrading';
+import type { OrderBookSnapshot } from './shared/types';
 
 // 화면 셸: 상단 인증 바 + 캔들 차트 + (로그인 시) 거래 패널 + 호가창.
 // - 차트/호가창은 공개 데이터라 로그인과 무관하게 항상 보인다.

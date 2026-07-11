@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Fill, Order, Portfolio } from '../types';
-import * as paperApi from './paperApi';
+import type { Fill, Order, Portfolio } from '../../shared/types';
+import * as paperApi from '../api/paperApi';
 
 // 거래 화면 데이터(계좌·주문·체결)를 한곳에서 들고 있는 훅.
 // - 마운트 시 1회 + 3초마다 새로 불러온다(백그라운드 matcher가 OPEN 지정가를 자동 체결할 수 있어 폴링으로 따라잡는다).

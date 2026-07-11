@@ -1,4 +1,4 @@
-import type { Fill } from '../types';
+import type { Fill } from '../../shared/types';
 
 type Props = {
   fills: Fill[]; // 백엔드는 오름차순 → 여기서 최신순으로 뒤집어 표시

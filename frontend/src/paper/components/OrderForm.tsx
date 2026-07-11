@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { Portfolio } from '../types';
-import * as paperApi from './paperApi';
+import type { Portfolio } from '../../shared/types';
+import * as paperApi from '../api/paperApi';
 
 type Props = {
   portfolio: Portfolio | null; // 가용잔고·레버리지 (% 바 사이징 기준)

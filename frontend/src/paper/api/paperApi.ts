@@ -1,5 +1,5 @@
 // 백엔드 모의 거래 API 호출 모음. authApi.ts와 같은 방식 — 쿠키 세션이라 credentials:'include'만 붙인다.
-import type { Fill, Order, Portfolio } from '../types';
+import type { Fill, Order, Portfolio } from '../../shared/types';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 

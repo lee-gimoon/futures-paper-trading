@@ -1,4 +1,4 @@
-import type { Portfolio } from '../types';
+import type { Portfolio } from '../../shared/types';
 
 type Props = {
   portfolio: Portfolio | null;

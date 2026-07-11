@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { User } from '../types';
-import * as authApi from './authApi';
+import type { User } from '../../shared/types';
+import * as authApi from '../api/authApi';
 
 // 로그인 상태를 들고 있는 단 하나의 출처.
 // - user: 로그인한 사용자 (없으면 null)

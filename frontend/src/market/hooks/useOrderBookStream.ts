@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { OrderBookSnapshot } from './types';
+import type { OrderBookSnapshot } from '../../shared/types';
 
 // React Hook 한 줄 요약: 컴포넌트가 마운트되면 백엔드 SSE에 연결하고,
 // 받은 snapshot을 state로 들고 있는다. 컴포넌트가 사라지면 연결을 닫는다.

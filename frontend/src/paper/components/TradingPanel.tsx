@@ -1,7 +1,7 @@
 import { AccountSummary } from './AccountSummary';
 import { ClosePositionButton } from './ClosePositionButton';
 import { OrderForm } from './OrderForm';
-import type { Portfolio } from '../types';
+import type { Portfolio } from '../../shared/types';
 
 type Props = {
   portfolio: Portfolio | null;

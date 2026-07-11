@@ -14,9 +14,9 @@ import {
   intervalSeconds,
   type Candle,
   type Interval,
-} from './binanceKline';
-import { deriveQuote } from './quote';
-import type { Order, OrderBookSnapshot, Position } from './types';
+} from '../api/binanceKline';
+import { deriveQuote } from '../engine/quote';
+import type { Order, OrderBookSnapshot, Position } from '../../shared/types';
 
 type Props = {
   snapshot: OrderBookSnapshot | null;

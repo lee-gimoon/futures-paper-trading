@@ -1,36 +1,33 @@
+// Vite 설정을 작성할 때 TypeScript 타입 추론을 도와주는 함수입니다.
 import { defineConfig } from 'vite';
+
+// React의 JSX와 Fast Refresh를 Vite에서 처리하게 해주는 플러그인입니다.
 import react from '@vitejs/plugin-react';
 
-// Vite 개발 서버는 5173 포트, 백엔드는 8080 포트.
-// 그냥 fetch하면 브라우저가 CORS로 막는다. 그래서 Vite에 프록시를 둬서
-// 프론트가 '/api/...'로 요청하면 Vite가 가로채 http://localhost:8080으로 그대로 넘긴다.
-// 브라우저 입장에서는 같은 출처(localhost:5173)와 통신하는 모양이라 CORS가 안 걸린다.
-//
-// ★ SSE buffer 비활성:
-// 기본 proxy 동작은 응답을 buffer하는 경향이 있어, SSE의 첫 chunk만 흘러오고
-// 그 다음 chunk가 buffer에 갇혀 화면이 첫 데이터 1장으로 멈추는 현상이 있었다.
-// configure 훅에서 응답 헤더에 'X-Accel-Buffering: no'를 박아 buffer를 끈다.
-// (이 헤더는 nginx 관례지만 http-proxy도 streaming 응답에 대해 buffer 비활성 단서로 본다.)
-//
-// buffer 켜기 (기본):
-//   장점 - TCP packet/시스템 콜 절약, 압축 효율 ↑, 동접 처리량 ↑
-//   단점 - chunk가 모일 때까지 지연 발생, 실시간 흐름 깨짐
-//   상황 - 블로그·파일 다운로드 등 지연 무관한 일반 응답
-//
-// buffer 끄기 (지금):
-//   장점 - chunk 도착 즉시 통과, 지연 거의 0
-//   단점 - packet 수 ↑, CPU/대역폭 비용 ↑ (사용자 적으면 무시 가능)
-//   상황 - 호가창·체결·게임 입력 등 실시간성이 효율보다 비싼 시스템
+// Vite 개발 서버와 프론트엔드 빌드에 적용할 설정을 반환합니다.
 export default defineConfig({
+  // Vite가 React 코드를 처리할 때 사용할 플러그인 목록입니다.
   plugins: [react()],
+
+  // Vite 개발 서버(localhost:5173)의 동작을 설정하는 영역입니다.
   server: {
+    // 개발 서버로 들어온 특정 요청을 다른 서버로 전달하는 규칙입니다.
     proxy: {
+      // 요청 경로가 '/api'로 시작하는 경우 이 규칙을 적용합니다.
       '/api': {
+        // '/api' 요청을 전달할 실제 백엔드 서버 주소입니다.
         target: 'http://localhost:8080',
+
+        // 프록시 요청의 Host 헤더를 대상 서버(localhost:8080)에 맞춥니다.
+        // 브라우저 주소창의 URL이 바뀌는 것은 아닙니다.
         changeOrigin: true,
+
+        // 프록시 객체가 생성된 뒤 세부 이벤트를 설정할 수 있는 콜백입니다.
         configure: (proxy) => {
+          // Spring Boot가 보낸 응답을 Vite 프록시가 받은 순간 발생하는 이벤트입니다.
           proxy.on('proxyRes', (proxyRes) => {
-            // SSE chunk가 즉시 흘러나가도록 buffer 비활성
+            // SSE 응답을 중간 프록시가 오래 모아두지 않도록 전달하는 힌트입니다.
+            // 주로 Nginx 같은 프록시가 이 헤더를 인식합니다.
             proxyRes.headers['x-accel-buffering'] = 'no';
           });
         },

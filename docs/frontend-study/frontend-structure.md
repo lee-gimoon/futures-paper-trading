@@ -54,7 +54,15 @@ frontend/
 └─ vite.config.ts                   Vite 서버·프록시 설정
 ```
 
-`npm run build`를 실행하면 `dist/`가 생성될 수 있습니다. `dist/`는 소스 코드가 아니라 빌드 결과물이며, 삭제해도 다시 생성됩니다. 현재 Docker 빌드에서는 Docker 내부에서 생성되므로 로컬에 없어도 됩니다.
+`npm run build`를 실행하면 `dist/`가 생성됩니다. `dist/`는 개발자가 직접 작성하는 소스 코드가 아니라, Vite가 브라우저용 파일로 변환·묶은 배포 결과물입니다.
+
+```text
+dist/
+├─ index.html       빌드된 시작 HTML
+└─ assets/          빌드된 JavaScript·CSS·기타 파일
+```
+
+로컬의 `frontend/dist/`는 그대로 두어도 됩니다. `.gitignore`에 포함되어 Git에는 올라가지 않으며, `npm run build`를 다시 실행하면 내용이 갱신됩니다. Docker 빌드에서도 Docker 내부에 별도의 `dist/`를 만들지만, 로컬 `dist/`와는 다른 공간입니다.
 
 ## 2. 폴더를 나눈 기준
 

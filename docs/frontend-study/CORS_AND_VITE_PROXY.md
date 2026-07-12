@@ -60,7 +60,35 @@ Spring Boot (localhost:8080)
 
 이 경우 Spring Boot는 `OPTIONS` 요청에도 적절한 CORS 응답을 제공해야 합니다.
 
-## 4. Vite proxy를 사용할 때의 흐름
+## 4. 브라우저, React, Vite의 역할
+
+React는 별도 서버에서 실행되는 프로그램이 아닙니다. 브라우저가 내려받은 React JavaScript 코드를 자신의 JavaScript 실행 엔진에서 실행합니다.
+
+```text
+브라우저 안
+├─ HTML을 해석하는 기능
+├─ DOM(실제 화면 구조)
+├─ JavaScript 실행 엔진
+│   ├─ JavaScript 코드 실행
+│   ├─ Vite가 JavaScript로 변환한 TypeScript/TSX 코드 실행
+│   └─ React 코드 실행
+├─ 네트워크 기능
+│   └─ fetch(), HTTP 요청, CORS 검사
+└─ 화면 렌더링 기능
+```
+
+브라우저는 JavaScript만 실행할 수 있습니다. 따라서 TypeScript(`.ts`, `.tsx`)는 브라우저가 직접 실행하는 언어가 아닙니다. 개발 환경에서는 브라우저가 React 소스 파일을 요청할 때 Vite가 TypeScript와 JSX를 일반 JavaScript로 변환하여 전달합니다. TypeScript의 타입 정보는 이 과정에서 제거됩니다.
+
+```text
+브라우저 → Vite: /src/App.tsx 요청
+Vite: TypeScript와 JSX를 JavaScript로 변환
+Vite → 브라우저: 변환된 JavaScript 전달
+브라우저의 JavaScript 실행 엔진: 변환된 코드와 React 코드 실행
+```
+
+즉, React는 화면을 계산하고 DOM 변경을 요청하는 JavaScript 라이브러리이고, 브라우저는 그 코드를 실행하고 실제 화면을 표시하는 환경입니다. Vite는 개발 중 소스 코드를 전달·변환하고 HMR(수정 내용을 빠르게 반영하는 기능)을 제공하는 개발 서버입니다.
+
+## 5. Vite proxy를 사용할 때의 흐름
 
 프론트엔드 코드에서는 백엔드의 전체 주소 대신 다음처럼 작성합니다.
 
@@ -153,7 +181,7 @@ fetch('/api/users')
 
 Vite가 Spring Boot를 대신해 요청을 전달하므로, 현재 Vite 개발 서버는 **개발용 reverse proxy(역방향 프록시)** 역할도 합니다.
 
-## 5. 현재 `vite.config.ts` 설정의 의미
+## 6. 현재 `vite.config.ts` 설정의 의미
 
 ```ts
 server: {
@@ -180,7 +208,7 @@ server: {
 | `proxyRes` | Spring Boot 응답을 Vite 프록시가 받은 시점의 이벤트입니다. |
 | `x-accel-buffering: no` | SSE처럼 응답을 계속 전달해야 하는 상황에서 버퍼링하지 않도록 알리는 헤더입니다. 주로 Nginx가 인식합니다. |
 
-## 6. URL 작성 방식의 차이
+## 7. URL 작성 방식의 차이
 
 ```js
 // 현재 페이지의 origin을 사용합니다.
@@ -196,7 +224,7 @@ fetch('http://localhost:8080/api/users');
 
 API 요청에는 현재 사이트의 루트부터 시작하는 `fetch('/api/...')` 형태를 주로 사용합니다. Vite proxy와 자연스럽게 연결되고, 개발·운영 환경의 백엔드 주소가 달라져도 React 코드를 바꿀 일이 줄어듭니다.
 
-## 7. 운영 환경에서는?
+## 8. 운영 환경에서는?
 
 `vite.config.ts`의 `server.proxy`는 `npm run dev`로 실행하는 **Vite 개발 서버에서만** 동작합니다. `npm run build` 이후 운영 환경에 배포된 React 정적 파일에는 Vite 개발 서버가 없습니다.
 

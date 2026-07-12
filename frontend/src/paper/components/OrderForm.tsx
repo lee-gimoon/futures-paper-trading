@@ -11,9 +11,28 @@ type Props = {
 
 const LEVERAGES = [1, 3, 5, 10, 20, 50];
 const PERCENTS = [25, 50, 75, 100];
+// 100% 시장가는 가용 증거금의 99.9%를 주문 예산으로 확정하고, 모든 수량/금액 계산은 그 예산을 기준으로 한다.
+const MAX_MARKET_MARGIN_USAGE = 0.999;
+
+function floorToPrecision(value: number, digits: number) {
+  const factor = 10 ** digits;
+  return Math.floor(value * factor) / factor;
+}
 
 function formatBtcAmount(value: number) {
-  return value.toFixed(6).replace(/\.?0+$/, '');
+  return floorToPrecision(value, 6).toFixed(6).replace(/\.?0+$/, '');
+}
+
+function formatUsdtAmount(value: number) {
+  return floorToPrecision(value, 2).toFixed(2);
+}
+
+function orderErrorMessage(err: unknown) {
+  if (!(err instanceof Error)) return '주문에 실패했습니다.';
+  if (err.message.startsWith('가용 증거금 부족:')) {
+    return '가용 증거금이 부족합니다. 주문 수량을 조금 줄여주세요.';
+  }
+  return err.message;
 }
 
 // 모의 주문 입력 폼 (레버리지/마진).
@@ -52,9 +71,11 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
   // 입력값(unit)을 BTC 수량과 USDT 명목으로 환산.
   const parsedAmount = Number(amount);
   const amountNum = Number.isFinite(parsedAmount) ? parsedAmount : 0;
-  const btcQty = unit === 'BTC' ? amountNum : refPrice > 0 ? amountNum / refPrice : 0;
-  const notional = unit === 'USDT' ? amountNum : amountNum * refPrice;
-  const openingQty = isReducingPosition && position ? Math.max(0, btcQty - position.quantity) : btcQty;
+  const rawBtcQty = unit === 'BTC' ? amountNum : refPrice > 0 ? amountNum / refPrice : 0;
+  // 화면 미리보기와 API 요청이 정확히 같은 BTC 수량을 사용하도록 먼저 6자리 수량을 확정한다.
+  const orderQuantity = floorToPrecision(rawBtcQty, 6);
+  const notional = orderQuantity * refPrice;
+  const openingQty = isReducingPosition && position ? Math.max(0, orderQuantity - position.quantity) : orderQuantity;
   const requiredMargin = leverage > 0 ? (openingQty * refPrice) / leverage : 0;
 
   // % 버튼: 반대 방향이면 포지션 수량 기준, 아니면 가용잔고 × 레버리지 기준으로 채운다.
@@ -63,12 +84,13 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
 
     if (isReducingPosition && position) {
       const closeQty = (position.quantity * pct) / 100;
-      setAmount(unit === 'USDT' ? (closeQty * refPrice).toFixed(2) : formatBtcAmount(closeQty));
+      setAmount(unit === 'USDT' ? formatUsdtAmount(closeQty * refPrice) : formatBtcAmount(closeQty));
       return;
     }
 
-    const pickNotional = (available * leverage * pct) / 100;
-    setAmount(unit === 'USDT' ? pickNotional.toFixed(2) : formatBtcAmount(pickNotional / refPrice));
+    const marginUsage = type === 'MARKET' && pct === 100 ? MAX_MARKET_MARGIN_USAGE : 1;
+    const pickNotional = (available * marginUsage * leverage * pct) / 100;
+    setAmount(unit === 'USDT' ? formatUsdtAmount(pickNotional) : formatBtcAmount(pickNotional / refPrice));
   }
 
   async function changeLeverage(lev: number) {
@@ -92,12 +114,11 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
       setError('지정가는 0보다 큰 숫자여야 합니다.');
       return;
     }
-    if (btcQty <= 0) {
+    if (rawBtcQty <= 0) {
       setError(unit === 'USDT' && refPrice <= 0 ? '환산 기준가가 없습니다(호가 대기 중).' : '수량을 확인하세요.');
       return;
     }
-    const roundedQuantity = Math.round(btcQty * 1e6) / 1e6;
-    if (roundedQuantity <= 0) {
+    if (orderQuantity <= 0) {
       setError('주문 가능한 최소 수량은 0.000001 BTC입니다.');
       return;
     }
@@ -106,12 +127,12 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
       await paperApi.createOrder({
         side,
         type,
-        quantity: roundedQuantity, // 백엔드는 BTC 수량
+        quantity: orderQuantity, // 백엔드는 BTC 수량, 6자리에서 내림해 가용 증거금을 초과하지 않게 한다.
         limitPrice: type === 'LIMIT' ? parsedLimitPrice : undefined,
       });
       onChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '주문에 실패했습니다.');
+      setError(orderErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -199,7 +220,7 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
 
       {/* 환산/증거금 미리보기 */}
       <div className="order-preview">
-        <span>≈ {btcQty.toFixed(4)} BTC</span>
+        <span>주문 {orderQuantity.toFixed(6)} BTC</span>
         <span>명목 {notional.toFixed(2)}</span>
         <span>증거금 {requiredMargin.toFixed(2)}</span>
       </div>

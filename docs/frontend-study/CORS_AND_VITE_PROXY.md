@@ -78,15 +78,75 @@ fetch('/api/users')
 
 그 뒤 Vite의 개발 서버가 `vite.config.ts`의 `proxy` 설정을 보고 `/api`로 시작하는 요청을 Spring Boot로 전달합니다.
 
+### 페이지 로딩부터 API 응답까지 전체 흐름
+
 ```text
+0. 사용자가 http://localhost:5173 주소를 입력하거나 새로고침
+   ↓
+
 1. 브라우저 → Vite 개발 서버
+   GET http://localhost:5173/
+   ↓
+
+2. Vite 개발 서버 → 브라우저
+   index.html 응답
+   ↓
+
+3. 브라우저 → Vite 개발 서버
+   React JavaScript, CSS 등의 파일 요청
+   예) /src/main.jsx, /src/App.jsx
+   ↓
+
+4. 브라우저가 받은 React 코드를 실행하고 첫 화면을 그림
+   ↓
+
+5. API 요청 트리거 발생
+
+   경우 A: 화면이 처음 그려진 후 useEffect 실행
+   경우 B: 사용자가 “사용자 목록 조회” 버튼 클릭
+   경우 C: 사용자가 검색어 입력 후 검색 버튼 클릭
+   경우 D: 사용자가 React 화면에서 /users 같은 페이지로 이동
+   ↓
+
+6. React 코드의 useEffect 또는 이벤트 함수가 실행
+   ↓
+
+7. React 코드가 fetch('/api/users') 호출
+   ↓
+
+8. 브라우저가 상대 주소를 완전한 주소로 해석
+   /api/users
+   → http://localhost:5173/api/users
+   ↓
+
+9. 브라우저 → Vite 개발 서버
    GET http://localhost:5173/api/users
+   ↓
 
-2. Vite 개발 서버의 proxy → Spring Boot
+10. Vite proxy가 /api 요청을 Spring Boot로 전달
    GET http://localhost:8080/api/users
+   ↓
 
-3. Spring Boot → Vite 개발 서버 → 브라우저
-   응답 전달
+11. Spring Boot가 요청을 처리
+    예) Controller → Service → Repository → DB 조회
+    ↓
+
+12. Spring Boot → Vite 개발 서버
+    사용자 목록 등의 응답 전달
+    ↓
+
+13. Vite 개발 서버 → 브라우저
+    Spring Boot 응답을 그대로 전달
+    ↓
+
+14. 브라우저가 응답 데이터를 React 코드에 전달
+    ↓
+
+15. React 코드가 응답 데이터를 state에 저장
+    예) setUsers(users)
+    ↓
+
+16. React가 변경된 state를 기준으로 화면을 다시 그림
 ```
 
 브라우저 관점에서는 처음 요청한 대상이 `localhost:5173`이므로 교차 출처 요청이 아닙니다. 따라서 이 개발 환경에서는 브라우저 CORS 검사를 피할 수 있습니다.

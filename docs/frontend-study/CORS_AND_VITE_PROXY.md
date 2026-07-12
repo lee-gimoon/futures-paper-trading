@@ -177,7 +177,27 @@ fetch('/api/users')
 16. React가 변경된 state를 기준으로 화면을 다시 그림
 ```
 
-브라우저 관점에서는 처음 요청한 대상이 `localhost:5173`이므로 교차 출처 요청이 아닙니다. 따라서 이 개발 환경에서는 브라우저 CORS 검사를 피할 수 있습니다.
+브라우저가 요청한 URL은 `http://localhost:5173/api/users`이므로 같은 출처 요청입니다. 따라서 이 개발 환경에서는 브라우저 CORS 검사가 필요하지 않습니다.
+
+### 왜 Spring Boot 응답에 CORS 헤더가 필요하지 않을까?
+
+브라우저가 Spring Boot(`localhost:8080`)에 직접 요청하는 것이 아니라 Vite(`localhost:5173`)에 요청하기 때문입니다. Vite가 받은 요청을 다시 Spring Boot로 전달하며, 이 두 통신은 서로 다른 연결입니다.
+
+```text
+브라우저 ── GET localhost:5173/api/users ──→ Vite
+브라우저 ←────────── Vite의 응답 ──────────── Vite
+
+Vite ── GET localhost:8080/api/users ──→ Spring Boot
+Vite ←──────── Spring Boot의 응답 ──────── Spring Boot
+```
+
+Spring Boot의 JSON 응답은 먼저 Vite가 받고, Vite가 자신의 응답으로 브라우저에 전달합니다. 브라우저는 `localhost:8080`에 직접 연결하지 않았으므로 이를 교차 출처 요청으로 판단하지 않습니다. CORS는 브라우저 정책이므로 Vite와 Spring Boot 사이의 서버 간 통신에는 적용되지 않습니다.
+
+반대로 아래처럼 브라우저가 Spring Boot에 직접 요청하면 CORS 허용 헤더가 필요합니다.
+
+```js
+fetch('http://localhost:8080/api/users');
+```
 
 Vite가 Spring Boot를 대신해 요청을 전달하므로, 현재 Vite 개발 서버는 **개발용 reverse proxy(역방향 프록시)** 역할도 합니다.
 

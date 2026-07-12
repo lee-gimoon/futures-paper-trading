@@ -20,13 +20,18 @@ export type User = {
   displayName: string;
 };
 
+export type OrderSide = 'BUY' | 'SELL';
+export type OrderType = 'MARKET' | 'LIMIT';
+export type OrderStatus = 'NEW' | 'OPEN' | 'FILLED' | 'CANCELED' | 'REJECTED';
+export type PositionSide = 'LONG' | 'SHORT';
+
 // 백엔드 OrderResponse와 1:1 대응. 주문 1건 요약(주문 폼 응답·주문 목록에 쓴다).
 export type Order = {
   id: number;
   symbol: string;
-  side: string; // BUY / SELL
-  type: string; // MARKET / LIMIT
-  status: string; // NEW / OPEN / FILLED / CANCELED / REJECTED
+  side: OrderSide;
+  type: OrderType;
+  status: OrderStatus;
   limitPrice: number | null;
   quantity: number;
   filledQuantity: number;
@@ -36,7 +41,7 @@ export type Order = {
 // 백엔드 PortfolioResponse.PositionView와 1:1 대응. 현재 포지션(없으면 portfolio.position이 null).
 export type Position = {
   symbol: string;
-  side: string; // LONG / SHORT
+  side: PositionSide;
   quantity: number; // 절대값
   averageEntryPrice: number;
   markPrice: number | null;
@@ -63,7 +68,7 @@ export type Fill = {
   id: number;
   orderId: number;
   symbol: string;
-  side: string;
+  side: OrderSide;
   price: number;
   quantity: number;
 };

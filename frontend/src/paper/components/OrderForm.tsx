@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { Portfolio } from '../../shared/types';
+import type { OrderSide, OrderType, Portfolio } from '../../shared/types';
 import * as paperApi from '../api/paperApi';
 
 type Props = {
-  portfolio: Portfolio | null; // 가용잔고·레버리지 (% 바 사이징 기준)
+  portfolio: Portfolio; // 가용잔고·레버리지 (% 바 사이징 기준)
   midPrice: number | null; // USDT↔BTC 환산 기준가
   limitFill: { price: number; n: number } | null; // 호가창 클릭 가격 (지정가로)
   onChanged: () => void; // 주문/레버리지 변경 후 새로고침
@@ -17,17 +17,18 @@ function formatBtcAmount(value: number) {
 }
 
 // 모의 주문 입력 폼 (레버리지/마진).
-//   Long/Short · 시장가/지정가 · 수량(BTC↔USDT 토글) · 지정가 한도 · 레버리지 선택 · 잔고 % 바.
+//   BUY/SELL · 시장가/지정가 · 수량(BTC↔USDT 토글) · 지정가 한도 · 레버리지 선택 · 잔고 % 바.
 //   백엔드는 BTC 수량을 받으므로 USDT 입력은 기준가(지정가면 limit, 아니면 mid)로 BTC로 환산해 보낸다.
 //   기준가가 명목·증거금 계산에도 쓰인다. 검증/체결/청산은 백엔드가 한다.
 export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) {
-  const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
-  const [type, setType] = useState<'MARKET' | 'LIMIT'>('MARKET');
+  const [side, setSide] = useState<OrderSide>('BUY');
+  const [type, setType] = useState<OrderType>('MARKET');
   const [unit, setUnit] = useState<'BTC' | 'USDT'>('BTC');
   const [amount, setAmount] = useState('0.01'); // unit 기준 입력값
   const [limitPrice, setLimitPrice] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [changingLeverage, setChangingLeverage] = useState<number | null>(null);
 
   // 호가창에서 가격을 클릭하면 지정가 모드로 바꾸고 그 가격을 한도가로 채운다.
   //   limitFill.n(클릭 카운터)이 매번 달라져 같은 가격을 다시 눌러도 effect가 재실행된다.
@@ -38,16 +39,19 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
     }
   }, [limitFill]);
 
-  const leverage = portfolio?.leverage ?? 10;
-  const available = portfolio?.availableBalance ?? 0;
-  const position = portfolio?.position;
+  const leverage = portfolio.leverage;
+  const available = portfolio.availableBalance;
+  const position = portfolio.position;
   const isReducingPosition =
     !!position && ((position.side === 'LONG' && side === 'SELL') || (position.side === 'SHORT' && side === 'BUY'));
   // 환산/명목 계산 기준가: 지정가면 limit, 아니면 현재 mid.
-  const refPrice = type === 'LIMIT' && Number(limitPrice) > 0 ? Number(limitPrice) : midPrice ?? 0;
+  const parsedLimitPrice = Number(limitPrice);
+  const hasValidLimitPrice = Number.isFinite(parsedLimitPrice) && parsedLimitPrice > 0;
+  const refPrice = type === 'LIMIT' ? (hasValidLimitPrice ? parsedLimitPrice : 0) : midPrice ?? 0;
 
   // 입력값(unit)을 BTC 수량과 USDT 명목으로 환산.
-  const amountNum = Number(amount) || 0;
+  const parsedAmount = Number(amount);
+  const amountNum = Number.isFinite(parsedAmount) ? parsedAmount : 0;
   const btcQty = unit === 'BTC' ? amountNum : refPrice > 0 ? amountNum / refPrice : 0;
   const notional = unit === 'USDT' ? amountNum : amountNum * refPrice;
   const openingQty = isReducingPosition && position ? Math.max(0, btcQty - position.quantity) : btcQty;
@@ -68,19 +72,33 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
   }
 
   async function changeLeverage(lev: number) {
+    if (changingLeverage !== null || submitting) return;
+    setError('');
+    setChangingLeverage(lev);
     try {
       await paperApi.setLeverage(lev);
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : '레버리지 변경 실패');
+    } finally {
+      setChangingLeverage(null);
     }
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+    if (type === 'LIMIT' && !hasValidLimitPrice) {
+      setError('지정가는 0보다 큰 숫자여야 합니다.');
+      return;
+    }
     if (btcQty <= 0) {
       setError(unit === 'USDT' && refPrice <= 0 ? '환산 기준가가 없습니다(호가 대기 중).' : '수량을 확인하세요.');
+      return;
+    }
+    const roundedQuantity = Math.round(btcQty * 1e6) / 1e6;
+    if (roundedQuantity <= 0) {
+      setError('주문 가능한 최소 수량은 0.000001 BTC입니다.');
       return;
     }
     setSubmitting(true);
@@ -88,8 +106,8 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
       await paperApi.createOrder({
         side,
         type,
-        quantity: Math.round(btcQty * 1e6) / 1e6, // 백엔드는 BTC 수량
-        limitPrice: type === 'LIMIT' ? Number(limitPrice) : undefined,
+        quantity: roundedQuantity, // 백엔드는 BTC 수량
+        limitPrice: type === 'LIMIT' ? parsedLimitPrice : undefined,
       });
       onChanged();
     } catch (err) {
@@ -103,10 +121,10 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
     <form className="order-form" onSubmit={handleSubmit}>
       <div className="seg">
         <button type="button" className={side === 'BUY' ? 'buy active' : 'buy'} onClick={() => setSide('BUY')}>
-          Long
+          BUY
         </button>
         <button type="button" className={side === 'SELL' ? 'sell active' : 'sell'} onClick={() => setSide('SELL')}>
-          Short
+          SELL
         </button>
       </div>
 
@@ -117,6 +135,7 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
             key={lev}
             type="button"
             className={leverage === lev ? 'lev active' : 'lev'}
+            disabled={changingLeverage !== null || submitting}
             onClick={() => changeLeverage(lev)}
           >
             {lev}x
@@ -139,7 +158,7 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
           <input
             type="number"
             step="0.1"
-            min="0"
+            min="0.1"
             value={limitPrice}
             onChange={(e) => setLimitPrice(e.target.value)}
             required
@@ -187,8 +206,12 @@ export function OrderForm({ portfolio, midPrice, limitFill, onChanged }: Props) 
 
       {error && <p className="auth-error">{error}</p>}
 
-      <button type="submit" className={side === 'BUY' ? 'submit buy' : 'submit sell'} disabled={submitting}>
-        {submitting ? '...' : side === 'BUY' ? 'Long 주문' : 'Short 주문'}
+      <button
+        type="submit"
+        className={side === 'BUY' ? 'submit buy' : 'submit sell'}
+        disabled={submitting || changingLeverage !== null}
+      >
+        {submitting ? '...' : `${side} 주문`}
       </button>
     </form>
   );

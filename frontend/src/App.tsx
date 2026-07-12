@@ -23,10 +23,17 @@ type TradingLayoutProps = {
   midPrice: number | null;
   limitFill: { price: number; n: number } | null;
   onPriceClick: (price: number) => void;
+  onUnauthorized: () => void;
 };
 
-function AuthenticatedTradingLayout({ snapshot, midPrice, limitFill, onPriceClick }: TradingLayoutProps) {
-  const { portfolio, orders, fills, refresh } = useTrading();
+function AuthenticatedTradingLayout({
+  snapshot,
+  midPrice,
+  limitFill,
+  onPriceClick,
+  onUnauthorized,
+}: TradingLayoutProps) {
+  const { portfolio, orders, fills, loading, error, refresh } = useTrading(onUnauthorized);
   const openOrders = useMemo(() => orders.filter((order) => order.status === 'OPEN'), [orders]);
 
   return (
@@ -50,7 +57,14 @@ function AuthenticatedTradingLayout({ snapshot, midPrice, limitFill, onPriceClic
         </div>
       </div>
       <div className="trade-col">
-        <TradingPanel portfolio={portfolio} midPrice={midPrice} limitFill={limitFill} onChanged={refresh} />
+        <TradingPanel
+          portfolio={portfolio}
+          midPrice={midPrice}
+          limitFill={limitFill}
+          loading={loading}
+          error={error}
+          onChanged={refresh}
+        />
       </div>
       <div className="book-col">
         {snapshot ? (
@@ -65,10 +79,10 @@ function AuthenticatedTradingLayout({ snapshot, midPrice, limitFill, onPriceClic
 
 export default function App() {
   const snapshot = useOrderBookStream();
-  const { user, loading, login, signup, logout } = useAuth();
+  const { user, loading, error: authError, login, signup, logout, expireSession } = useAuth();
   const [form, setForm] = useState<FormMode>(null);
 
-  // 거래 패널의 미실현 PnL을 실시간으로 갱신하려고 SSE snapshot에서 mid를 뽑아 넘긴다(호가창·차트와 같은 값).
+  // 거래 패널의 미실현 PnL을 실시간으로 갱신하려고 SSE snapshot에서 mid를 뽑아 넘긴다.
   const quote = snapshot ? deriveQuote(snapshot) : null;
   const midPrice = quote ? quote.midPrice : null;
 
@@ -97,6 +111,8 @@ export default function App() {
         </div>
       </header>
 
+      {authError && <p className="auth-error" role="alert">{authError}</p>}
+
       {form === 'login' && <LoginForm onLogin={login} onClose={() => setForm(null)} />}
       {form === 'signup' && <SignupForm onSignup={signup} onClose={() => setForm(null)} />}
 
@@ -112,6 +128,7 @@ export default function App() {
             midPrice={midPrice}
             limitFill={limitFill}
             onPriceClick={handlePriceClick}
+            onUnauthorized={expireSession}
           />
         )}
         {!user && (

@@ -44,7 +44,7 @@ function toCandle(k: RawKline): Candle {
 }
 
 // 인터벌(봉) 길이를 초로 변환. 진행 봉의 "시간 버킷" 계산에 쓴다.
-// (실시간 봉은 백엔드 호가 snapshot의 mid로 CandleChart에서 직접 묶는다.
+// (실시간 봉은 백엔드 호가 snapshot의 best ask로 CandleChart에서 직접 묶는다.
 //  바이낸스 선물의 체결 계열 push 스트림이 이 지역에서 막혀 있어 @kline WS는 못 씀.)
 const INTERVAL_SECONDS: Record<Interval, number> = {
   '1m': 60,

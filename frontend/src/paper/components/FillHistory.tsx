@@ -12,13 +12,13 @@ export function FillHistory({ fills }: Props) {
   return (
     <div className="fill-list">
       <div className="fill-row fill-header">
-        <span>포지션</span>
+        <span>방향</span>
         <span>가격</span>
         <span>개수</span>
       </div>
       {newestFirst.map((f) => (
         <div key={f.id} className="fill-row">
-          <span className={f.side === 'BUY' ? 'pnl up' : 'pnl down'}>{f.side === 'BUY' ? 'Long' : 'Short'}</span>
+          <span className={f.side === 'BUY' ? 'pnl up' : 'pnl down'}>{f.side}</span>
           <span>{f.price.toFixed(2)}</span>
           <span>{f.quantity.toFixed(3)}</span>
         </div>

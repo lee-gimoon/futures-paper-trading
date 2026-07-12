@@ -35,10 +35,6 @@ function applyInitialVisibleRange(chart: IChartApi, dataLength: number) {
   chart.timeScale().setVisibleLogicalRange({ from, to });
 }
 
-function orderPositionLabel(side: string) {
-  return side === 'BUY' ? 'Long' : 'Short';
-}
-
 function priceLineKey(position: Position | null | undefined, openOrders: Order[]) {
   const positionPart = position
     ? `${position.side}:${position.averageEntryPrice}:${position.quantity}`
@@ -52,7 +48,7 @@ function priceLineKey(position: Position | null | undefined, openOrders: Order[]
 
 // 캔들 차트.
 // - 과거 봉: 바이낸스 kline REST로 한 번 채운다(실제 체결 OHLC).
-// - 진행 봉: 내 백엔드 호가(SSE) snapshot의 mid로 실시간 갱신한다 → 호가창과 같은 값.
+// - 진행 봉: 내 백엔드 호가(SSE) snapshot의 best ask로 실시간 갱신한다 → 호가창과 같은 값.
 //   (호가 snapshot은 "가격 한 개"라, 진행 봉의 OHLC는 여기서 직접 묶는다.)
 export function CandleChart({ snapshot, position = null, openOrders = [] }: Props) {
   const [activeInterval, setActiveInterval] = useState<Interval>('1m');
@@ -135,7 +131,7 @@ export function CandleChart({ snapshot, position = null, openOrders = [] }: Prop
           axisLabelVisible: true,
           axisLabelColor: color,
           axisLabelTextColor: '#ffffff',
-          title: `대기 ${orderPositionLabel(order.side)} ${remainingQty.toFixed(3)}`,
+          title: `대기 ${order.side} ${remainingQty.toFixed(3)}`,
         }),
       );
     }
@@ -168,7 +164,7 @@ export function CandleChart({ snapshot, position = null, openOrders = [] }: Prop
     };
   }, [activeInterval]);
 
-  // 호가 snapshot이 올 때마다: mid로 진행 봉을 갱신한다.
+  // 호가 snapshot이 올 때마다: best ask로 진행 봉을 갱신한다.
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || !snapshot || !readyRef.current) return;

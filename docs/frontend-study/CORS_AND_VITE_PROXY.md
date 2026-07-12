@@ -246,11 +246,45 @@ API 요청에는 현재 사이트의 루트부터 시작하는 `fetch('/api/...'
 
 ## 8. 운영 환경에서는?
 
-`vite.config.ts`의 `server.proxy`는 `npm run dev`로 실행하는 **Vite 개발 서버에서만** 동작합니다. `npm run build` 이후 운영 환경에 배포된 React 정적 파일에는 Vite 개발 서버가 없습니다.
+`vite.config.ts`의 `server.proxy`는 `npm run dev`로 실행하는 **Vite 개발 서버에서만** 동작합니다. `npm run build`로 빌드한 뒤 운영 서버에 배포하면 Vite 개발 서버는 없습니다.
 
-운영 환경에서는 보통 다음 중 하나를 선택합니다.
+### 운영 배포의 핵심
 
-1. Nginx 같은 웹 서버가 React 파일을 제공하면서 `/api` 요청을 Spring Boot로 reverse proxy합니다. 브라우저는 하나의 도메인으로 통신하므로 CORS가 필요 없는 구성이 됩니다.
-2. 프론트엔드와 백엔드를 서로 다른 도메인에 배포하고, Spring Boot에서 허용할 origin을 명시적으로 CORS 설정합니다.
+Vite는 사라지지만, `/api` 요청을 Spring Boot에 전달하는 proxy 역할은 보통 Nginx 같은 운영 웹 서버가 대신 맡습니다. 따라서 React 코드의 상대 경로 요청은 그대로 유지할 수 있습니다.
 
-따라서 Vite proxy는 CORS 보안 정책을 없애는 기능이 아니라, **개발 중에 같은 출처처럼 요청을 중계해 주는 편의 기능**입니다.
+```js
+fetch('/api/users');
+```
+
+```text
+개발 환경
+브라우저 → Vite :5173 → Spring Boot :8080
+
+운영 환경
+브라우저 → Nginx :443 → Spring Boot :8080
+```
+
+운영 배포 전에는 Vite를 한 번 실행해 React의 TypeScript/JSX 코드를 브라우저용 JavaScript 파일로 빌드합니다.
+
+```text
+React 소스 코드 수정
+  ↓ npm run build
+dist 폴더에 HTML, JavaScript, CSS 생성
+  ↓
+Nginx 또는 Spring Boot에 dist 결과물 배포
+```
+
+Nginx를 사용하는 경우, Nginx는 빌드된 React 파일을 제공하고 `/api` 요청만 Spring Boot로 전달합니다.
+
+```text
+브라우저 → https://example.com/             → Nginx가 React 파일 반환
+브라우저 → https://example.com/api/users    → Nginx가 Spring Boot로 전달
+```
+
+이 구조에서는 브라우저가 `example.com`에만 직접 요청하므로 CORS가 필요하지 않습니다. Vite proxy가 하던 개발용 중계 역할을 Nginx reverse proxy가 운영에서 맡는 것입니다.
+
+또는 React의 빌드 결과물을 Spring Boot의 정적 파일 경로에 넣어 Spring Boot 하나가 화면 파일과 `/api`를 모두 제공할 수도 있습니다. 이 경우도 화면과 API의 출처가 같으므로 CORS가 필요하지 않습니다.
+
+프론트엔드와 백엔드를 서로 다른 도메인에 별도로 배포하고 proxy를 두지 않는 경우에는, 브라우저가 백엔드에 직접 요청하므로 Spring Boot에서 허용할 origin을 명시적으로 CORS 설정해야 합니다.
+
+따라서 Vite proxy는 CORS 보안 정책을 없애는 기능이 아니라, **개발 중에 같은 출처처럼 요청을 중계해 주는 기능**입니다. 운영에서는 Nginx, Spring Boot의 정적 파일 제공, 또는 별도 CORS 설정으로 같은 문제를 해결합니다.

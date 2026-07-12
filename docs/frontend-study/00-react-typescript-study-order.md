@@ -1,12 +1,10 @@
 # React + TypeScript 학습 순서 — 이 프로젝트를 교재로 사용하기
 
-이 문서는 React을 처음 배우는 사람이 이 저장소의 `frontend` 코드를 따라가며 공부하기 위한 순서입니다.
+React을 처음 배우는 경우, 모든 파일을 위에서 아래로 읽으면 금방 복잡해집니다. 아래 **순서대로 한 파일씩** 보세요. 각 파일에서 적힌 핵심만 이해한 뒤 다음 파일로 넘어가면 됩니다.
 
-목표는 처음부터 모든 코드를 외우는 것이 아닙니다. **작은 화면을 React가 어떻게 그리는지 이해한 뒤**, 이 프로젝트의 로그인, 시세, 모의 거래 기능을 한 단계씩 읽는 것입니다.
+처음에는 코드를 완전히 해석하려 하지 않아도 됩니다. “이 파일은 무슨 역할인가?”와 “React가 어떤 값을 받아 화면을 어떻게 바꾸는가?”만 잡는 것이 목표입니다.
 
-## 시작 전: 프로젝트를 실행해 보기
-
-터미널에서 `frontend` 폴더로 이동한 뒤 실행합니다.
+## 시작 전
 
 ```powershell
 cd frontend
@@ -14,254 +12,287 @@ npm install
 npm run dev
 ```
 
-표시되는 주소(보통 `http://localhost:5173`)를 브라우저에서 엽니다. 실행 중에는 파일을 저장할 때 화면이 자동으로 갱신됩니다.
+브라우저에서 화면을 열어 둔 채 파일을 읽으세요. `npm run build`는 수정 후 TypeScript 오류가 없는지 확인할 때 사용합니다.
 
-다음 명령도 기억해 둡니다.
+## 꼭 지킬 읽는 순서
 
-```powershell
-npm run build
-```
+| 순서 | 파일 | 이 파일에서 배울 핵심 | 지금은 넘어가도 되는 것 |
+|---:|---|---|---|
+| 1 | `frontend/package.json` | React, TypeScript, Vite가 이 프로젝트에 설치되어 있다는 사실과 `npm run dev`/`npm run build` 명령 | 각 라이브러리의 세부 버전 |
+| 2 | `frontend/src/main.tsx` | React 앱의 시작점, `root`에 `<App />`을 그리는 방법 | `StrictMode`의 내부 동작 |
+| 3 | `frontend/src/App.tsx` | 컴포넌트를 조립하는 방법, `useState`, 조건부 렌더링, props를 전달하는 모습 | 차트·주문 전체 로직 |
+| 4 | `frontend/src/auth/components/LoginForm.tsx` | JSX, 컴포넌트, props, `input`, `button`, `onClick`/`onSubmit` 이벤트 | API가 실제로 요청되는 세부 과정 |
+| 5 | `frontend/src/shared/types.ts` | TypeScript `type`, 문자열 유니온, `null`을 포함한 타입 | 모든 도메인 타입의 의미 |
+| 6 | `frontend/src/auth/api/authApi.ts` | `fetch`, `async`/`await`, 서버 요청과 응답 | 쿠키·HTTP 헤더의 상세 규칙 |
+| 7 | `frontend/src/auth/hooks/useAuth.ts` | 커스텀 Hook, 상태를 여러 컴포넌트에서 쓰기 좋게 묶는 방법 | 로그인 API의 모든 예외 처리 |
+| 8 | `frontend/src/market/components/OrderBook.tsx` | 배열을 `map`으로 화면 목록으로 바꾸기, props로 함수 전달하기 | SSE 연결 방식 |
+| 9 | `frontend/src/market/hooks/useOrderBookStream.ts` | `useEffect`, 실시간 데이터 구독, cleanup(연결 해제) | EventSource의 프로토콜 세부 사항 |
+| 10 | `frontend/src/market/engine/quote.ts` | React 밖의 순수 함수와 화면 코드의 분리 | 호가 계산 공식 자체 |
+| 11 | `frontend/src/paper/components/OrderForm.tsx` | 폼 입력 상태, 선택값, 부모에게 주문 요청을 전달하는 방법 | 주문 도메인 규칙 전체 |
+| 12 | `frontend/src/paper/hooks/useTrading.ts` | 여러 API 호출·로딩·오류·데이터 상태를 하나의 Hook으로 관리 | 각 API의 구현 세부 |
+| 13 | `frontend/src/paper/components/TradingPanel.tsx` | 작은 컴포넌트를 조합해 기능 화면을 만드는 방법 | CSS 레이아웃 미세 조정 |
+| 14 | `frontend/src/market/components/CandleChart.tsx` | 외부 차트 라이브러리를 React 컴포넌트 안에서 사용하는 방법 | 차트 라이브러리 전체 API |
 
-이 명령은 TypeScript 오류를 검사하고 배포용 파일을 만듭니다. 학습 중 코드를 수정한 뒤 오류가 없는지 확인할 때 사용합니다.
+> `CandleChart.tsx`는 가장 마지막에 보세요. React의 기본 개념보다 외부 라이브러리 코드가 많아서 처음 읽기에 적합하지 않습니다.
 
-> 백엔드가 실행되지 않은 상태에서는 로그인, 주문, 실시간 데이터 같은 API 기능이 실패할 수 있습니다. 이때도 React 화면 구조를 읽고 연습하는 데는 문제가 없습니다.
+---
 
-## 전체 학습 지도
+## 파일별로 무엇을 보면 되는가
 
-```text
-JavaScript/TypeScript 기초
-        ↓
-Vite가 React 앱을 시작하는 위치 이해
-        ↓
-컴포넌트와 JSX
-        ↓
-props · useState · 이벤트 · 조건부 렌더링
-        ↓
-useEffect와 서버 데이터
-        ↓
-커스텀 Hook · API · TypeScript 타입
-        ↓
-차트/호가/주문 기능을 하나의 흐름으로 읽기
-```
+### 1. `frontend/package.json`
 
-## 1단계: JavaScript와 TypeScript 기초
+먼저 이 프로젝트가 무엇으로 실행되는지 확인합니다.
 
-React보다 먼저 아래 문법을 익힙니다. React 코드는 JavaScript 위에 TypeScript 타입을 더한 코드이기 때문입니다.
-
-1. [`01-object-literals-and-arrow-functions.md`](01-object-literals-and-arrow-functions.md)
-   - 객체 `{}`
-   - 화살표 함수 `() => {}`
-   - `type`과 `export`/`import`
-2. [`02-export-and-import.md`](02-export-and-import.md)
-   - 파일을 나누고 다른 파일의 코드를 가져오는 방법
-3. `frontend/src/shared/types.ts`
-   - `User`, `Order`, `Portfolio` 같은 실제 타입을 읽습니다.
-
-이 단계에서는 다음을 말로 설명할 수 있으면 충분합니다.
-
-```ts
-type User = { email: string };
-
-const greet = (user: User) => `안녕하세요, ${user.email}`;
-```
-
-- `User`는 값이 아니라 객체의 모양을 설명하는 타입이다.
-- `greet`는 `User`를 받아 문자열을 돌려주는 함수다.
-
-## 2단계: Vite와 React의 시작점
-
-다음 파일을 순서대로 엽니다.
-
-1. `frontend/package.json`
-2. `frontend/index.html`
-3. `frontend/src/main.tsx`
-4. `frontend/src/App.tsx`
-
-흐름은 아래와 같습니다.
-
-```text
-브라우저
-  → index.html의 <div id="root">
-  → main.tsx가 root를 찾음
-  → <App />을 렌더링함
-  → App.tsx와 하위 컴포넌트가 화면을 만듦
-```
-
-- **Vite**는 개발 서버를 실행하고 TypeScript/React 코드를 브라우저용 코드로 처리해 주는 도구입니다.
-- `main.tsx`는 React의 입구입니다.
-- `App.tsx`는 이 앱의 가장 큰 화면 조립 파일입니다.
-- `.tsx`는 TypeScript 파일 안에서 HTML처럼 보이는 JSX를 쓸 수 있는 확장자입니다.
-
-## 3단계: 컴포넌트와 JSX
-
-React 컴포넌트는 **화면의 한 조각을 반환하는 함수**입니다.
-
-```tsx
-function Welcome() {
-  return <h1>안녕하세요</h1>;
+```json
+"scripts": {
+  "dev": "vite",
+  "build": "tsc && vite build"
 }
 ```
 
-`App.tsx`에서 아래처럼 보이는 태그들이 모두 컴포넌트입니다.
+핵심:
+
+- `npm run dev`: Vite 개발 서버 실행
+- `npm run build`: TypeScript 검사 후 배포용 파일 생성
+- `react`, `react-dom`: 화면을 만드는 라이브러리
+- `typescript`: 코드의 타입 오류를 미리 찾는 도구
+- `vite`: 개발 서버와 빌드 도구
+
+여기서는 **Vite가 React 자체가 아니라 React 프로젝트를 실행하고 빌드하는 도구**라는 것만 기억하면 됩니다.
+
+### 2. `frontend/src/main.tsx`
+
+이 파일은 React의 입구입니다.
 
 ```tsx
-<CandleChart snapshot={snapshot} />
-<OrderBook snapshot={snapshot} onPriceClick={handlePriceClick} />
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
 ```
 
-처음에는 복잡한 차트 대신 작은 폼 컴포넌트부터 읽는 편이 좋습니다.
+핵심:
 
-1. `frontend/src/auth/components/LoginForm.tsx`
-2. `frontend/src/auth/components/SignupForm.tsx`
-3. `frontend/src/paper/components/AccountSummary.tsx`
+- `index.html`에 있는 `<div id="root">`를 찾는다.
+- 그 빈 공간에 `<App />` 컴포넌트를 그린다.
+- 즉, 화면은 `App.tsx`부터 시작한다.
 
-읽을 때 아래 세 가지를 찾아보세요.
+다음 한 줄로 기억하면 충분합니다.
 
-- `return (...)` 안에 어떤 화면(JSX)을 만드는가?
-- 함수의 매개변수(예: `onLogin`, `portfolio`)는 무엇인가?
-- 버튼이나 입력창에서 어떤 이벤트를 처리하는가?
-
-### 실습 1
-
-`App.tsx`의 제목 근처에 다음 JSX를 잠시 추가하고 화면 변화를 확인합니다.
-
-```tsx
-<p>React 학습 중입니다.</p>
+```text
+index.html의 root → main.tsx → App.tsx → 하위 컴포넌트
 ```
 
-확인한 뒤에는 원래 코드로 되돌리거나, 학습용 문구로 남겨도 됩니다.
+### 3. `frontend/src/App.tsx`
 
-## 4단계: props, 상태(useState), 이벤트
-
-### props: 부모가 자식에게 건네는 값
-
-```tsx
-function Greeting({ name }: { name: string }) {
-  return <p>{name}님, 반갑습니다.</p>;
-}
-
-<Greeting name="Codex" />
-```
-
-여기서 `name`은 props입니다. 이 프로젝트에서는 `CandleChart`의 `snapshot`, `OrderBook`의 `onPriceClick` 등이 props입니다.
-
-### 상태: 화면이 기억해야 하는 값
-
-`App.tsx`의 이 코드를 읽습니다.
+이 파일은 여러 기능을 한 화면으로 **조립하는 부모 컴포넌트**입니다. 처음에는 위에서부터 아래로 읽되, 아래 네 가지만 찾으세요.
 
 ```tsx
 const [form, setForm] = useState<FormMode>(null);
 ```
 
-- `form`: 현재 로그인/회원가입 폼이 열렸는지 저장하는 값
-- `setForm(...)`: 값을 바꾸는 함수
-- 값이 바뀌면 React가 관련 화면을 다시 그립니다.
+핵심:
 
-### 이벤트와 조건부 렌더링
+- `useState`: 화면이 기억해야 하는 값을 만든다.
+- `form`: 로그인 폼/회원가입 폼을 열지 저장한다.
+- `setForm(...)`: 상태를 바꾸고 화면을 다시 그리게 한다.
+- `<LoginForm />`, `<OrderBook />`처럼 다른 컴포넌트에 값(props)을 전달한다.
+
+아래 코드는 React에서 가장 자주 나오는 패턴입니다.
 
 ```tsx
-<button onClick={() => setForm('login')}>로그인</button>
-
 {form === 'login' && <LoginForm onLogin={login} onClose={() => setForm(null)} />}
 ```
 
-버튼 클릭으로 상태를 바꾸고, 상태가 `'login'`일 때만 로그인 폼을 표시합니다.
+뜻: `form`이 `'login'`일 때만 로그인 화면을 보여 준다.
 
-### 실습 2
+### 4. `frontend/src/auth/components/LoginForm.tsx`
 
-`App.tsx`에 숫자를 하나 늘리는 버튼을 잠시 만들어 보세요.
+처음 읽을 컴포넌트입니다. `App.tsx`보다 작아서 React의 기본을 보기 좋습니다.
 
-```tsx
-const [count, setCount] = useState(0);
+핵심:
 
-<button onClick={() => setCount(count + 1)}>
-  클릭 수: {count}
-</button>
+- 컴포넌트는 `return (...)`으로 JSX 화면을 돌려주는 함수다.
+- `onLogin`, `onClose`는 부모(`App.tsx`)가 전달한 props다.
+- `<input>`은 사용자 입력을 받는다.
+- `<form onSubmit={...}>`은 제출 이벤트를 처리한다.
+- 버튼 클릭/폼 제출 뒤에는 부모가 준 함수를 호출해 부모에게 알려 준다.
+
+여기서 스스로 답해 보세요.
+
+> 로그인 버튼을 누르면 어떤 함수가 호출되고, 그 함수는 어느 파일에 있는가?
+
+답의 흐름은 `LoginForm.tsx → App.tsx → useAuth.ts`입니다.
+
+### 5. `frontend/src/shared/types.ts`
+
+이 파일은 TypeScript 타입을 모아 둔 곳입니다. React보다 먼저 아래 모양을 익히세요.
+
+```ts
+export type User = {
+  id: number;
+  email: string;
+  displayName: string;
+};
 ```
 
-이 실습이 자연스럽게 이해되면 로그인 버튼, 로그아웃 버튼, 호가 클릭 처리도 같은 원리로 읽을 수 있습니다.
+핵심:
 
-## 5단계: useEffect와 서버에서 오는 데이터
+- `type User = { ... }`: `User` 데이터가 가져야 할 모양을 설명한다.
+- 이것은 실제 데이터가 아니라 **검사용 설계도**다.
+- `export`: 다른 파일에서도 이 타입을 쓸 수 있게 내보낸다.
+- `string | null`: 문자열이거나 값이 없을 수 있다는 뜻이다.
+- `'BUY' | 'SELL'`: 둘 중 하나만 가능한 값이라는 뜻이다.
 
-다음 파일을 읽습니다.
+`Order`, `Portfolio`는 지금 다 외우지 말고, 화면에서 해당 이름이 나올 때마다 다시 찾아보면 됩니다.
 
-1. `frontend/src/market/hooks/useOrderBookStream.ts`
-2. `frontend/src/market/components/OrderBook.tsx`
-3. `frontend/src/market/engine/quote.ts`
+### 6. `frontend/src/auth/api/authApi.ts`
 
-`useEffect`는 컴포넌트가 화면에 나타난 뒤 서버 연결, 타이머, 이벤트 구독처럼 **React 바깥과 연결하는 작업**을 할 때 사용합니다.
+이 파일은 화면이 아니라 서버와 통신하는 코드입니다.
 
-이 프로젝트에서는 실시간 호가 SSE 연결이 메시지를 받을 때마다 상태를 바꾸고, 상태 변화가 `OrderBook`과 `CandleChart` 화면 갱신으로 이어집니다.
+핵심:
+
+- `fetch(...)`: 백엔드 API에 요청을 보낸다.
+- `async`/`await`: 서버 응답이 올 때까지 기다린다.
+- API 함수는 데이터를 받아서 반환하고, 화면을 직접 그리지 않는다.
+
+구분을 기억하세요.
 
 ```text
-백엔드 SSE 메시지
-  → useOrderBookStream의 상태 변경
-  → App.tsx가 새 snapshot을 props로 전달
-  → OrderBook / CandleChart가 다시 렌더링
+컴포넌트: 화면을 그림
+api 파일: 서버와 통신함
 ```
 
-여기서는 특히 `return () => ...`를 찾아보세요. 이는 컴포넌트가 사라질 때 연결을 정리하는 **cleanup**입니다.
+### 7. `frontend/src/auth/hooks/useAuth.ts`
 
-## 6단계: 커스텀 Hook과 API 함수
+`useAuth`는 로그인과 관련된 상태·API 호출을 한곳에 모아 둔 **커스텀 Hook**입니다.
 
-다음 순서가 좋습니다.
+핵심:
 
-1. `frontend/src/auth/api/authApi.ts`
-2. `frontend/src/auth/hooks/useAuth.ts`
-3. `frontend/src/paper/api/paperApi.ts`
-4. `frontend/src/paper/hooks/useTrading.ts`
-
-역할을 이렇게 구분해 읽으면 편합니다.
-
-| 위치 | 역할 |
-|---|---|
-| `api/*.ts` | `fetch`로 백엔드에 요청하고 응답을 받음 |
-| `hooks/*.ts` | 로딩/오류/데이터 같은 React 상태와 API 호출을 묶음 |
-| `components/*.tsx` | 받은 데이터를 화면에 표시하고 사용자 입력을 받음 |
-| `shared/types.ts` | 서버와 화면이 주고받는 데이터의 모양을 정의함 |
-
-`useAuth`를 읽을 때는 “로그인 성공 뒤 `user` 상태가 어떻게 바뀌고, 그 결과 `App.tsx`의 어느 화면이 달라지는가?”를 따라가 보세요.
-
-## 7단계: 기능 하나를 처음부터 끝까지 따라가기
-
-처음에는 아래 두 흐름 중 하나를 선택해 한 번에 읽습니다.
-
-### A. 로그인 흐름
+- `user`, `loading`, `error`처럼 화면에서 필요한 상태를 관리한다.
+- `login`, `signup`, `logout` 함수를 밖으로 반환한다.
+- `App.tsx`는 Hook의 내부 구현을 몰라도 반환값만 받아 쓸 수 있다.
 
 ```text
-LoginForm.tsx
-  → useAuth.ts의 login
-  → authApi.ts의 API 요청
-  → User 타입
-  → App.tsx의 user 조건부 화면
+App.tsx
+  → useAuth() 호출
+  → user / login / logout 등을 받음
+  → 받은 값으로 화면을 결정함
 ```
 
-### B. 주문 흐름
+### 8. `frontend/src/market/components/OrderBook.tsx`
+
+호가 목록을 보여 주는 컴포넌트입니다. React에서 배열을 화면으로 바꾸는 방식을 배웁니다.
+
+핵심:
+
+- `bids.map(...)`, `asks.map(...)`: 배열 항목마다 JSX를 하나씩 만든다.
+- `key`: React가 목록 항목을 구별하도록 붙이는 값이다.
+- `onPriceClick(price)`: 자식 컴포넌트가 부모에게 “이 가격이 클릭되었다”고 알리는 방법이다.
+
+중요한 흐름:
 
 ```text
-OrderForm.tsx
-  → useTrading.ts
-  → paperApi.ts의 API 요청
-  → Order / Portfolio 타입
-  → OrderList, AccountSummary, FillHistory 화면
+부모가 onPriceClick 함수를 props로 전달
+  → OrderBook에서 가격을 클릭
+  → OrderBook이 onPriceClick(가격)을 호출
+  → App.tsx의 상태가 바뀜
 ```
 
-파일 하나를 완벽히 이해하려고 멈추기보다, 이 흐름을 왕복하며 “입력 → 상태 변경 → 화면 갱신”의 길을 찾는 데 집중하세요.
+### 9. `frontend/src/market/hooks/useOrderBookStream.ts`
 
-## 권장 학습 리듬
+이 파일에서 `useEffect`를 배웁니다. `useEffect`는 화면을 그리는 것 외에 서버 연결, 타이머, 구독 같은 작업을 할 때 사용합니다.
 
-- 하루 30~60분씩 한 단계만 진행합니다.
-- 먼저 실행해 보고, 파일을 읽고, 작은 수정 하나를 한 다음 `npm run build`로 확인합니다.
-- 모르는 문법은 표시해 두고 다음 단계로 넘어갑니다. 처음부터 차트 라이브러리나 SSE 세부 구현을 모두 이해할 필요는 없습니다.
-- 원본 기능을 크게 고치기보다는, 학습용으로 문구·버튼·조건부 표시처럼 되돌리기 쉬운 변경부터 해 봅니다.
+핵심:
 
-## 지금 바로 시작할 파일
+- `useEffect(() => { ... }, [])`: 컴포넌트가 처음 화면에 나타날 때 작업한다.
+- `EventSource`: 서버에서 오는 실시간 메시지를 받는다.
+- `setSnapshot(...)`: 새 메시지를 상태에 저장해 화면을 갱신한다.
+- `return () => eventSource.close()`: 화면이 사라질 때 연결을 정리한다.
 
-처음이라면 오늘은 아래 네 파일만 순서대로 보세요.
+```text
+서버 메시지 수신
+  → setSnapshot으로 상태 변경
+  → App.tsx가 새 데이터를 props로 전달
+  → OrderBook/CandleChart가 새 화면을 그림
+```
+
+### 10. `frontend/src/market/engine/quote.ts`
+
+이 파일은 React 코드가 아닌 일반 TypeScript 계산 함수입니다.
+
+핵심:
+
+- 화면과 상관없는 계산은 컴포넌트 밖의 함수로 분리한다.
+- 입력이 같으면 항상 같은 결과가 나오는 함수를 **순수 함수**라고 한다.
+- 이렇게 분리하면 테스트와 재사용이 쉬워진다.
+
+React 컴포넌트에 모든 계산을 넣지 않는 이유를 이해하는 단계입니다.
+
+### 11. `frontend/src/paper/components/OrderForm.tsx`
+
+이제 폼을 한 단계 더 자세히 봅니다.
+
+핵심:
+
+- `useState`로 입력값을 관리한다.
+- 사용자의 선택/입력을 주문 요청 데이터로 만든다.
+- 제출 성공 뒤 부모가 준 `onChanged` 같은 함수를 호출해 화면 갱신을 요청한다.
+
+`LoginForm`과 비교하면서 “입력 → 상태 → 제출”의 공통 구조를 찾아보세요.
+
+### 12. `frontend/src/paper/hooks/useTrading.ts`
+
+`useAuth.ts`를 이해한 뒤에 보세요. 구조가 더 복잡하지만 역할은 비슷합니다.
+
+핵심:
+
+- 주문, 잔고, 체결 내역 같은 여러 데이터를 관리한다.
+- API 요청 뒤 최신 데이터를 다시 가져온다.
+- `loading`, `error` 상태를 화면 컴포넌트에 제공한다.
+
+여기서는 모든 함수를 외우지 말고, `refresh`가 어떤 데이터를 다시 불러오는지만 따라가면 됩니다.
+
+### 13. `frontend/src/paper/components/TradingPanel.tsx`
+
+작은 화면 조각을 하나로 묶는 방법을 봅니다.
+
+핵심:
+
+- `OrderForm`, `AccountSummary`, `OrderList` 등을 import해서 배치한다.
+- 큰 화면은 작고 역할이 분명한 컴포넌트로 나눈다.
+- 필요한 데이터와 함수를 props로 각각 전달한다.
+
+`App.tsx`와 비교하면, 둘 다 “조립 담당 컴포넌트”라는 점을 알 수 있습니다.
+
+### 14. `frontend/src/market/components/CandleChart.tsx`
+
+마지막 파일입니다. React 기본기를 익힌 뒤에만 읽으세요.
+
+핵심:
+
+- `lightweight-charts` 같은 외부 라이브러리를 React에 연결하는 방법
+- `useEffect`에서 차트를 만들고, cleanup에서 제거하는 방법
+- props가 바뀌면 차트 데이터를 갱신하는 방법
+
+이 파일에서 이해가 안 되는 차트 전용 코드는 당장 건너뛰어도 됩니다. 목표는 **외부 객체의 생성·갱신·정리를 React 생명주기와 연결하는 방식**을 보는 것입니다.
+
+---
+
+## 오늘 처음 볼 파일 4개
+
+처음 시작하는 날에는 여기까지만 보세요.
 
 1. `frontend/package.json`
 2. `frontend/src/main.tsx`
 3. `frontend/src/App.tsx`
 4. `frontend/src/auth/components/LoginForm.tsx`
 
-그리고 `App.tsx`에 `<p>React 학습 중입니다.</p>`를 한 줄 추가해 화면이 바뀌는 것까지 확인하면, React 학습의 좋은 첫걸음입니다.
+마지막으로 `App.tsx`의 제목 아래에 아래 한 줄을 잠시 넣고 화면이 바뀌는지 확인해 보세요.
+
+```tsx
+<p>React 학습 중입니다.</p>
+```
+
+이 작은 변경이 보이면, 이미 “컴포넌트 수정 → Vite 갱신 → React 화면 변경” 흐름을 경험한 것입니다.

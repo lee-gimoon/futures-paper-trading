@@ -7,6 +7,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- 사용자가 사이트 URL에 접속하면 Vite가 기본 문서인 index.html을 응답하고,
+         브라우저는 아래 script 태그를 읽어 main.tsx를 다시 요청하면서 React 앱이 시작된다. -->
+    <!-- script 태그: HTML 문서에서 JavaScript 파일을 불러와 실행한다. -->
+    <!-- type="module": 이 파일을 ES 모듈 방식으로 실행하며 import/export 문법을 사용할 수 있다.
+         또한 일반 script와 달리 module script는 기본적으로 defer처럼 동작하여 HTML을 끝까지 읽은 뒤 실행된다. -->
+    <!-- src: React 앱의 실행이 시작되는 진입 파일(main.tsx)의 경로를 지정한다. -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

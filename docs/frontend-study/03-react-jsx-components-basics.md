@@ -75,13 +75,13 @@ XML은 태그로 구조를 표현하는 마크업 형식입니다.
 
 JSX도 태그처럼 보이는 문법을 JavaScript 안에 쓰기 때문에 `X`가 붙었습니다.
 
-```tsx
-const title = <h1>BTCUSDT</h1>;
-```
-
 다만 JSX가 실제 XML이나 HTML인 것은 아닙니다. 현재 공식적으로는 **JavaScript를 위한 문법 확장(syntax extension)**이라고 설명하는 편이 더 정확합니다.
 
 JSX는 JavaScript/TypeScript 코드 안에서 화면 구조를 HTML처럼 작성하는 문법입니다. 브라우저가 JSX를 그대로 실행하는 것도 아니며, Vite가 `.tsx` 파일의 JSX를 브라우저가 실행할 JavaScript로 변환합니다.
+
+```tsx
+const title = <h1>BTCUSDT</h1>;
+```
 
 위 코드는 `<h1>` 태그를 화면에 바로 출력하는 것이 아니라, React에게 “`h1` 요소와 BTCUSDT라는 텍스트가 필요하다”고 설명하는 값을 만듭니다. ReactDOM이 이 결과를 실제 DOM으로 반영합니다.
 

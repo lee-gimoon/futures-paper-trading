@@ -1,3 +1,5 @@
+// 'react'는 설치된 React 라이브러리를 가리키는 모듈 이름이며,
+// React 라이브러리의 기본 export(React API 객체)를 React라는 이름으로 가져온다.
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

@@ -27,6 +27,24 @@ JavaScript
 브라우저가 변경된 DOM을 다시 화면에 반영
 ```
 
+### JavaScript와 DOM의 역할
+
+JavaScript는 DOM 없이도 계산, 조건문, 타이머, 서버 요청 같은 로직을 실행할 수 있는 언어입니다.
+
+```text
+JavaScript만으로 할 수 있는 일
+  → 계산, 조건문, 타이머, 서버 요청 등
+```
+
+하지만 HTML 화면의 내용이나 구조를 JavaScript로 바꾸려면 DOM이 필요합니다. JavaScript는 DOM에서 요소를 찾고, 그 요소의 텍스트·속성·자식 요소를 변경해 화면을 갱신합니다.
+
+```text
+JavaScript로 화면을 바꾸는 일
+  → DOM 요소를 찾아 변경해야 함
+```
+
+즉 `<script>` 안에서 JavaScript를 실행할 수는 있지만, JavaScript가 브라우저 화면을 변경하는 순간에는 보통 DOM을 통해 변경합니다.
+
 브라우저가 HTML을 읽으면 태그의 부모·자식 관계를 가진 DOM 객체 트리가 생성됩니다. 예를 들어 아래 HTML을 읽었을 때 생성되는 DOM은 다음과 같습니다.
 
 ```html

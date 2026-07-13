@@ -35,7 +35,7 @@ document
 JavaScript는 `document` 객체를 통해 이 DOM을 찾고 변경할 수 있습니다.
 
 ```ts
-const title = document.querySelector('h1');
+const title = document.querySelector('h1'); // query(질의·조회) + selector(선택 조건): CSS 선택자로 첫 번째 h1을 찾는다.
 title?.textContent = 'ETHUSDT';
 ```
 
@@ -65,7 +65,19 @@ document
 
 ## 3. ReactDOM이란?
 
-`ReactDOM`은 React와 브라우저 DOM 사이를 연결하는 **웹 브라우저용 렌더러**입니다.
+`ReactDOM`은 React와 브라우저 DOM 사이를 연결하는 **웹 브라우저용 렌더러**입니다. 여기서 렌더러는 React가 계산한 화면 구조를 브라우저 DOM 요소로 만들고 갱신하는 도구라는 뜻입니다.
+
+React는 `<App />`, `<h1>BTCUSDT</h1>`처럼 “현재 상태라면 어떤 화면이 필요할지”를 컴포넌트와 JSX로 계산합니다. 하지만 React 자체가 브라우저의 `<div>`나 `<h1>`을 직접 만드는 것은 아닙니다. ReactDOM이 그 결과를 받아 `document.createElement(...)`, `appendChild(...)` 같은 브라우저 DOM 기능으로 실제 요소를 `#root` 안에 생성·수정합니다.
+
+```text
+React: "h1에 BTCUSDT를 보여야 한다"는 화면 구조를 계산
+  ↓
+ReactDOM: 실제 h1 DOM 요소를 만들고 div#root에 연결
+  ↓
+브라우저 렌더링 엔진: DOM을 분석해 화면의 픽셀로 그림
+```
+
+따라서 ReactDOM은 픽셀을 직접 그리는 브라우저 엔진이 아닙니다. React의 화면 결과를 **브라우저가 그릴 수 있는 DOM으로 반영하는 연결층**입니다.
 
 ```text
 React 컴포넌트와 JSX

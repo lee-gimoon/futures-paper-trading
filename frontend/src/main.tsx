@@ -32,6 +32,8 @@ import './styles.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   // JSX 문법: JavaScript/TypeScript 안에 HTML과 비슷한 태그 표기법으로 React UI 구조를 작성하는 문법이며, Vite가 JavaScript로 변환한다.
   <React.StrictMode>
+    {/* <App />은 React에게 App 컴포넌트(UI)를 렌더링해 화면에 포함하라고 전달하는 JSX 표현입니다. */}
+    {/* 이후 render 과정에서 React가 App 함수를 호출하고, 반환된 UI를 root에 반영합니다. */}
     <App />
   </React.StrictMode>
 );

@@ -12,7 +12,7 @@ function Pnl({ value }: { value: number }) {
   return <span className={cls}>{sign}{value.toFixed(2)}</span>;
 }
 
-// 계좌 요약: 평가자산 · 현금 · 실현/미실현 PnL · 레버리지/증거금/가용잔고 · 현재 포지션(청산가 포함).
+// 계좌 요약: 평가자산 · 초기 자금 · 실현/미실현 PnL · 레버리지/증거금/가용잔고 · 현재 포지션(청산가 포함).
 //   미실현 PnL·equity는 백엔드 값 대신 실시간 mid로 다시 계산한다(SSE가 100ms마다 갱신 → 즉시 따라감).
 //   청산가는 진입가·레버리지로만 정해져 mid와 무관하므로 백엔드 값을 그대로 쓴다.
 export function AccountSummary({ portfolio, midPrice }: Props) {
@@ -32,7 +32,7 @@ export function AccountSummary({ portfolio, midPrice }: Props) {
         <span>{liveEquity.toFixed(2)} USDT</span>
       </div>
       <div className="account-row">
-        <span>현금</span>
+        <span>초기 자금</span>
         <span>{portfolio.cashBalance.toFixed(2)}</span>
       </div>
       <div className="account-row">

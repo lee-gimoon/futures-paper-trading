@@ -56,9 +56,12 @@ import type { OrderBookSnapshot } from './shared/types';
 //                └─ OrderBook 또는 수신 대기 메시지
 
 // 현재 열린 인증 폼의 종류. null이면 로그인/회원가입 폼을 열지 않은 상태다.
+// FormMode는 변수명이 아닌 타입 이름이며, FormMode 타입 변수에는 'login', 'signup', null만 저장할 수 있다.
 type FormMode = 'login' | 'signup' | null;
 
 // 로그인했을 때만 표시할 거래 레이아웃이 부모(App)로부터 받는 값들.
+// `type TradingLayoutProps = { ... }`는 TradingLayoutProps 타입의 모양을 정의하며,
+// 이 타입으로 선언된 변수에는 이 모양을 만족하는 객체만 저장할 수 있다.
 type TradingLayoutProps = {
   snapshot: OrderBookSnapshot | null;
   midPrice: number | null;

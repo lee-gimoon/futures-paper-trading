@@ -200,6 +200,11 @@ export default function App() {
         )}
 
         {/* 로그인 상태: 사용자 거래 정보까지 포함한 3열 레이아웃을 표시한다. */}
+        {/* React는 부모가 자식 컴포넌트에 전달하는 값을 하나의 객체로 묶고, 이 객체를 props라고 부른다. */}
+        {/* App이 부모로서 시세 데이터와 이벤트 처리 함수를 AuthenticatedTradingLayout에 props로 전달한다.
+            `snapshot={snapshot}`에서 왼쪽 snapshot은 자식 컴포넌트가 받을 props 이름이고,
+            오른쪽 {snapshot}은 App 안에서 useOrderBookStream으로 얻은 JavaScript 변수 값이다. */}
+        {/* JSX의 { ... } 안에는 JavaScript 표현식(값을 만드는 코드)을 작성할 수 있다. */}
         {user && (
           <AuthenticatedTradingLayout
             snapshot={snapshot}

@@ -65,9 +65,34 @@ setTimeout(() => {
 
 핵심은 화살표 함수 문법이 아니라, **누가 언제 호출하느냐를 전달받은 함수에 맡긴다**는 점입니다.
 
-실행 순서는 `1 → closePanel() 내부 코드 → 2 → 3`이다. `setTimeout`의 시간이 0이어도 현재 `handleClick`이 끝나기 전에 콜백이 실행되지는 않는다.
+실행 순서는 `1 → closePanel() 내부 코드 → 2 → 3`이다. `setTimeout`의 시간이 0이어도, JavaScript는 한 번 실행 중인 동기 함수의 중간을 끼어들어 다른 콜백을 실행하지 않는 **run-to-completion** 방식입니다. 그래서 현재 `handleClick`의 동기 코드가 모두 끝나기 전에는 타이머 콜백이 실행되지 않습니다.
 
-`fetch`도 같은 원리다. `fetch(...)`를 호출해 요청을 등록하는 부분은 지금 실행되지만, 서버 응답 뒤의 `await` 다음 코드는 응답이 도착해 Promise가 완료된 뒤 큐에서 실행된다.
+### `async`, `await`, `fetch`는 어떻게 함께 동작하는가?
+
+```ts
+async function load() {
+  console.log('1. 요청 시작');
+
+  const response = await fetch('/api/users');
+
+  console.log('3. 응답 뒤 실행');
+  return response;
+}
+
+console.log('0');
+const loadPromise = load();
+console.log('2');
+```
+
+`async`는 이 함수 전체를 백그라운드에서 실행한다는 뜻이 아니다. **`await`를 사용할 수 있게 하고, 함수의 최종 결과를 Promise로 반환하게 하는 표시**다.
+
+`load()`는 `await` 전까지 즉시 실행된다. 따라서 `0 → 1`이 출력되고, `fetch`는 요청을 시작한 뒤 Promise를 반환한다. Promise가 아직 완료되지 않았다면 `await` 뒤의 코드는 잠시 보류되고, 호출한 쪽은 계속 실행되어 `2`가 출력된다.
+
+`await` 다음의 코드는, 해당 Promise가 완료될 때까지 **그 `async` 함수 안에서 실행이 보류된다.** 여기서 “보류”는 JavaScript 전체가 멈추는 블로킹이 아니다. `load` 함수의 `await` 뒤쪽 코드만 나중으로 미뤄질 뿐, 호출자 코드나 다른 이벤트 처리, 화면 갱신 등은 계속 진행될 수 있다.
+
+응답이 도착해 Promise가 완료된 뒤에는 현재 동기 코드가 끝난 후 `load`가 재개되어 `3`이 출력된다.
+
+실행 순서: `0 → 1 → 2 → 3`
 
 ## 네트워크 I/O는 메인 스레드가 기다리지 않는다
 

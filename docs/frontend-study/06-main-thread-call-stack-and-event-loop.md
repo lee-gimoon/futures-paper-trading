@@ -59,8 +59,7 @@ flowchart TB
     TQ["태스크 큐들<br/>HTML 데이터 전달 · 클릭 이벤트<br/>타이머 · 네트워크 완료 후속 처리"]
     MQ["마이크로태스크 큐<br/>Promise.then · await 이후 코드"]
 
-    subgraph MAIN[" "]
-      THREAD["렌더러 메인 스레드<br/>(OS 스레드 하나)"]
+    subgraph MAIN["렌더러 메인 스레드(OS 스레드 하나)"]
       EL["브라우저의 이벤트 루프 구현 코드 실행<br/>실행 가능한 태스크 확인·선택"]
       WAIT["태스크가 없으면<br/>메인 스레드 대기"]
       TASK["선택된 태스크 코드 실행<br/>다음 태스크 선택은 진행되지 않음"]
@@ -74,8 +73,7 @@ flowchart TB
   end
 
   SOURCES -.->|"관련 태스크 준비·등록"| TQ
-  SOURCES -->|"태스크가 준비되면<br/>대기 중인 메인 스레드 깨움"| THREAD
-  THREAD -->|"이 스레드가 실행"| EL
+  SOURCES -->|"태스크가 준비되면<br/>대기 중인 메인 스레드 깨움"| EL
   EL -->|"태스크 큐 확인"| TQ
   TQ -->|"실행할 태스크 없음"| WAIT
   WAIT -->|"태스크 도착·스레드 깨움"| EL

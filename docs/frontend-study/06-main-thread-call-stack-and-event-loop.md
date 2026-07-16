@@ -64,7 +64,8 @@ flowchart TB
 flowchart TB
   SOURCES["태스크가 준비되는 계기<br/>HTML 데이터 청크 · 사용자 입력 · 타이머 만료<br/>네트워크 완료 · 렌더링 기회"]
 
-  subgraph RENDERER["렌더러 프로세스"]
+  subgraph RENDERER[" "]
+    RENDERER_TITLE["렌더러 프로세스"]:::processTitle
     TQ["태스크 큐들<br/>HTML 파싱 · 클릭 이벤트 전달 · 타이머 콜백<br/>네트워크 완료 후속 처리 · 렌더링 태스크"]
     MQ["마이크로태스크 큐<br/>Promise.then 콜백 · await 이후 코드<br/>queueMicrotask 콜백"]
 
@@ -72,8 +73,8 @@ flowchart TB
       EL["① 렌더러 메인 스레드가<br/>이벤트 루프 구현 코드 실행"]
       HAS_TASK{"실행 가능한<br/>태스크가 있는가?"}
       SELECT["② 이벤트 루프 구현 코드가<br/>태스크 하나를 선택하고 큐에서 제거"]
-      WAIT["태스크가 없으면<br/>렌더러 메인 스레드 대기"]
-      WAKE["새 태스크가 준비되어 스레드가 깨어나면<br/>① 이벤트 루프 구현 코드부터 다시 시작"]
+      WAIT["실행할 태스크가 없으면<br/>메시지 펌프가 메인 스레드를 대기시킴"]
+      WAKE["태스크 게시 · OS 이벤트 · 예약 시각 도달<br/>메시지 펌프가 메인 스레드를 깨움<br/>① 이벤트 루프 구현 코드부터 다시 시작"]
       TASK["③ 같은 렌더러 메인 스레드가<br/>선택된 태스크 코드 실행<br/>일반적으로 다른 태스크로 전환하지 않음"]
       TASK_DONE["④ 선택된 태스크의 모든 처리 완료<br/>태스크 종료"]
       CHECK["⑤ 마이크로태스크 체크포인트<br/>마이크로태스크 큐 확인"]
@@ -82,11 +83,13 @@ flowchart TB
     end
   end
 
+  RENDERER_TITLE ~~~ EL
+  RENDERER_TITLE ~~~ TQ
   SOURCES -.->|"필요한 태스크 준비·등록"| TQ
   EL -.->|"실행 가능한 큐·태스크 확인"| TQ
   EL --> HAS_TASK
   HAS_TASK -.->|"없음"| WAIT
-  WAIT -.->|"새 태스크 준비·스레드 깨움"| WAKE
+  WAIT -.->|"깨움 신호"| WAKE
   HAS_TASK -->|"있음"| SELECT
   SELECT -->|"제어권 이동"| TASK
   TASK -->|"태스크 내부 처리는 다음 그림"| TASK_DONE
@@ -95,6 +98,8 @@ flowchart TB
   CHECK -->|"비어 있지 않음"| MICRO_JS
   CHECK -->|"비어 있음"| BACK
   MICRO_JS -->|"큐를 모두 비운 뒤"| BACK
+
+  classDef processTitle fill:transparent,stroke:transparent,color:#333
 ```
 
 #### 선택된 태스크 코드 내부
@@ -134,6 +139,8 @@ flowchart TB
 태스크가 끝나면 **마이크로태스크 체크포인트 자체는 수행**한다. 마이크로태스크 큐가 비어 있으면 실행할 마이크로태스크가 없고, 비어 있지 않으면 실행 중 새로 추가되는 것까지 큐가 빌 때까지 처리한다. 체크포인트는 태스크 종료 외에도 HTML 표준이 정한 시점에 수행된다. 예를 들어 HTML 파서가 동기적으로 실행을 요청한 스크립트는 스크립트 실행 정리 과정에서 체크포인트를 거친 뒤 파서로 돌아간다.
 
 **그림 읽는 법:** 두 번째 그림의 맨 위 박스는 특정 프로세스나 스레드가 아니라 **태스크가 준비되는 여러 계기**를 묶어 나타낸 것이다. 이러한 계기를 감지한 브라우저 내부 구성 요소가 필요한 태스크를 준비해 알맞은 태스크 큐에 등록한다.
+
+**대기 중 새 태스크를 알아채는 방법:** 이벤트 루프가 CPU를 사용하면서 태스크 큐를 계속 들여다보는 **바쁜 폴링(busy polling)** 방식은 아니다. 실행 가능한 태스크가 없으면 브라우저의 **메시지 펌프(message pump)** 가 렌더러 메인 스레드를 운영체제의 대기 상태로 둔다. 이후 다른 스레드나 브라우저 구성 요소가 태스크를 게시하거나, 입력·IPC 같은 알림이 도착하거나, 가장 이른 지연 태스크의 예약 시각이 되면 메시지 펌프에 깨움 신호가 전달된다. 깨어난 메인 스레드는 이벤트 루프 구현 코드로 돌아가 실행 가능한 큐와 태스크를 다시 확인한다. 즉 **실행 중에는 다음 일을 고를 때 큐를 확인하지만, 일이 없는 동안에는 계속 확인하며 CPU를 소비하지 않고 알림을 기다린다.**
 
 맨 위 계기에서 태스크 큐로 향하는 점선은 **태스크 등록**, 이벤트 루프 구현 코드에서 태스크 큐로 향하는 점선은 **실행 가능한 큐·태스크 확인**, ② 상자에서 선택된 태스크로 향하는 화살표는 **제어권 이동**을 뜻한다. 태스크 큐와 마이크로태스크 큐는 데이터를 관리하는 구조이고 이벤트 루프는 처리 모델과 그 구현 코드다. 어느 것도 별도 실행 스레드를 뜻하지 않는다.
 
@@ -188,3 +195,5 @@ JavaScript 엔진이 스크립트나 콜백을 실행하기 시작하면 함수 
 - [HTML Standard: Perform a microtask checkpoint](https://html.spec.whatwg.org/multipage/webappapis.html#perform-a-microtask-checkpoint)
 - [HTML Standard: Clean up after running script](https://html.spec.whatwg.org/multipage/webappapis.html#clean-up-after-running-script)
 - [Chromium: Task Scheduling in Blink](https://chromium.googlesource.com/chromium/src/+/HEAD/third_party/blink/renderer/platform/scheduler/TaskSchedulingInBlink.md)
+- [Chromium: SequenceManager](https://chromium.googlesource.com/chromium/src/+/HEAD/base/task/sequence_manager/README.md)
+- [Chromium: Threading and Tasks](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/threading_and_tasks.md)

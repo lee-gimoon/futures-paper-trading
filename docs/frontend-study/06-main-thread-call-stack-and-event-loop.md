@@ -110,7 +110,7 @@ flowchart TB
 flowchart TB
   subgraph MAIN["선택된 태스크를 실행 중인 렌더러 메인 스레드"]
     direction TB
-    TASK["선택된 태스크 코드 실행<br/><small>(아래 네 갈래는 대표적인 내부 처리 경로 예시)</small>"]
+    TASK["선택된 태스크 코드 실행<br/>(태스크 종류별<br/>대표 처리 경로 예시)"]
     PARSER["HTML 파서 코드<br/>수신 데이터 청크 해석 · DOM 생성"]
     SCRIPT_JS["JavaScript 엔진 코드<br/>HTML 파서가 요청한 스크립트 실행"]
     PARSER_RESUME["스크립트 실행 정리와 체크포인트 후<br/>HTML 파서 코드로 복귀<br/>남은 데이터 청크 처리"]

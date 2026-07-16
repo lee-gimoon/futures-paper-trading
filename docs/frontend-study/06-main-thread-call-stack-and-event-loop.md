@@ -61,7 +61,7 @@ flowchart TB
 
     subgraph MAIN[" "]
       THREAD["렌더러 메인 스레드<br/>(OS 스레드 하나)"]
-      EL["이벤트 루프 구현 코드<br/>실행 가능한 태스크 확인·선택"]
+      EL["브라우저의 이벤트 루프 구현 코드 실행<br/>실행 가능한 태스크 확인·선택"]
       WAIT["태스크가 없으면<br/>메인 스레드 대기"]
       TASK["선택된 태스크 코드 실행<br/>다음 태스크 선택은 진행되지 않음"]
       PARSER["HTML 파서 코드<br/>HTML 해석 · DOM 생성"]
@@ -73,9 +73,10 @@ flowchart TB
     end
   end
 
-  SOURCES -->|"관련 태스크 준비·등록"| TQ
+  SOURCES -.->|"관련 태스크 준비·등록"| TQ
+  SOURCES -->|"태스크가 준비되면<br/>대기 중인 메인 스레드 깨움"| THREAD
   THREAD -->|"이 스레드가 실행"| EL
-  EL -->|"실행 가능한 태스크 확인"| TQ
+  EL -->|"태스크 큐 확인"| TQ
   TQ -->|"실행할 태스크 없음"| WAIT
   WAIT -->|"태스크 도착·스레드 깨움"| EL
   TQ -->|"이벤트 루프가 태스크 하나 선택<br/>제어권 이동"| TASK

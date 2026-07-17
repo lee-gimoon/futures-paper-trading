@@ -47,7 +47,9 @@ worker 스레드 0이 아래 코드를 모두 실행
    └─ worker가 run()의 다음 반복 실행
 ```
 
-#### **EventLoop는 전담 worker 스레드가 반복 실행하는 객체로, 준비된 Channel I/O와 큐의 태스크를 확인하고 해당 처리 코드를 순서대로 호출하는 역할을 한다.**
+#### **EventLoop와 worker 스레드의 역할**
+
+**EventLoop는 전담 worker 스레드가 반복 실행하는 객체다. EventLoop 구현 코드는 준비된 Channel I/O와 큐의 태스크를 확인하고 해당 처리 메서드를 차례로 호출한다. EventLoop 코드뿐 아니라 호출된 I/O·WebFlux·`Runnable` 코드까지 실제로 실행하는 주체는 모두 같은 worker 스레드다.**
 
 ```mermaid
 %%{init: {"themeVariables": {"fontSize": "16px"}, "flowchart": {"nodeSpacing": 18, "rankSpacing": 24, "curve": "linear", "subGraphTitleMargin": {"top": 0, "bottom": 14}}}}%%

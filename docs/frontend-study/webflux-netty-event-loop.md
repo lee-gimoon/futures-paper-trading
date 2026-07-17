@@ -8,6 +8,8 @@
 
 Netty에서는 **JVM `main` 스레드가 EventLoop의 `run()` 반복문을 실행하지 않는다.** `main`은 Spring Boot와 서버를 시작할 뿐이다. 이후에는 여러 **Netty worker 스레드**가 각각 자신에게 연결된 `EventLoop`의 `run()` 구현 코드를 반복 실행한다.
 
+> **핵심: worker 스레드가 EventLoop 객체의 `run()` 코드와, 그 코드가 호출하는 Channel I/O 처리·WebFlux·`Runnable` 코드를 직접 실행한다.**
+
 > **EventLoop는 스레드가 아니다.** I/O와 태스크를 관리하는 실행기 객체이며, 실제 코드를 실행하는 것은 그 EventLoop를 담당하는 JVM/OS worker 스레드다.
 
 ## main, worker, EventLoop, Channel의 관계
@@ -27,14 +29,18 @@ JVM main 스레드
 서버가 시작된 뒤에는 각 worker가 자신에게 연결된 EventLoop의 반복 코드를 실행한다. Channel A와 B의 순서는 설명을 위한 예시다.
 
 ```text
-worker 스레드 0
-└─ EventLoop 0의 run() 실행 중
-   ├─ 어떤 Channel의 I/O가 준비됐는지 확인
-   ├─ Channel A가 준비됐다면 Channel A 처리 메서드 호출
-   ├─ Channel A 처리가 끝나면 processSelectedKeys()로 복귀
-   ├─ Channel B도 준비됐다면 Channel B 처리 메서드 호출
-   ├─ 큐의 Runnable 실행
-   └─ run()의 다음 반복
+worker 스레드 0이 아래 코드를 모두 실행
+└─ EventLoop 0의 run() 코드 실행 중
+   ├─ run()에서 어떤 Channel의 I/O가 준비됐는지 확인
+   ├─ run()이 processSelectedKeys() 호출
+   │  ├─ Channel A가 준비됐다면 worker가 Channel A I/O 처리 메서드 실행
+   │  │  └─ ChannelPipeline → Reactor Netty → WebFlux → Controller 실행
+   │  ├─ Channel A 처리가 끝나면 processSelectedKeys()로 복귀
+   │  └─ Channel B도 준비됐다면 worker가 Channel B I/O 처리 메서드 실행
+   ├─ processSelectedKeys()가 끝나면 run()으로 복귀
+   ├─ run()이 runAllTasks(...) 호출
+   │  └─ worker가 큐의 Runnable 실행
+   └─ worker가 run()의 다음 반복 실행
 ```
 
 ```mermaid
@@ -48,14 +54,14 @@ flowchart LR
     INIT --> CREATE --> REQUEST
   end
 
-  subgraph RUNTIME["런타임 · EventLoop 0의 상태와 실행"]
+  subgraph RUNTIME["런타임 · worker 스레드 0이 run()과 호출된 코드를 실행"]
     direction TB
-    READY["ready Channel I/O 상태<br/>Selector의 selected-key set<br/>상태·저장소이지 실행 코드가 아님"]
-    QUEUES["실행 대기 태스크<br/>taskQueue · scheduledTaskQueue<br/>저장소이지 실행 코드가 아님"]
+    READY["run()이 확인하는 ready Channel I/O 상태<br/>Selector의 selected-key set<br/>worker가 확인하는 대상"]
+    QUEUES["runAllTasks(...)가 확인하는 실행 대기 큐<br/>taskQueue · scheduledTaskQueue<br/>worker가 Runnable을 꺼내는 저장소"]
 
-    RUN["worker 실행 ①<br/>EventLoop 0의 NioEventLoop.run() 반복<br/>select · 상태 확인 · 메서드 호출"]
-    IO["worker 실행 ② · processSelectedKeys()<br/>ready Channel 순회 (예: A → B)<br/>각 Channel의 I/O 처리 메서드 실행<br/>HTTP read → Pipeline → Reactor Netty<br/>→ WebFlux → Controller"]
-    TASK["worker 실행 ③ · runAllTasks(...)<br/>큐를 확인하고<br/>Runnable이 있으면 실행"]
+    RUN["worker가 직접 실행 ①<br/>EventLoop 0의 NioEventLoop.run() 반복<br/>select · 상태 확인 · 메서드 호출"]
+    IO["worker가 직접 실행 ② · processSelectedKeys()<br/>ready Channel 순회 (예: A → B)<br/>각 Channel의 I/O 처리 메서드 실행<br/>HTTP read → Pipeline → Reactor Netty<br/>→ WebFlux → Controller"]
+    TASK["worker가 직접 실행 ③ · runAllTasks(...)<br/>큐를 확인하고<br/>Runnable이 있으면 직접 실행"]
 
     RUN -->|"ready I/O가 있으면 호출"| IO
     IO -->|"I/O 처리 뒤 task 단계"| TASK
@@ -72,7 +78,7 @@ flowchart LR
 - `EventLoopGroup`은 여러 EventLoop를 생성·보관·선택하는 객체다. Group 객체 자체의 코드를 계속 실행하는 전용 스레드는 없으며, 부팅 중 생성·초기화 메서드는 이를 호출한 스레드, 보통 `main`이 실행한다.
 - `main`은 bind를 시작하지만 실제 서버 Channel 등록·bind 단계는 선택된 EventLoop worker에 위임될 수 있다.
 - `EventLoop 0`은 Channel A·B가 자신에게 등록되어 있다는 관계와 I/O 준비 상태·task queue를 관리한다.
-- Channel 자체를 실행하는 것이 아니라, **EventLoop 0의 `run()`을 실행 중인 worker 스레드 0이 ready Channel의 I/O 메서드와 Pipeline 코드를 호출해 실행**한다.
+- 그림의 ① `run()`, ② Channel I/O·WebFlux 처리, ③ 큐의 `Runnable`은 **모두 worker 스레드 0이 실행**한다. ready I/O 상태와 task queue는 worker가 확인하는 대상이다.
 - 일반적인 Netty 구현에서는 EventLoop 하나와 전담 worker 하나가 장기간 연결되며, 요청마다 새 스레드나 EventLoop를 만들지 않는다.
 
 ## worker가 실행하는 이벤트 루프 구현 코드

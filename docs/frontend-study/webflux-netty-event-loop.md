@@ -26,30 +26,28 @@ JVM main 스레드
 → Channel 등록과 EventLoop worker 시작 요청
 ```
 
-서버가 시작된 뒤에는 각 worker가 자신에게 연결된 EventLoop의 반복 코드를 실행한다. 아래는 현재 프로젝트가 사용하는 Netty 4.2 구조의 NIO 예시이며, Channel A와 B의 처리 순서는 설명을 위한 것이다.
+서버가 시작된 뒤에는 각 worker가 자신에게 연결된 EventLoop의 반복 코드를 실행한다. 먼저 전체 흐름을 단순화하면 다음과 같다.
 
 ```text
-worker 스레드 0이 아래 코드를 모두 실행
-└─ EventLoop 0의 SingleThreadIoEventLoop.run() 실행 중
-   ├─ run()이 runIo() 호출
-   │  └─ runIo()가 IoHandler.run() 호출
-   │     └─ NIO에서는 NioIoHandler.run() 실행
-   │        ├─ 준비된 Channel I/O 확인
-   │        └─ processSelectedKeys() 호출
-   │           ├─ Channel A의 HTTP 요청 read를 worker가 처리
-   │           │  └─ 스레드 전환 경계 없이 처리가 이어진다면
-   │           │     ChannelPipeline → Reactor Netty → WebFlux → Controller 실행
-   │           ├─ Channel A 처리 후 processSelectedKeys()로 복귀
-   │           └─ Channel B도 HTTP 요청 read가 준비됐다면 worker가 I/O 처리 메서드 실행
-   ├─ I/O 처리가 끝나면 runIo() → run()으로 복귀
-   ├─ run()이 runAllTasks(maxTaskProcessingQuantumNs) 호출
-   │  └─ worker가 큐의 Runnable 실행
-   └─ worker가 run()의 다음 반복 실행
+worker 스레드가 EventLoop의 run() 실행
+└─ 반복
+   ├─ 준비된 Channel I/O 확인
+   ├─ 준비된 I/O가 있으면 Channel 처리 메서드 호출
+   │  └─ HTTP 요청 처리가 이어지면
+   │     ChannelPipeline → Reactor Netty → WebFlux → Controller
+   ├─ 큐에 Runnable이 있으면 실행
+   └─ 다음 반복
 ```
 
 #### **EventLoop와 worker 스레드의 역할**
 
-**EventLoop는 전담 worker 스레드가 반복 실행하는 객체다. EventLoop 구현 코드는 준비된 Channel I/O와 큐의 태스크를 확인하고 해당 처리 메서드를 차례로 호출한다. EventLoop 코드뿐 아니라 호출된 I/O·WebFlux·`Runnable` 코드까지 실제로 실행하는 주체는 모두 같은 worker 스레드다.**
+**EventLoop는 전담 worker 스레드가 반복 실행하는 객체다. EventLoop 구현 코드는 준비된 Channel I/O와 큐의 태스크를 확인하고 해당 처리 메서드를 차례로 호출한다.**
+
+- **OS:** 소켓에 읽기·쓰기 같은 I/O가 준비됐다는 상태를 만든다.
+- **Netty 개발자:** I/O 준비 상태와 태스크 큐를 확인하고 처리 메서드를 호출하는 EventLoop 로직을 구현했다.
+- **Spring·Reactor 개발자:** Reactor Netty와 WebFlux 처리 코드를 구현했다.
+- **애플리케이션 개발자:** Controller와 비즈니스 코드를 작성한다.
+- **worker 스레드:** EventLoop 코드와 그 코드가 호출한 I/O·WebFlux·`Runnable` 코드를 실제로 실행한다.
 
 ```mermaid
 %%{init: {"themeVariables": {"fontSize": "16px"}, "flowchart": {"nodeSpacing": 18, "rankSpacing": 24, "curve": "linear", "subGraphTitleMargin": {"top": 0, "bottom": 14}}}}%%

@@ -171,7 +171,7 @@ async function handleSubmit() {
 4. Spring Boot가 HTTP 응답을 전송한다.
 5. 브라우저 네트워크 계층이 응답을 해석하고 fetch Promise를 완료한다.
 6. await 다음 코드를 재개할 마이크로태스크가 큐에 등록된다.
-7. 현재 JavaScript 작업이 끝나면, 같은 handleSubmit 호출이 await 다음 줄부터 재개된다.
+7. 서버 응답이 와서 fetch Promise가 완료된 뒤, 현재 JavaScript 작업이 끝나 호출 스택이 비면 등록된 마이크로태스크가 실행된다. 이때 같은 handleSubmit 호출이 await 다음 줄부터 재개된다.
 8. response.ok가 true이면 '2. 서버 응답 수신 후 실행'을 출력하고 onClose()를 호출한다.
 ```
 

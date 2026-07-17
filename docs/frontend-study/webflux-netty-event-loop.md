@@ -29,14 +29,14 @@ JVM main 스레드
 서버가 시작된 뒤에는 각 worker가 자신에게 연결된 EventLoop의 반복 코드를 실행한다. 먼저 전체 흐름을 단순화하면 다음과 같다.
 
 ```text
-worker 스레드가 EventLoop의 run() 실행
-└─ 반복
+worker 스레드가 EventLoop의 run()에 진입
+└─ run() 내부 반복문을 서버 종료 전까지 반복
    ├─ 준비된 Channel I/O 확인
    ├─ 준비된 I/O가 있으면 Channel 처리 메서드 호출
    │  └─ HTTP 요청 처리가 이어지면
    │     ChannelPipeline → Reactor Netty → WebFlux → Controller
    ├─ 큐에 Runnable이 있으면 실행
-   └─ 다음 반복
+   └─ run() 내부의 다음 반복
 ```
 
 #### **EventLoop와 worker 스레드의 역할**

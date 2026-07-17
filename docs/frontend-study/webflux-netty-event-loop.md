@@ -41,7 +41,7 @@ worker 스레드가 EventLoop의 run() 실행
 
 #### **EventLoop와 worker 스레드의 역할**
 
-**EventLoop는 전담 worker 스레드가 반복 실행하는 객체다. EventLoop 구현 코드는 준비된 Channel I/O와 큐의 태스크를 확인하고 해당 처리 메서드를 차례로 호출한다.**
+**EventLoop는 전담 worker 스레드가 반복 실행하는 객체다. EventLoop 구현 코드는 준비된 Channel I/O와 큐의 태스크를 확인하고 해당 처리 메서드를 차례로 호출한다. EventLoop 코드뿐 아니라 호출된 I/O·WebFlux·`Runnable` 코드까지 실제로 실행하는 주체는 모두 같은 worker 스레드다.**
 
 - **OS:** 소켓에 읽기·쓰기 같은 I/O가 준비됐다는 상태를 만든다.
 - **Netty 개발자:** I/O 준비 상태와 태스크 큐를 확인하고 처리 메서드를 호출하는 EventLoop 로직을 구현했다.

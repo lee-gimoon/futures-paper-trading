@@ -141,11 +141,12 @@ OS
   → fetch Promise 완료
 
 브라우저 이벤트 루프
-  → await 뒤 코드를 재개할 마이크로태스크를 등록
+  → 중단된 async 함수의 실행을 재개할 마이크로태스크를 등록
   → 현재 작업이 끝난 뒤 마이크로태스크를 선택
 
 JavaScript 엔진
-  → 선택된 코드, 즉 await 다음 줄부터 실행
+  → 완료된 Promise의 값을 await 표현식의 결과로 사용
+  → 변수 대입을 마친 뒤, 다음 await 또는 함수 종료 지점까지 실행
 ```
 
 ### 예시: 로그인 응답 후 `await` 다음 줄이 실행되는 과정
@@ -170,10 +171,17 @@ async function handleSubmit() {
 3. await는 현재 handleSubmit 호출을 잠시 중단한다. 메인 스레드는 다른 작업을 처리할 수 있다.
 4. Spring Boot가 HTTP 응답을 전송한다.
 5. 브라우저 네트워크 계층이 응답을 해석하고 fetch Promise를 완료한다.
-6. await 다음 코드를 재개할 마이크로태스크가 큐에 등록된다.
-7. 서버 응답이 와서 fetch Promise가 완료된 뒤, 현재 JavaScript 작업이 끝나 호출 스택이 비면 등록된 마이크로태스크가 실행된다. 이때 같은 handleSubmit 호출이 await 다음 줄부터 재개된다.
+6. 중단된 handleSubmit의 실행을 재개할 마이크로태스크가 큐에 등록된다.
+7. 서버 응답이 와서 fetch Promise가 완료된 뒤, 현재 JavaScript 작업이 끝나 호출 스택이 비면 등록된 마이크로태스크가 실행된다. Promise의 완료 값인 Response가 response에 대입되고, 같은 handleSubmit 호출이 if 문부터 계속 실행된다.
 8. response.ok가 true이면 '2. 서버 응답 수신 후 실행'을 출력하고 onClose()를 호출한다.
 ```
+
+여기서 소스 코드 자체가 큐에 복사되는 것은 아니다. 큐에 등록되는 것은 **중단된 `handleSubmit`의 실행을 재개하는 작업**이다. 이 예시에서 재개되는 코드의 정확한 범위는 다음과 같다.
+
+- `fetch('/api/login')` 호출과 Promise 반환은 중단되기 전에 이미 실행된다.
+- 마이크로태스크가 실행되면 `await`가 완료된 `Response`를 결과로 내고, `const response = ...` 대입이 마무리된다.
+- 이어서 `if (!response.ok)`, `console.log(...)`, `onClose()`가 같은 마이크로태스크 안에서 실행된다.
+- 실행 범위는 다음 `await`, `return`, 예외 발생 또는 함수 끝을 만날 때까지다.
 
 `await`는 잠금(lock)을 잡고 있는 것이 아니다. 로그인 성공 후 `handleSubmit()`을 새로 호출하는 것도 아니다. Promise가 완료되면 이미 실행 중이었다가 중단된 **같은 `handleSubmit` 호출**이 이어서 실행된다.
 

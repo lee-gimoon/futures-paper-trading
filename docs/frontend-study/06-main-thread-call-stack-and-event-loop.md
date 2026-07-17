@@ -110,32 +110,30 @@ flowchart TB
 flowchart TB
   subgraph MAIN["선택된 태스크를 실행 중인 렌더러 메인 스레드"]
     direction TB
-    TASK["선택된 태스크 코드 실행<br/>(태스크 종류별<br/>대표 처리 경로 예시)"]
-    PARSER["HTML 파서 코드<br/>수신 데이터 청크 해석 · DOM 생성"]
-    SCRIPT_JS["JavaScript 엔진 코드<br/>HTML 파서가 요청한 스크립트 실행"]
-    PARSER_RESUME["스크립트 실행 정리와 체크포인트 후<br/>HTML 파서 코드로 복귀<br/>남은 데이터 청크 처리"]
-    TASK_JS["JavaScript 엔진 코드<br/>이벤트 핸들러·타이머 콜백 등의 동기 코드 실행"]
-    RENDER_CODE["렌더링 관련 코드<br/>스타일 · 레이아웃 · 페인트 준비"]
-    OTHER["JavaScript·파싱·렌더링이<br/>필요 없는 태스크 처리"]
-    TASK_DONE["선택된 태스크의 모든 처리 완료<br/>태스크 종료"]
+    TASK["선택된 태스크 하나<br/>HTML 파싱 · 이벤트/타이머 · 렌더링 · 기타"]
+    STEPS["태스크에 정의된 단계들을<br/>끝날 때까지 실행"]
+    TASK_DONE["태스크 종료"]
 
-    TASK -->|"HTML 파싱 태스크"| PARSER
-    PARSER -->|"script 실행 조건이 맞으면"| SCRIPT_JS
-    PARSER -->|"현재 데이터 청크 처리 완료"| TASK_DONE
-    SCRIPT_JS --> PARSER_RESUME
-    PARSER_RESUME -->|"현재 데이터 청크 처리 완료"| TASK_DONE
-    TASK -->|"이벤트 전달·타이머 콜백 등"| TASK_JS
-    TASK_JS --> TASK_DONE
-    TASK -->|"렌더링 태스크"| RENDER_CODE
-    RENDER_CODE --> TASK_DONE
-    TASK --> OTHER
-    OTHER --> TASK_DONE
+    subgraph CODE["태스크의 단계가 필요에 따라 사용하는 코드"]
+      direction LR
+      BROWSER_CODE["브라우저·Blink 코드<br/>파싱 · 이벤트 전달 · DOM<br/>스타일 · 레이아웃 · 페인트 준비"]
+      JS_CODE["JavaScript 엔진(V8) 코드<br/>스크립트 · 이벤트/타이머/rAF 콜백"]
+      BROWSER_CODE <-->|"JavaScript 호출·복귀"| JS_CODE
+    end
+
+    TASK --> STEPS --> TASK_DONE
+    STEPS -.->|"필요할 때 호출·복귀"| BROWSER_CODE
+    STEPS -.->|"필요할 때 호출·복귀"| JS_CODE
   end
+
+  TASK_DONE --> CHECKPOINT["다음: 마이크로태스크 체크포인트"]
 ```
+
+점선은 서로 배타적인 태스크 종류를 나눈 것이 아니라, **현재 태스크에 정의된 단계가 필요에 따라 해당 코드를 호출하고 다시 돌아올 수 있음**을 뜻한다. 하나의 HTML 파싱 태스크가 Blink 코드와 JavaScript 엔진 코드를 오갈 수 있고, 렌더링 태스크도 `requestAnimationFrame` 콜백을 실행하기 위해 JavaScript 엔진을 호출한 뒤 스타일·레이아웃 등의 단계를 이어 갈 수 있다. 모든 태스크가 그림의 코드를 전부 실행한다는 뜻은 아니다.
 
 **태스크가 있을 때의 주 흐름:** ① 렌더러 메인 스레드가 이벤트 루프 구현 코드 실행 → ② 실행 가능한 태스크 하나 선택 → ③ 같은 렌더러 메인 스레드가 선택된 태스크 코드 실행 → ④ 태스크 종료 → ⑤ 마이크로태스크 체크포인트 → ⑥ 이벤트 루프 구현 코드로 복귀
 
-**렌더링과 체크포인트:** 렌더링은 모든 일반 태스크 뒤에 붙는 고정 단계가 아니다. 렌더링 기회가 생겨 렌더링 태스크가 준비되면, 이벤트 루프가 이를 다른 태스크처럼 선택하고 같은 렌더러 메인 스레드가 렌더링 관련 코드를 실행한다.
+**렌더링과 체크포인트:** 렌더링은 모든 일반 태스크 뒤에 붙는 고정 단계가 아니다. 렌더링 기회가 생겨 렌더링 태스크가 준비되면, 이벤트 루프가 이를 다른 태스크처럼 선택하고 같은 렌더러 메인 스레드가 렌더링 갱신 단계를 실행한다. 이 과정은 `requestAnimationFrame` 콜백처럼 JavaScript 엔진을 호출하는 단계와 스타일·레이아웃·페인트 준비 같은 렌더링 관련 단계를 함께 포함할 수 있다.
 
 태스크가 끝나면 **마이크로태스크 체크포인트 자체는 수행**한다. 마이크로태스크 큐가 비어 있으면 실행할 마이크로태스크가 없고, 비어 있지 않으면 실행 중 새로 추가되는 것까지 큐가 빌 때까지 처리한다. 체크포인트는 태스크 종료 외에도 HTML 표준이 정한 시점에 수행된다. 예를 들어 HTML 파서가 동기적으로 실행을 요청한 스크립트는 스크립트 실행 정리 과정에서 체크포인트를 거친 뒤 파서로 돌아간다.
 

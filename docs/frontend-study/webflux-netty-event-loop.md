@@ -48,16 +48,22 @@ flowchart LR
     INIT --> CREATE --> REQUEST
   end
 
-  subgraph RUNTIME["런타임 · worker 스레드 0이 모두 실행"]
+  subgraph RUNTIME["런타임 · EventLoop 0의 상태와 실행"]
     direction TB
-    RUN["EventLoop 0의 NioEventLoop.run() 반복"]
-    READY["Selector 결과 확인<br/>어떤 Channel의 I/O가 준비됐는가?"]
-    CHANNEL["processSelectedKeys()<br/>ready A 처리 → ready B 처리"]
-    TASK["runAllTasks(...)<br/>큐를 확인해 Runnable이 있으면 실행"]
-    RUN --> READY
-    READY -->|"ready Channel 있음"| CHANNEL --> TASK
-    READY -->|"ready Channel 없음"| TASK
+    READY["ready Channel I/O 상태<br/>Selector의 selected-key set<br/>상태·저장소이지 실행 코드가 아님"]
+    QUEUES["실행 대기 태스크<br/>taskQueue · scheduledTaskQueue<br/>저장소이지 실행 코드가 아님"]
+
+    RUN["worker 실행 ①<br/>EventLoop 0의 NioEventLoop.run() 반복<br/>select · 상태 확인 · 메서드 호출"]
+    IO["worker 실행 ② · processSelectedKeys()<br/>ready Channel 순회 (예: A → B)<br/>각 Channel의 I/O 처리 메서드 실행<br/>HTTP read → Pipeline → Reactor Netty<br/>→ WebFlux → Controller"]
+    TASK["worker 실행 ③ · runAllTasks(...)<br/>큐를 확인하고<br/>Runnable이 있으면 실행"]
+
+    RUN -->|"ready I/O가 있으면 호출"| IO
+    IO -->|"I/O 처리 뒤 task 단계"| TASK
+    RUN -->|"ready I/O가 없으면 task 단계"| TASK
     TASK -->|"다음 반복"| RUN
+
+    READY -.->|"select 결과를 확인"| RUN
+    QUEUES -.->|"꺼내 실행할 대상"| TASK
   end
 
   STARTUP -->|"선택된 EventLoop worker가<br/>Channel 등록·실제 bind 실행"| RUNTIME
@@ -106,28 +112,6 @@ final class NioEventLoop extends SingleThreadEventLoop {
 ```
 
 실제 `run()`에는 예외 처리, 종료 처리, Selector 복구와 `ioRatio`에 따른 I/O·task 실행 시간 조절이 더 들어간다. 하지만 **worker가 `run()`에 진입 → `for (;;)` 반복 → I/O 처리 → task 처리 → 다음 반복**이라는 뼈대는 위와 같다. 위 코드는 NIO transport 기준이며 epoll·kqueue transport도 각자의 EventLoop 구현을 전담 worker가 실행한다.
-
-```mermaid
-%%{init: {"themeVariables": {"fontSize": "16px"}, "flowchart": {"nodeSpacing": 16, "rankSpacing": 24, "curve": "linear", "subGraphTitleMargin": {"top": 0, "bottom": 14}}}}%%
-flowchart TB
-  READY["ready Channel I/O 상태<br/>Selector의 selected-key set"]
-  QUEUES["실행 대기 태스크<br/>taskQueue · scheduledTaskQueue"]
-
-  subgraph WORKER["worker 스레드 0이 직접 실행"]
-    direction TB
-    RUN["① NioEventLoop.run() 반복<br/>select · 상태 확인 · 메서드 호출"]
-    IO["② processSelectedKeys()<br/>worker가 Channel I/O 실행<br/>HTTP read → Pipeline → Reactor Netty<br/>→ WebFlux → Controller"]
-    TASK["③ runAllTasks(...)<br/>worker가 큐를 확인하고<br/>Runnable이 있으면 실행"]
-
-    RUN -->|"ready I/O가 있으면 호출"| IO
-    IO -->|"I/O 처리 뒤 task 단계"| TASK
-    RUN -->|"ready I/O는 없고 task가 있으면"| TASK
-    TASK -->|"다음 반복"| RUN
-  end
-
-  READY -.->|"I/O 처리 대상"| IO
-  QUEUES -.->|"꺼내 실행할 대상"| TASK
-```
 
 ready I/O와 task queue는 스레드나 실행 코드가 아니라 **실행할 대상을 알려 주는 상태·저장소**다. EventLoop 구현은 중심 반복문인 `run()`과 여기서 호출하는 `processSelectedKeys()`·`runAllTasks(...)` 같은 Netty 메서드로 이루어진다. worker 스레드 0은 이 메서드를 따라 Channel I/O, WebFlux 처리와 `Runnable`까지 직접 실행하고, 호출이 끝나면 `run()`의 다음 반복으로 돌아간다. **WebFlux 코드 자체가 EventLoop 내부에 저장되어 있는 것은 아니다.**
 

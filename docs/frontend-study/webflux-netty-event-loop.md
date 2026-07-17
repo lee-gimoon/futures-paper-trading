@@ -1,6 +1,6 @@
 # Spring WebFlux + Reactor Netty 이벤트 루프 — OS 네트워크부터 응답까지
 
-> 이 문서는 [`06-main-thread-call-stack-and-event-loop.md`](../frontend-study/06-main-thread-call-stack-and-event-loop.md)의 브라우저 설명과 같은 관점으로, **Spring WebFlux + Reactor Netty 서버가 시작되고 요청을 처리하는 흐름**을 정리한다. 현재 프로젝트의 `Spring Boot 4.0.6`, Java 21, `spring-boot-starter-webflux`, R2DBC 구성을 기준으로 하되, 스레드 수와 NIO/native transport 같은 세부 구현은 버전·OS·설정에 따라 달라질 수 있다.
+> 이 문서는 [`06-main-thread-call-stack-and-event-loop.md`](06-main-thread-call-stack-and-event-loop.md)의 브라우저 설명과 같은 관점으로, **Spring WebFlux + Reactor Netty 서버가 시작되고 요청을 처리하는 흐름**을 정리한다. 현재 프로젝트의 `Spring Boot 4.0.6`, Java 21, `spring-boot-starter-webflux`, R2DBC 구성을 기준으로 하되, 스레드 수와 NIO/native transport 같은 세부 구현은 버전·OS·설정에 따라 달라질 수 있다.
 
 ## 먼저 결론
 
@@ -507,9 +507,9 @@ OS가 TCP 바이트를 socket buffer에 받음
 
 ## 관련 프로젝트 문서
 
-- [브라우저 이벤트 루프, 메인 스레드, 콜 스택](../frontend-study/06-main-thread-call-stack-and-event-loop.md)
+- [브라우저 이벤트 루프, 메인 스레드, 콜 스택](06-main-thread-call-stack-and-event-loop.md)
 - [WebFlux 엔드포인트별 Mono/Flux 실행 흐름](../backend/webflux-execution-flow.md)
-- [MVC와 WebFlux 비교](mvc-vs-webflux.md)
+- [MVC와 WebFlux 비교](../study/mvc-vs-webflux.md)
 
 ## 참고 자료
 

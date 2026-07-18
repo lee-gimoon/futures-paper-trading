@@ -82,8 +82,6 @@ Tomcat worker 스레드                    → 참고로 Netty는 같은 worker 
 └─ 요청 처리가 끝나면 worker 풀로 복귀
 ```
 
-`Servlet`은 스레드가 아니라 Servlet API 규칙에 따라 요청을 처리하는 Java 객체이며, Tomcat은 Servlet Container로서 이 객체를 관리하고 호출한다. `DispatcherServlet`은 Spring MVC가 제공하는 Servlet 구현체로, 요청을 직접 비즈니스 처리하기보다 적절한 Controller를 찾아 호출하고 그 반환값을 응답으로 처리한다. 일반적인 동기 요청에서는 같은 Tomcat worker 스레드가 Filter·`DispatcherServlet`·Controller·Service·Repository 코드를 차례로 실행한다.
-
 즉, Tomcat은 `Tomcat Poller 스레드 → Tomcat worker 스레드`로 실행 주체가 바뀌지만, Netty는 worker EventLoop가 I/O 준비 상태를 확인한 뒤 별도의 요청 worker에게 넘기지 않고 ChannelPipeline·WebFlux·Controller 코드까지 직접 실행한다.
 
 ### 각 구성 요소와 스레드의 역할

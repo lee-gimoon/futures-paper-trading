@@ -32,16 +32,16 @@ JVM main 스레드
 서버가 시작된 뒤 일반적인 동기 요청 하나가 처리되는 흐름을 단순화하면 다음과 같다.
 
 ```text
-Acceptor 스레드
+Acceptor 스레드                         → 참고로 Netty는 parent/acceptor EventLoop이 담당
 └─ 새 TCP 연결 accept
    └─ 소켓을 Poller의 Selector에 등록
 
-Poller 스레드
+Poller 스레드                           → 참고로 Netty는 worker EventLoop이 이 역할도 담당
 └─ 여러 소켓의 I/O 준비 상태를 반복 확인
    └─ 읽기 가능한 소켓 발견
       └─ SocketProcessor 작업을 Executor에 제출
 
-Tomcat worker 스레드
+Tomcat worker 스레드                    → 참고로 Netty는 같은 worker EventLoop이 요청 코드까지 실행
 └─ SocketProcessor.run() 실행
    └─ HTTP 요청 파싱·처리
       └─ CoyoteAdapter → Tomcat Servlet 처리 체인
@@ -50,6 +50,8 @@ Tomcat worker 스레드
                └─ 응답 생성·쓰기
 └─ 요청 처리가 끝나면 worker 풀로 복귀
 ```
+
+즉, Tomcat은 `Poller 스레드 → Tomcat worker 스레드`로 실행 주체가 바뀌지만, Netty는 worker EventLoop가 I/O 준비 상태를 확인한 뒤 별도의 요청 worker에게 넘기지 않고 ChannelPipeline·WebFlux·Controller 코드까지 직접 실행한다.
 
 ### 각 구성 요소와 스레드의 역할
 

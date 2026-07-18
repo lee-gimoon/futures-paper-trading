@@ -18,13 +18,15 @@ Tomcat NIO에서는 역할이 나뉜다. **Tomcat Acceptor 스레드**가 새 TC
 
 ```text
 JVM main 스레드
-→ Spring Boot 초기화 코드 실행
-→ Spring ApplicationContext 생성·갱신
-→ 내장 Tomcat과 HTTP Connector 생성
-→ Spring MVC 구성과 DispatcherServlet 등록·초기화
-→ Tomcat Executor와 NIO Endpoint 초기화
-→ 서버 소켓 bind와 Tomcat 시작
-→ Acceptor·Poller 등 Tomcat 내부 스레드 시작
+→ Spring Boot와 ApplicationContext 초기화
+→ Spring MVC 구성·DispatcherServlet 등록 준비
+→ 내장 Tomcat과 HTTP Connector 구성
+→ Tomcat 시작 메서드 호출
+→ NIO Endpoint가 서버 소켓 생성
+→ 서버 소켓을 로컬 주소·포트에 bind
+→ 요청 처리용 Executor 준비
+→ Tomcat Poller·Acceptor 스레드 시작
+→ 서버 요청 수신 준비 완료
 ```
 
 서버가 시작된 뒤 일반적인 동기 요청 하나가 처리되는 흐름을 단순화하면 다음과 같다.

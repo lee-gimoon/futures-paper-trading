@@ -8,7 +8,7 @@
 
 브라우저에서는 렌더러 메인 스레드가 이벤트 루프 구현 코드와 JavaScript를 번갈아 실행한다. Reactor Netty에서는 EventLoop worker 스레드가 I/O 준비 상태를 확인하는 EventLoop 구현 코드를 실행하고, 준비된 I/O를 처리하는 과정에서 호출되는 ChannelPipeline·Reactor Netty·WebFlux 코드도 같은 worker 스레드가 실행한다.
 
-Tomcat NIO에서는 역할이 나뉜다. **Acceptor 스레드**가 새 TCP 연결을 받아 Poller에 등록하고, **Poller 스레드**가 I/O 준비 상태를 확인해 `SocketProcessor` 작업을 Executor에 제출한다. 이후 선택된 **Tomcat worker 스레드**가 `SocketProcessor.run()`을 실행하며 Tomcat·Servlet·Spring MVC·Controller·비즈니스 코드를 같은 Java 호출 스택에서 처리한다.
+Tomcat NIO에서는 역할이 나뉜다. **Acceptor 스레드**가 새 TCP 연결을 받아 Poller에 등록하고, **Poller 스레드**가 I/O 준비 상태를 확인해 `SocketProcessor` 작업을 Tomcat Connector의 요청 처리용 `Executor`에 제출한다. 여기서 `Executor`는 제출된 작업을 대기시키고 사용 가능한 Tomcat worker 스레드에 배정하는 스레드 풀이다. 이후 선택된 **Tomcat worker 스레드**가 `SocketProcessor.run()`을 실행하며 Tomcat·Servlet·Spring MVC·Controller·비즈니스 코드를 같은 Java 호출 스택에서 처리한다.
 
 > **핵심: Acceptor는 연결 수락, Poller는 I/O 감지와 작업 전달, worker는 요청 처리 코드 실행을 담당한다.** 각 스레드는 자신이 맡은 로직을 실행하므로, Poller가 Controller를 실행하거나 worker가 Poller의 `run()` 반복문을 실행하는 구조가 아니다.
 

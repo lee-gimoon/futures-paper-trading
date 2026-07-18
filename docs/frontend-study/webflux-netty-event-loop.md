@@ -37,6 +37,22 @@ worker 스레드가 EventLoop의 run()에 진입
    │     ChannelPipeline → Reactor Netty → WebFlux → Controller
    ├─ 큐에 Runnable이 있으면 실행
    └─ run() 내부의 다음 반복
+
+위 흐름의 ChannelPipeline → Reactor Netty → WebFlux → Controller 부분을 자세히 풀어 보면 다음과 같다.
+
+EventLoop worker 스레드
+└─ ChannelPipeline (Netty의 I/O 처리 체인)
+   └─ Reactor Netty HTTP 처리
+      └─ ReactorHttpHandlerAdapter
+         │  (Reactor Netty 요청을 Spring WebFlux 처리 계층에 연결)
+         └─ HttpWebHandlerAdapter
+            └─ WebFilterChain
+               ├─ WebFilter들 (인증·보안·로깅 등의 전처리·후처리)
+               └─ DispatcherHandler
+                  │  (WebFlux의 중앙 요청 처리 객체)
+                  ├─ HandlerMapping으로 Controller 검색
+                  └─ HandlerAdapter로 Controller 메서드 호출
+                     └─ Controller → Service → Repository
 ```
 
 #### **EventLoop와 worker 스레드의 역할**

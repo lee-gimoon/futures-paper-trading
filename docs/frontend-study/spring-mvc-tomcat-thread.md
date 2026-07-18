@@ -12,6 +12,29 @@ Tomcat NIO에서는 역할이 나뉜다. **Tomcat Acceptor 스레드**가 새 TC
 
 > **핵심: Acceptor는 연결 수락, Poller는 I/O 감지와 작업 전달, worker는 요청 처리 코드 실행을 담당한다.** 각 스레드는 자신이 맡은 로직을 실행하므로, Poller가 Controller를 실행하거나 worker가 Poller의 `run()` 반복문을 실행하는 구조가 아니다.
 
+### Tomcat NIO에서 NIO가 뜻하는 것
+
+Tomcat NIO의 `NIO`는 Java NIO 기반의 **논블로킹 네트워크 I/O Connector**를 뜻한다. 이는 소켓을 감시하는 네트워크 계층이 논블로킹이라는 뜻이지, Spring MVC의 Controller와 비즈니스 코드까지 자동으로 논블로킹이 된다는 뜻은 아니다.
+
+```text
+Tomcat NIO
+
+네트워크 계층: 논블로킹
+Tomcat Poller 스레드
+└─ Selector로 여러 소켓을 동시에 감시
+   └─ 요청이 준비된 소켓만 발견
+      └─ SocketProcessor를 worker에게 전달
+
+애플리케이션 계층: 동기·블로킹
+Tomcat worker 스레드
+└─ Controller 실행
+   └─ Service 실행
+      └─ 블로킹 JDBC 호출
+         └─ DB 응답이 올 때까지 worker 스레드 대기
+```
+
+따라서 **Tomcat NIO Connector의 소켓 감시는 논블로킹**이고, 동시에 **일반적인 Spring MVC 요청 처리는 동기·블로킹**일 수 있다. `NIO`라는 이름은 Connector의 네트워크 처리 방식을 가리키며 애플리케이션 코드의 실행 방식 전체를 가리키지 않는다.
+
 ## main, Acceptor, Poller, worker의 관계
 
 부팅 단계에서는 보통 JVM `main` 스레드가 다음 초기화 코드를 실행한다.

@@ -162,6 +162,27 @@ flowchart LR
 - worker가 작업 실행을 시작한 뒤에는 HTTP 처리부터 Controller까지 일반적인 Java 메서드 호출로 이어진다.
 - 요청 처리가 끝나면 worker는 특정 연결에 계속 묶여 있지 않고 풀로 돌아가 다른 요청을 처리할 수 있다.
 
+### Acceptor·Poller·worker는 각각 몇 개인가
+
+이 문서가 기준으로 삼는 Tomcat 11 NIO Connector 하나에서는 Acceptor와 Poller가 각각 하나이고, 요청 처리용 worker는 스레드 풀에 여러 개 존재한다. Acceptor는 여러 연결을 차례로 받고 Poller는 여러 연결 소켓을 하나의 Selector로 감시하며, 준비된 요청은 사용 가능한 worker가 병렬로 처리한다.
+
+```text
+TCP 서버 소켓 1개
+└─ Tomcat Acceptor 스레드 1개
+   └─ 여러 TCP 연결을 차례로 accept
+      ├─ 연결 소켓 A ┐
+      ├─ 연결 소켓 B │
+      ├─ 연결 소켓 C ├─ Tomcat Poller 스레드 1개가 감시
+      └─ 연결 소켓 D ┘
+                         │
+                         └─ 준비된 소켓의 작업을 Executor에 제출
+                            └─ worker 스레드 풀(기본 최대 200개)
+                               ├─ worker 1
+                               ├─ worker 2
+                               ├─ ...
+                               └─ worker 200
+```
+
 ## Tomcat의 요청 처리 작업과 worker
 
 Tomcat NIO 구현의 구조와 주요 메서드 이름만 남겨 단순화하면 다음과 같다. 실제 소스에는 오류·타임아웃·TLS·비동기 Servlet·HTTP/2 처리 등 더 많은 분기가 있다.

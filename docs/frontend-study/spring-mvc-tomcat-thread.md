@@ -14,7 +14,7 @@ Tomcat NIO에서는 역할이 나뉜다. **Tomcat Acceptor 스레드**가 새 TC
 
 ### Tomcat NIO에서 NIO가 뜻하는 것
 
-Tomcat NIO의 `NIO`는 Java NIO 기반의 **논블로킹 네트워크 I/O Connector**를 뜻한다. 이는 소켓을 감시하는 네트워크 계층이 논블로킹이라는 뜻이지, Spring MVC의 Controller와 비즈니스 코드까지 자동으로 논블로킹이 된다는 뜻은 아니다.
+Tomcat NIO의 `NIO`는 Java NIO 기반의 **논블로킹 네트워크 I/O Connector**를 뜻한다. 이는 소켓을 감시하는 네트워크 계층이 논블로킹이라는 뜻이지, Spring MVC의 Controller와 비즈니스 코드까지 자동으로 논블로킹이 된다는 뜻은 아니다. (참고로 Spring WebFlux + Reactor Netty는 네트워크부터 요청 처리 체인까지 비동기·논블로킹 방식으로 설계된다. 다만 블로킹 API를 호출한 부분까지 자동으로 논블로킹이 되지는 않는다.)
 
 ```text
 Tomcat NIO

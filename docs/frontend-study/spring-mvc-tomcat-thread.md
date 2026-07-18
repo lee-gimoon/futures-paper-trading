@@ -69,12 +69,20 @@ Tomcat Poller 스레드                    → 참고로 Netty는 worker EventLo
 Tomcat worker 스레드                    → 참고로 Netty는 같은 worker EventLoop이 요청 코드까지 실행
 └─ SocketProcessor.run() 실행
    └─ HTTP 요청 파싱·처리
-      └─ CoyoteAdapter → Tomcat Servlet 처리 체인
-         └─ FilterChain → DispatcherServlet
-            └─ Controller → Service → Repository
-               └─ 응답 생성·쓰기
+      └─ CoyoteAdapter (Tomcat HTTP 처리 계층을 Servlet 처리 계층에 연결)
+         └─ Tomcat Servlet 처리 체인
+            │  (Servlet: Tomcat이 관리·호출하는 HTTP 요청 처리 Java 객체)
+            └─ FilterChain (Filter들을 순서대로 실행한 뒤 마지막에 Servlet 호출)
+               ├─ Filter들 (인증·보안·로깅 등의 전처리·후처리)
+               └─ DispatcherServlet (Spring MVC의 중앙 Servlet: 요청에 맞는 Controller를 찾아 호출)
+                  ├─ HandlerMapping으로 요청을 처리할 Controller 검색
+                  └─ HandlerAdapter로 선택된 Controller 메서드 호출
+                     └─ Controller → Service → Repository
+                        └─ 반환값 처리·응답 생성·쓰기
 └─ 요청 처리가 끝나면 worker 풀로 복귀
 ```
+
+`Servlet`은 스레드가 아니라 Servlet API 규칙에 따라 요청을 처리하는 Java 객체이며, Tomcat은 Servlet Container로서 이 객체를 관리하고 호출한다. `DispatcherServlet`은 Spring MVC가 제공하는 Servlet 구현체로, 요청을 직접 비즈니스 처리하기보다 적절한 Controller를 찾아 호출하고 그 반환값을 응답으로 처리한다. 일반적인 동기 요청에서는 같은 Tomcat worker 스레드가 Filter·`DispatcherServlet`·Controller·Service·Repository 코드를 차례로 실행한다.
 
 즉, Tomcat은 `Tomcat Poller 스레드 → Tomcat worker 스레드`로 실행 주체가 바뀌지만, Netty는 worker EventLoop가 I/O 준비 상태를 확인한 뒤 별도의 요청 worker에게 넘기지 않고 ChannelPipeline·WebFlux·Controller 코드까지 직접 실행한다.
 

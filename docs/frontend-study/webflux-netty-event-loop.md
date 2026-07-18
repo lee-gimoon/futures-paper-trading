@@ -49,7 +49,7 @@ worker 스레드가 EventLoop의 run()에 진입
 - **애플리케이션 개발자:** Controller와 비즈니스 코드를 작성한다.
 - **worker 스레드:** EventLoop 코드와 그 코드가 호출한 I/O·WebFlux·`Runnable` 코드를 실제로 실행한다.
 
-마지막 항목을 Java의 일반적인 메서드 호출 관계로 풀어 보면 다음과 같다. worker 스레드가 EventLoop의 `run()`을 실행하다가 다른 처리 메서드를 호출하면, 별도의 스레드에 자동으로 넘기는 것이 아니라 같은 worker 스레드가 호출 스택을 따라 그 코드까지 이어서 실행한다.
+바로 위 worker 스레드 항목을 Java의 일반적인 메서드 호출 관계로 풀어 보면 다음과 같다. worker 스레드가 EventLoop의 `run()`을 실행하다가 다른 처리 메서드를 호출하면, 별도의 스레드에 자동으로 넘기는 것이 아니라 같은 worker 스레드가 호출 스택을 따라 그 코드까지 이어서 실행한다.
 
 ```text
 worker 스레드
@@ -72,6 +72,8 @@ void eventLoopRun() {
 ```
 
 `eventLoopRun()`을 실행하던 worker 스레드는 `processIo()`가 호출되면 그 메서드 안으로 들어가 코드를 실행하고, 메서드가 끝나면 다시 `eventLoopRun()`으로 돌아온다. 별도의 “EventLoop 스레드”가 호출만 하고 worker에게 일을 넘기는 구조가 아니다.
+
+#### 전체 실행 흐름
 
 ```mermaid
 %%{init: {"themeVariables": {"fontSize": "16px"}, "flowchart": {"nodeSpacing": 18, "rankSpacing": 24, "curve": "linear", "subGraphTitleMargin": {"top": 0, "bottom": 14}}}}%%

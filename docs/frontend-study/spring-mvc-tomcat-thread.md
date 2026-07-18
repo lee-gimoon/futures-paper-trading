@@ -8,7 +8,7 @@
 
 브라우저에서는 렌더러 메인 스레드가 이벤트 루프 구현 코드와 JavaScript를 번갈아 실행한다. Reactor Netty에서는 EventLoop worker 스레드가 I/O 준비 상태를 확인하는 EventLoop 구현 코드를 실행하고, 준비된 I/O를 처리하는 과정에서 호출되는 ChannelPipeline·Reactor Netty·WebFlux 코드도 같은 worker 스레드가 실행한다.
 
-Tomcat NIO에서는 역할이 나뉜다. **Acceptor 스레드**가 새 TCP 연결을 받아 Poller에 등록하고, **Poller 스레드**가 I/O 준비 상태를 확인해 `SocketProcessor` 작업을 Tomcat Connector의 요청 처리용 `Executor`에 제출한다. 여기서 `Executor`는 제출된 작업을 대기시키고 사용 가능한 Tomcat worker 스레드에 배정하는 스레드 풀이다. 이후 선택된 **Tomcat worker 스레드**가 `SocketProcessor.run()`을 실행하며 Tomcat·Servlet·Spring MVC·Controller·비즈니스 코드를 같은 Java 호출 스택에서 처리한다.
+Tomcat NIO에서는 역할이 나뉜다. **Tomcat Acceptor 스레드**가 새 TCP 연결을 받아 Poller에 등록하고, **Tomcat Poller 스레드**가 I/O 준비 상태를 확인해 `SocketProcessor` 작업을 Tomcat Connector의 요청 처리용 `Executor`에 제출한다. 여기서 `Executor`는 제출된 작업을 대기시키고 사용 가능한 Tomcat worker 스레드에 배정하는 스레드 풀이다. 이후 선택된 **Tomcat worker 스레드**가 `SocketProcessor.run()`을 실행하며 Tomcat·Servlet·Spring MVC·Controller·비즈니스 코드를 같은 Java 호출 스택에서 처리한다.
 
 > **핵심: Acceptor는 연결 수락, Poller는 I/O 감지와 작업 전달, worker는 요청 처리 코드 실행을 담당한다.** 각 스레드는 자신이 맡은 로직을 실행하므로, Poller가 Controller를 실행하거나 worker가 Poller의 `run()` 반복문을 실행하는 구조가 아니다.
 
@@ -30,12 +30,12 @@ JVM main 스레드
 서버가 시작된 뒤 일반적인 동기 요청 하나가 처리되는 흐름을 단순화하면 다음과 같다.
 
 ```text
-Acceptor 스레드                         → 참고로 Netty는 parent/acceptor EventLoop이 담당
+Tomcat Acceptor 스레드                  → 참고로 Netty는 parent/acceptor EventLoop이 담당
 └─ Acceptor.run() 실행
    └─ 새 TCP 연결 accept
       └─ 소켓을 Poller의 Selector에 등록
 
-Poller 스레드                           → 참고로 Netty는 worker EventLoop이 이 역할도 담당
+Tomcat Poller 스레드                    → 참고로 Netty는 worker EventLoop이 이 역할도 담당
 └─ Poller.run() 실행
    └─ 여러 소켓의 I/O 준비 상태를 반복 확인
       └─ 읽기 가능한 소켓 발견
@@ -51,7 +51,7 @@ Tomcat worker 스레드                    → 참고로 Netty는 같은 worker 
 └─ 요청 처리가 끝나면 worker 풀로 복귀
 ```
 
-즉, Tomcat은 `Poller 스레드 → Tomcat worker 스레드`로 실행 주체가 바뀌지만, Netty는 worker EventLoop가 I/O 준비 상태를 확인한 뒤 별도의 요청 worker에게 넘기지 않고 ChannelPipeline·WebFlux·Controller 코드까지 직접 실행한다.
+즉, Tomcat은 `Tomcat Poller 스레드 → Tomcat worker 스레드`로 실행 주체가 바뀌지만, Netty는 worker EventLoop가 I/O 준비 상태를 확인한 뒤 별도의 요청 worker에게 넘기지 않고 ChannelPipeline·WebFlux·Controller 코드까지 직접 실행한다.
 
 ### 각 구성 요소와 스레드의 역할
 
@@ -61,8 +61,8 @@ Tomcat worker 스레드                    → 참고로 Netty는 같은 worker 
 - **Tomcat 개발자:** Acceptor·Poller·Executor·HTTP 처리·Servlet 호출 로직을 구현했다.
 - **Spring 개발자:** `DispatcherServlet`, HandlerMapping, HandlerAdapter 등 Spring MVC 처리 코드를 구현했다.
 - **애플리케이션 개발자:** Controller·Service·Repository와 비즈니스 코드를 작성한다.
-- **Acceptor 스레드:** 새 연결을 `accept()`하고 NIO 소켓을 Poller에 등록한다.
-- **Poller 스레드:** Selector로 여러 소켓의 I/O 준비 상태를 확인하고 처리 작업을 Executor에 제출한다.
+- **Tomcat Acceptor 스레드:** 새 연결을 `accept()`하고 NIO 소켓을 Poller에 등록한다.
+- **Tomcat Poller 스레드:** Selector로 여러 소켓의 I/O 준비 상태를 확인하고 처리 작업을 Executor에 제출한다.
 - **Tomcat worker 스레드:** 제출된 작업과 그 작업이 호출한 Tomcat·Servlet·Spring MVC·애플리케이션 코드를 실제로 실행한다.
 
 바로 위 Tomcat worker 스레드 항목을 Java의 일반적인 메서드 호출 관계로 풀어 보면 다음과 같다. worker가 `SocketProcessor.run()`을 실행하다가 다른 처리 메서드를 호출하면, 같은 worker가 호출 스택을 따라 그 코드까지 이어서 실행한다.
@@ -96,7 +96,7 @@ void filterChainDoFilter() {
 }
 ```
 
-`socketProcessorRun()`을 실행하던 worker 스레드는 `coyoteAdapterService()`가 호출되면 그 메서드 안으로 들어가 코드를 실행하고, 호출이 끝나면 다시 `socketProcessorRun()`으로 돌아온다. Poller 스레드가 Spring MVC 메서드를 하나씩 호출하면서 worker에게 넘기는 구조가 아니다. **Poller에서 worker로 작업을 제출할 때 한 번 스레드가 전환된 뒤, worker가 일반적인 Java 호출 관계로 요청 처리 코드를 이어서 실행하는 구조다.**
+`socketProcessorRun()`을 실행하던 worker 스레드는 `coyoteAdapterService()`가 호출되면 그 메서드 안으로 들어가 코드를 실행하고, 호출이 끝나면 다시 `socketProcessorRun()`으로 돌아온다. Tomcat Poller 스레드가 Spring MVC 메서드를 하나씩 호출하면서 worker에게 넘기는 구조가 아니다. **Poller에서 worker로 작업을 제출할 때 한 번 스레드가 전환된 뒤, worker가 일반적인 Java 호출 관계로 요청 처리 코드를 이어서 실행하는 구조다.**
 
 ### 전체 실행 흐름
 
@@ -113,8 +113,8 @@ flowchart LR
 
   subgraph RUNTIME["런타임 · Tomcat NIO 요청 처리"]
     direction TB
-    ACCEPTOR["Acceptor 스레드<br/>새 TCP 연결 accept<br/>소켓을 Poller에 등록"]
-    POLLER["Poller 스레드<br/>Selector로 I/O 준비 상태 확인<br/>읽기 가능한 소켓 선택"]
+    ACCEPTOR["Tomcat Acceptor 스레드<br/>새 TCP 연결 accept<br/>소켓을 Poller에 등록"]
+    POLLER["Tomcat Poller 스레드<br/>Selector로 I/O 준비 상태 확인<br/>읽기 가능한 소켓 선택"]
     QUEUE["Tomcat Executor<br/>SocketProcessor 작업 전달"]
     WORKER["worker 스레드<br/>SocketProcessor.run() 실행"]
     STACK["같은 worker의 호출 스택<br/>HTTP 처리 → CoyoteAdapter<br/>FilterChain → DispatcherServlet<br/>Controller → Service → Repository"]

@@ -45,8 +45,8 @@ JVM main 스레드
 → Spring MVC 구성·DispatcherServlet 등록 준비
 → 내장 Tomcat과 HTTP Connector 구성
 → Tomcat 시작 메서드 호출
-→ NIO Endpoint가 서버 소켓 생성
-→ 서버 소켓을 로컬 주소·포트에 bind
+→ Tomcat NIO Endpoint가 Java NIO TCP 서버 소켓(ServerSocketChannel)을 생성·관리
+→ 해당 서버 소켓을 로컬 주소·포트에 bind
 → 요청 처리용 Executor 준비
 → Tomcat Poller·Acceptor 스레드 시작
 → 서버 요청 수신 준비 완료

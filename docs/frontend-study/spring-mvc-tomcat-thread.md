@@ -71,10 +71,11 @@ Tomcat worker 스레드                    → 참고로 Netty는 같은 worker 
    └─ HTTP 요청 파싱·처리
       └─ CoyoteAdapter (Tomcat HTTP 처리 계층을 Servlet 처리 계층에 연결)
          └─ Tomcat Servlet 처리 체인
-            │  (Servlet: Tomcat이 관리·호출하는 HTTP 요청 처리 Java 객체)
+            │  (Tomcat: Servlet 구현체를 등록·관리하고 service()를 호출하는 Servlet Container)
+            │  (Servlet: Tomcat이 호출할 웹 요청 처리 객체의 표준 인터페이스)
             └─ FilterChain (Filter들을 순서대로 실행한 뒤 마지막에 Servlet 호출)
                ├─ Filter들 (인증·보안·로깅 등의 전처리·후처리)
-               └─ DispatcherServlet (Spring MVC의 중앙 Servlet: 요청에 맞는 Controller를 찾아 호출)
+               └─ DispatcherServlet (Spring MVC가 만든 Servlet 구현체: 요청에 맞는 Controller를 찾아 호출)
                   ├─ HandlerMapping으로 요청을 처리할 Controller 검색
                   └─ HandlerAdapter로 선택된 Controller 메서드 호출
                      └─ Controller → Service → Repository

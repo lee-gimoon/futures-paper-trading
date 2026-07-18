@@ -6,7 +6,7 @@
 
 ## 핵심 답
 
-브라우저에서는 렌더러 메인 스레드가 이벤트 루프 구현 코드와 JavaScript를 번갈아 실행한다. Reactor Netty에서는 EventLoop worker가 I/O 준비 상태 확인과 그 I/O가 호출한 WebFlux 코드를 함께 실행한다.
+브라우저에서는 렌더러 메인 스레드가 이벤트 루프 구현 코드와 JavaScript를 번갈아 실행한다. Reactor Netty에서는 EventLoop worker 스레드가 I/O 준비 상태를 확인하는 EventLoop 구현 코드를 실행하고, 준비된 I/O를 처리하는 과정에서 호출되는 ChannelPipeline·Reactor Netty·WebFlux 코드도 같은 worker 스레드가 실행한다.
 
 Tomcat NIO에서는 역할이 나뉜다. **Acceptor 스레드**가 새 TCP 연결을 받아 Poller에 등록하고, **Poller 스레드**가 여러 연결의 I/O 준비 상태를 확인한다. 읽을 요청이 준비되면 Poller는 `SocketProcessor` 작업을 Tomcat Executor에 제출한다. 그 뒤 **Tomcat worker 스레드**가 작업을 꺼내 HTTP 처리·Servlet Filter·Spring MVC·Controller 코드를 같은 Java 호출 스택에서 실행한다.
 

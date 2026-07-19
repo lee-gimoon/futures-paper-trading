@@ -1,5 +1,5 @@
-// 'react'는 설치된 React 라이브러리를 가리키는 모듈 이름이며,
-// React 라이브러리의 기본 export(React API 객체)를 React라는 이름으로 가져온다.
+// 'react'는 설치된 React 패키지를 가리키는 모듈 지정자다.
+// Vite가 이 지정자를 실제 패키지 모듈로 해석하며, 가져온 React 객체는 아래의 React.StrictMode에 사용한다.
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -16,61 +16,73 @@ import './styles.css';
 //      또한 React는 컴포넌트 함수를 호출하고, useState로 만든 상태를 기억하며,
 //      상태가 바뀌면 컴포넌트를 다시 실행해 새 화면 구조를 계산하도록 하는
 //      JavaScript 라이브러리다.
-//      (JSX 문법을 JavaScript로 변환하는 일은 Vite가 담당한다.)
+//      JSX를 브라우저가 실행할 JavaScript로 변환하는 일은 Vite의 변환 과정이 담당한다.
 //
 // ReactDOM 패키지
-//   → React가 계산한 화면 구조를 브라우저의 실제 DOM 요소로 생성·수정해
-//      화면에 반영하는 JavaScript 라이브러리다.
+//   → React와 브라우저 DOM을 연결하는 렌더러 라이브러리다.
+//      React가 계산한 화면 구조에 따라 실제 DOM 요소를 생성·수정한다.
+//      변경된 DOM을 실제 화면에 표시하는 일은 이후 브라우저 렌더링 과정에서 수행된다.
 //
 // 예: 사용자가 버튼을 클릭하면 운영체제 입력 시스템과 브라우저의 내장 DOM 이벤트 엔진이
-// 클릭을 감지한다. 브라우저 이벤트 시스템은 ReactDOM의 이벤트 처리 코드에 이벤트를 전달하고,
-// ReactDOM은 클릭된 버튼의 onClick 속성에 개발자가 등록한 함수를 찾아 실행되도록 연결한다.
-// 그 함수에서 useState가 반환한 setter 함수(예: setPrice)가 호출되어 상태가 바뀌면 React는 해당 컴포넌트를 다시 실행해
-// 새 화면 구조를 계산하고, ReactDOM은 변경된 부분을 실제 DOM에 반영한다.
+// 클릭을 감지한다. 브라우저가 DOM 이벤트를 전달하면 ReactDOM의 이벤트 처리 코드가
+// 해당 요소의 onClick에 연결된 개발자 함수를 호출한다. 그 함수에서 useState가 반환한
+// setter 함수(예: setPrice)가 호출되면 React가 새 화면 구조를 계산하고,
+// ReactDOM이 변경된 부분을 실제 DOM에 반영한다.
 
 // React 진입점. index.html의 <div id="root">를 찾아 그 안에 App을 그린다.
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  // JSX 문법: JavaScript/TypeScript 안에 HTML과 비슷한 태그 표기법으로 React UI 구조를 작성하는 문법이며, Vite가 JavaScript로 변환한다.
+  // JSX는 JavaScript/TypeScript 안에 HTML과 비슷한 표기법으로 React UI 구조를 작성하는 문법이다.
+  // Vite가 JSX를 브라우저에서 실행할 JavaScript 표현으로 변환한다.
   <React.StrictMode>
-    {/* <App />은 React에게 App 컴포넌트(UI)를 렌더링해 화면에 포함하라고 전달하는 JSX 표현입니다. */}
-    {/* 이후 render 과정에서 React가 App 함수를 호출하고, 반환된 UI를 root에 반영합니다. */}
+    {/* <App />은 App 컴포넌트를 렌더링하라는 React 요소 설명이며, 여기서 App()을 직접 호출하지 않는다. */}
+    {/* React는 예약된 렌더링 작업에서 App 함수를 호출하고 반환된 화면 구조를 처리한다. */}
     <App />
   </React.StrictMode>
 );
 
 // React, ReactDOM, 브라우저 DOM 객체의 관계:
 // - document.getElementById('root')는 index.html에 이미 만들어진 div#root DOM 객체를 찾는다.
-// - ReactDOM은 React 컴포넌트가 계산한 화면 구조를 브라우저 DOM에 반영하는 라이브러리다.
 // - ReactDOM.createRoot(div#root)는 div#root 내부를 관리할 React root 객체를 만든다.
 // - React root 객체는 div#root에 연결된 React 앱의 컴포넌트 트리와
 //   상태 변경에 따른 화면 갱신 작업을 관리하며 render(...)를 제공한다.
-
-// - <App />은 App 컴포넌트를 렌더링하라는 React 화면 설명 객체다. 이 시점에는 App()을 실행하지 않는다.
-// - render(...)가 호출되면 React가 App()을 실행해 화면 구조를 계산하고,
-//   ReactDOM이 그 결과를 div#root 내부의 실제 DOM 요소로 생성·수정한다.
+// - <App />은 App 컴포넌트를 렌더링하라는 React 요소 설명이다.
+// - render(<App />)는 초기 렌더링을 요청한다. React가 렌더링을 시작하면 App()을 호출해
+//   화면 구조를 계산하고, ReactDOM이 그 결과를 div#root 내부의 실제 DOM에 반영한다.
 
 // 브라우저에서 React 앱이 실행되고 화면이 표시되는 흐름:
+//
 // 사용자가 http://localhost:5173/에 접속
 //   ↓
 // Vite 개발 서버가 index.html 응답
 //   ↓
-// 브라우저가 index.html을 읽어 div#root DOM 요소를 생성
+// 이벤트 루프 처리 과정에서 HTML 파싱 작업이 선택되면
+// 렌더러 메인 스레드가 Blink의 HTML 파서를 실행해 div#root DOM 요소를 생성
 //   ↓
-// 브라우저가 <script type="module" src="/src/main.tsx">를 발견하고 main.tsx 요청
+// HTML 파서가 <script type="module" src="/src/main.tsx">를 발견하고
+// 브라우저가 main.tsx 요청
 //   ↓
-// Vite가 main.tsx의 TypeScript·JSX 문법을 브라우저용 JavaScript로 변환해 응답
+// Vite가 main.tsx의 TypeScript·JSX를 JavaScript로 변환해 응답
 //   ↓
-// 브라우저가 import를 보고 React·ReactDOM·App 모듈도 요청
+// 브라우저가 변환된 main.tsx의 정적 import를 확인하고
+// React·ReactDOM·App·styles.css 등의 의존 파일을 각각 요청
 //   ↓
-// Vite가 node_modules의 React 관련 JavaScript 라이브러리를 찾아,
-// 브라우저가 HTTP 요청으로 import할 수 있는 ES 모듈 URL로 준비해 전달
+// Vite가 각 요청을 처리해 소스 파일은 변환하고,
+// node_modules의 패키지는 브라우저가 불러올 수 있는 모듈로 제공
 //   ↓
-// 브라우저가 필요한 모듈을 받은 뒤 이 파일의 createRoot(...).render(<App />) 실행
+// main.tsx 진입 모듈과 정적으로 import된 의존 모듈이 로드·연결되고
+// HTML 파싱이 끝나면 브라우저가 모듈 스크립트를 실행할 수 있는 상태가 됨
 //   ↓
-// 브라우저 안에서 실행 중인 React 라이브러리 코드가 App() 함수를 호출해
-// 현재 상태에 필요한 화면 구조를 계산
+// 이벤트 루프 처리 과정에서 모듈 스크립트를 실행할 차례가 되면
+// 렌더러 메인 스레드의 V8이 JavaScript 의존 모듈을 필요한 순서로 평가한 뒤
+// main.tsx 파일을 변환해 만든 JavaScript 진입 모듈의 최상위 코드를 평가
 //   ↓
-// 브라우저 안에서 실행 중인 ReactDOM 라이브러리 코드가 그 결과를
-// div#root 내부의 실제 DOM 요소로 생성·수정
+// main.tsx의 최상위 코드에서 createRoot(div#root)가 React root를 만들고
+// render(<App />)가 초기 렌더링을 요청
 //   ↓
-// 브라우저 렌더링 엔진이 변경된 DOM을 화면 픽셀로 표시
+// React가 예약된 렌더링 작업에서 App 컴포넌트를 호출해 화면 구조를 계산
+// 개발 환경의 StrictMode에서는 오류 검사를 위해 컴포넌트 렌더링이 한 번 더 수행될 수 있음
+//   ↓
+// ReactDOM이 계산 결과를 div#root 내부의 실제 DOM에 반영
+//   ↓
+// DOM 반영 작업이 끝나고 렌더링 기회가 오면 렌더러 메인 스레드가
+// Blink의 스타일·레이아웃·페인트 준비 코드를 실행하고, 이후 합성·래스터 과정을 거쳐 화면에 표시

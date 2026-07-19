@@ -16,3 +16,12 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+<!-- Vite 개발 서버로부터 index.html 데이터 청크 도착
+     → HTML 파싱 작업이 태스크 큐에 준비됨
+     → 이벤트 루프 구현 코드가 실행 가능한 태스크 확인
+     → HTML 파싱 태스크 선택
+     → 렌더러 메인 스레드가 Blink의 HTML 파서 실행
+     → DOM 생성 및 main.tsx 모듈 요청
+
+     HTML 문서 전체가 항상 하나의 태스크로 처리되는 것은 아니다.
+     HTML 데이터가 여러 청크로 도착하면 각 청크를 처리하기 위한 파서 작업이 여러 차례 이어질 수 있다. -->

@@ -14,8 +14,12 @@ type Props = {
   onClose: () => void;
 };
 
+// LoginForm 함수(컴포넌트)는 실행될 때마다 현재 이메일·비밀번호 상태에 맞는 화면을 계산해 JSX를 반환한다.
+// 상태의 실제 저장과 렌더링 관리는 LoginForm 함수가 아니라 React가 담당한다.
 export function LoginForm({ onLogin, onClose }: Props) {
-  const [email, setEmail] = useState('');
+  // useState는 현재 렌더링 중인 LoginForm의 사용 위치에 이메일 상태를 연결해,
+  // 다음 렌더링에서도 값을 유지한다. setEmail을 호출하면 LoginForm이 다시 렌더링된다.
+  const [email, setEmail] = useState(''); // useState(초깃값)는 [상태 값, 변경 함수]를 반환한다.
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);

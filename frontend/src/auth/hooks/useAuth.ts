@@ -22,12 +22,13 @@ export function useAuth() {
       .finally(() => setLoading(false));
   }, []);
 
+  // 폼이 호출하면 서버 로그인 → 현재 사용자 조회 → React 로그인 상태 갱신 순으로 처리한다.
   const login = useCallback(async (email: string, password: string) => {
-    await authApi.login(email, password);
-    const authenticatedUser = await authApi.fetchMe();
-    if (!authenticatedUser) throw new Error('로그인 세션을 확인하지 못했습니다. 다시 시도해주세요.');
-    setError(null);
-    setUser(authenticatedUser);
+    await authApi.login(email, password); // 성공이면 undefined로 계속, 실패면 Error가 호출한 폼까지 전달된다.
+    const authenticatedUser = await authApi.fetchMe(); // 로그인 응답의 SESSION 쿠키로 현재 사용자를 요청한다.
+    if (!authenticatedUser) throw new Error('로그인 세션을 확인하지 못했습니다. 다시 시도해주세요.'); // 성공했는데 사용자가 없으면 이후 state 갱신을 막는다.
+    setError(null); // 이전 인증 오류를 지운다.
+    setUser(authenticatedUser); // user state가 바뀌어 App이 로그인된 화면을 렌더링한다.
   }, []);
 
   // 가입 → 곧바로 로그인까지 이어줘서 한 번에 로그인 상태가 되게 한다.

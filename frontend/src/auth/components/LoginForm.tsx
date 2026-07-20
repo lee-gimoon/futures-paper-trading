@@ -42,6 +42,10 @@ export function LoginForm({ onLogin, onClose }: Props) {
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <h2>로그인</h2>
+      {/*
+        value={email}: email state 값을 input에 표시한다.
+        onChange: 사용자 입력을 setEmail으로 email state에 반영한다.
+      */}
       <input
         type="email"
         placeholder="이메일"

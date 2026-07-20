@@ -589,6 +589,8 @@ onChange={(e) => setEmail(e.target.value)}
 - `e.target.value`: 사용자가 편집한 뒤의 전체 문자열
 - `setEmail(...)`: 그 문자열을 다음 React state로 저장
 
+JSX의 `<input ... />`와 `e.target`은 input 두 개가 아니다. JSX는 React에 전달하는 화면 설명이고, React는 이를 바탕으로 브라우저에 실제 input 하나를 만든다. `e.target`은 사용자가 입력하는 그 실제 input을 가리킨다.
+
 `password` input도 똑같이 작동한다.
 
 ```tsx

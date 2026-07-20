@@ -189,6 +189,23 @@ LoginForm 함수 실행
 
 JSX는 HTML처럼 보이지만 HTML 문자열이 아니다. “현재 이 위치에는 `form`, `input`, `button`이 있어야 한다”는 React 요소 설명을 만든다. ReactDOM은 이전 설명과 새 설명을 비교해 브라우저의 실제 DOM을 필요한 만큼만 바꾼다.
 
+예를 들어 아래 JSX는 개념적으로 `type`과 `props`를 가진 화면 설명이 된다.
+
+```tsx
+<input onChange={handleChange} />
+```
+
+```ts
+{
+  type: 'input',
+  props: {
+    onChange: handleChange,
+  },
+}
+```
+
+소문자로 쓴 `input`은 함수가 아니라 React가 아는 HTML 내장 태그 이름이고, `onChange`는 그 요소 설명의 prop이다. 이후 ReactDOM이 이 설명을 바탕으로 브라우저의 실제 input 요소를 만든다.
+
 이를 식처럼 기억해도 좋다.
 
 ```text

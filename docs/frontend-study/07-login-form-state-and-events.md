@@ -551,6 +551,32 @@ JSX: value={'a'}
  각 단계마다 onChange → setEmail → 새 렌더링
 ```
 
+### 여러 글자를 입력하면 어떻게 되는가?
+
+예를 들어 빈 input에 `lee`를 입력하면, 보통 키 입력 한 번마다 아래 과정이 반복된다.
+
+```text
+빈칸
+↓ 'l' 입력
+onChange → setEmail('l') → LoginForm 리렌더링 → value="l"
+
+↓ 'e' 입력
+onChange → setEmail('le') → LoginForm 리렌더링 → value="le"
+
+↓ 'e' 입력
+onChange → setEmail('lee') → LoginForm 리렌더링 → value="lee"
+```
+
+따라서 마지막에는 `email` state가 `'lee'`이고, 새 JSX의 `value={email}`도 사실상 `value="lee"`가 된다. React가 그 값을 input에 반영하므로 화면에도 `lee`가 보인다.
+
+여기서 `setEmail(...)`이 `LoginForm` 함수를 직접 호출하는 것은 아니다. setter는 “다음 state로 다시 렌더링해 달라”고 React에 요청하고, React가 `LoginForm`을 다시 호출해 새 JSX를 계산한다.
+
+### 그런데 왜 입력하자마자 보이는가?
+
+키를 누르면 브라우저가 먼저 input의 값을 잠시 바꾸고, 곧바로 React의 `onChange`가 실행된다. 이어서 React가 새 state로 리렌더링하고 `value={email}`을 통해 input 값을 다시 맞춘다. 이 과정이 매우 빠르므로 사용자에게는 글자가 즉시 입력되는 것처럼 보인다.
+
+`value={email}`이 있기 때문에 최종 값의 기준은 브라우저 DOM이 아니라 React state다. 만약 `onChange`에서 `setEmail`을 호출하지 않으면 state는 이전 값에 머물고, React는 input을 그 이전 값으로 되돌린다.
+
 ### onChange의 e는 무엇인가?
 
 `e`는 이벤트 객체다. 어떤 요소에서 이벤트가 발생했는지, 그 요소의 현재 값이 무엇인지 같은 정보를 담는다.

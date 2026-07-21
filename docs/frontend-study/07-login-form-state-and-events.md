@@ -217,6 +217,8 @@ onChange={(e) => setEmail(e.target.value)}
 
 이 함수가 실행 → `email` state 변경 → 컴포넌트 함수가 다시 실행 → 새 React 요소 트리 반환 → React가 `<input>`의 값처럼 달라진 DOM만 갱신합니다.
 
+위 객체 트리는 `LoginForm` 전체 `return`을 단순화한 것이다. 이제 그 안에 들어 있는 JSX 한 줄을 작은 예제로 떼어 내어, React 요소 설명이 어떤 모양인지 살펴보자.
+
 예를 들어 아래 JSX는 개념적으로 `type`과 `props`를 가진 화면 설명이 된다.
 
 ```tsx

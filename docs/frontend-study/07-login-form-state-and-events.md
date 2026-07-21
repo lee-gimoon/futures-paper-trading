@@ -1172,6 +1172,18 @@ authError: 앱 수준 인증 오류가 있는가
 {error && <p className="auth-error">{error}</p>}
 ```
 
+`&&`는 JavaScript의 논리 AND 연산자다. 여기서는 앞의 `error` 값을 조건처럼 사용한다. `&&`는 왼쪽 값이 falsy이면 오른쪽을 평가하지 않고 왼쪽 값을 그대로 반환하는 **단축 평가(short-circuit evaluation)** 규칙을 따른다.
+
+따라서 이 JSX는 개념적으로 아래 `if` 문과 같다.
+
+```tsx
+if (error) {
+  return <p className="auth-error">{error}</p>;
+}
+```
+
+`error`가 빈 문자열(`''`)이면 falsy이므로 표현식의 결과도 빈 문자열이고, React는 이를 화면에 렌더링하지 않는다. 반대로 오류 메시지처럼 내용이 있는 문자열은 truthy이므로 오른쪽 JSX가 결과가 되어 오류 문단을 렌더링한다.
+
 | error 값 | JavaScript 평가 | 렌더링 결과 |
 |---|---|---|
 | `''` | falsy | 아무 문단도 없음 |

@@ -30,6 +30,8 @@ export function LoginForm({ onLogin, onClose }: Props) {
   }
 
   return (
+    /* submit 버튼 클릭 또는 Enter → form의 submit 이벤트 → onSubmit의 handleSubmit(e) 실행
+       handleSubmit의 e.preventDefault() → 브라우저 기본 폼 전송/페이지 이동 방지 */
     <form className="auth-form" onSubmit={handleSubmit}>
       <h2>로그인</h2>
       {/* state가 input 값을 정하고, 사용자의 입력은 다시 state로 돌아온다. */}
@@ -49,8 +51,11 @@ export function LoginForm({ onLogin, onClose }: Props) {
       />
       {error && <p className="auth-error">{error}</p>}
       <div className="auth-actions">
+        {/* type="submit": 이 form의 submit 이벤트를 발생시킨다.
+            disabled={submitting}: 요청 중(true)에는 중복 로그인을 막기 위해 클릭할 수 없다.
+            아래 삼항 연산자: 요청 중에는 '로그인 중...', 평소에는 '로그인'을 표시한다. */}
         <button type="submit" disabled={submitting}>
-          {submitting ? '...' : '로그인'}
+          {submitting ? '로그인 중...' : '로그인'}
         </button>
         <button type="button" className="ghost" onClick={onClose}>
           취소

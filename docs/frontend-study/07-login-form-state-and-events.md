@@ -189,11 +189,9 @@ LoginForm 함수 실행
 
 JSX는 HTML처럼 보이지만 HTML 문자열이 아니다. “현재 이 위치에는 `form`, `input`, `button`이 있어야 한다”는 React 요소 설명을 만든다. ReactDOM은 이전 설명과 새 설명을 비교해 브라우저의 실제 DOM을 필요한 만큼만 바꾼다.
 
-앞 절의 `LoginForm`이 `return (...)`에서 돌려주는 것도 실제 `form` DOM 요소가 아니라, 화면 구조를 나타내는 React 요소 객체 트리다. JSX 안의 `{...}`에 있는 JavaScript 표현식을 먼저 평가한 다음, 그 결과를 자식 요소에 넣어 트리를 만든다.
+JSX 전체는 대략 다음처럼 React 요소 객체가 됩니다. 실제 내부 구조는 더 복잡하지만 개념은 이렇습니다.
 
-전체 `return` 결과를 아주 단순화하면 다음과 같은 모양이다. 실제 React 내부 객체에는 더 많은 정보가 있지만, `type`, `props`, `children`이라는 관점으로 이해하면 충분하다.
-
-```ts
+```
 {
   type: 'form',
   props: {
@@ -201,19 +199,23 @@ JSX는 HTML처럼 보이지만 HTML 문자열이 아니다. “현재 이 위치
     onSubmit: handleSubmit,
     children: [
       { type: 'h2', props: { children: '로그인' } },
-      { type: 'input', props: { type: 'email', value: email, /* ... */ } },
-      error
-        ? { type: 'p', props: { className: 'auth-error', children: error } }
-        : null,
-      { type: 'div', props: { children: [/* 버튼 요소들 */] } }
+      { type: 'input', props: { type: 'email', value: email, ... } },
+      // error가 있을 때만 p 요소가 들어감
+      { type: 'div', props: { children: [...] } }
     ]
   }
 }
 ```
 
-이때 `onSubmit: handleSubmit`이나 `onClick: onClose`는 함수를 지금 실행한 결과가 아니다. 나중에 제출 또는 클릭 이벤트가 발생했을 때 React가 호출할 **함수 자체를 전달**한 것이다. 반면 `{error && ...}`와 `{submitting ? '...' : '로그인'}`처럼 중괄호 안에 쓴 표현식은 이번 렌더링 중에 평가되어, 현재 state에 맞는 자식 내용이 된다.
+React는 이 반환값을 받아 이전 렌더링 결과와 비교한 뒤, 필요한 실제 DOM만 생성·수정합니다.
 
-예를 들어 사용자가 이메일을 입력하면 `onChange` 핸들러가 실행되고 `setEmail(e.target.value)`가 다음 state를 요청한다. React는 `LoginForm` 함수를 다시 호출해 새 React 요소 트리를 반환받고, 이전 트리와 비교한 뒤 `input`의 값처럼 실제로 달라진 DOM만 갱신한다.
+예를 들어 사용자가 이메일을 입력하면:
+
+```tsx
+onChange={(e) => setEmail(e.target.value)}
+```
+
+이 함수가 실행 → `email` state 변경 → 컴포넌트 함수가 다시 실행 → 새 React 요소 트리 반환 → React가 `<input>`의 값처럼 달라진 DOM만 갱신합니다.
 
 예를 들어 아래 JSX는 개념적으로 `type`과 `props`를 가진 화면 설명이 된다.
 

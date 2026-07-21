@@ -187,7 +187,7 @@ LoginForm 함수 실행
 출력: 현재 보여야 할 화면을 설명하는 JSX
 ```
 
-JSX는 HTML처럼 보이지만 HTML 문자열이 아니다. “현재 이 위치에는 `form`, `input`, `button`이 있어야 한다”는 React 요소 설명을 만든다. ReactDOM은 이전 설명과 새 설명을 비교해 브라우저의 실제 DOM을 필요한 만큼만 바꾼다.
+`return (...)`의 괄호 안에 있는 `<form>...</form>` 부분이 JSX다. JSX는 HTML처럼 보이지만 HTML 문자열이 아니다. “현재 이 위치에는 `form`, `input`, `button`이 있어야 한다”는 React 요소 설명을 만든다. ReactDOM은 이전 설명과 새 설명을 비교해 브라우저의 실제 DOM을 필요한 만큼만 바꾼다.
 
 JSX 전체는 대략 다음처럼 React 요소 객체가 됩니다. 실제 내부 구조는 더 복잡하지만 개념은 이렇습니다.
 

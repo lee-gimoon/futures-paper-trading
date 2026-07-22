@@ -6,7 +6,7 @@
 
 ```text
 페이지 접속
-→ React 앱 시작
+→ React 앱 시작 (브라우저에서 JavaScript가 실행되어 React가 UI·상태·이벤트를 관리하는 프런트엔드를 처음 렌더링한다는 뜻이며, React라는 별도 프로그램이 켜지는 것은 아니다.)
 → 로그인 버튼 클릭
 → LoginForm mount
 → 이메일·비밀번호 입력

@@ -40,6 +40,32 @@
 
 배포할 때는 `npm run build`의 `vite build`가 `dist` 결과물을 만들고, Spring·Nginx·CDN 같은 서버가 그 파일을 브라우저에 전달한다.
 
+## Docker 배포에서 React 앱이 전달되는 과정
+
+```text
+Docker 빌드
+→ RUN npm run build
+  → Vite가 React 앱을 frontend/dist로 빌드
+
+→ COPY --from=frontend-build /workspace/frontend/dist/ ./src/main/resources/static/
+  → Dockerfile이 dist 파일을 Spring Boot의 표준 정적 파일 위치에 복사
+
+→ RUN ./gradlew bootJar --no-daemon -x test
+  → static 파일을 포함한 Spring Boot JAR 생성
+  → JAR 내부에는 대략 BOOT-INF/classes/static/으로 들어감
+
+→ java -jar app.jar
+  → Spring Boot 실행
+  → Spring Boot의 기본 정적 리소스 기능이 classpath:/static/ 파일을 HTTP로 응답
+
+사용자 홈페이지 접속
+→ 브라우저가 GET / 요청
+→ Spring Boot가 static/index.html 응답
+→ 브라우저가 HTML의 script·link를 읽고 JS·CSS를 자동 요청
+→ Spring Boot가 static/assets/... 파일을 응답
+→ 브라우저가 React 앱을 실행하고 화면을 렌더링
+```
+
 ---
 
 ## 1. 사용자가 페이지에 접속한다: React 앱 시작

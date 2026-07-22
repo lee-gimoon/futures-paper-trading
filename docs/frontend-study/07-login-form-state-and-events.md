@@ -26,6 +26,10 @@
 | `frontend/src/auth/hooks/useAuth.ts` | 로그인한 사용자 state와 로그인 동작을 관리한다. |
 | `frontend/src/auth/api/authApi.ts` | 브라우저의 `fetch`로 인증 HTTP 요청을 보낸다. |
 
+## React 프로젝트인 이유
+
+이 프로젝트에서는 `.tsx` 파일에 JSX로 화면 구조를 작성한다. TypeScript의 `"jsx": "react-jsx"` 설정은 이 JSX를 `react` 패키지의 `jsx-runtime` 호출 코드로 변환한다. 또한 `react`에서 `useState` 같은 상태 기능을 가져오고, `react-dom`의 `ReactDOM.createRoot(...).render(<App />)`로 React가 계산한 화면을 브라우저 DOM에 표시한다. 이처럼 화면 구조·상태·렌더링에 React와 ReactDOM을 사용하므로 React 프로젝트라고 한다.
+
 ---
 
 ## 1. 사용자가 페이지에 접속한다: React 앱 시작

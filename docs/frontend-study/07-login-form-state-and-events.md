@@ -56,8 +56,8 @@ Docker 빌드
 
 → java -jar app.jar
   → Spring Boot 실행
-  → 정적 파일 URL 요청 시, Spring Boot의 정적 리소스 자동 설정
-    (ResourceHttpRequestHandler)이 `classpath:/static/`에서 해당 파일을 찾아 HTTP 응답으로 전송한다.
+  → 브라우저가 정적 파일 URL을 요청하면, Spring Boot의 정적 리소스 자동 설정(ResourceHttpRequestHandler)이
+    `classpath:/static/`에서 요청 경로에 해당하는 리소스를 찾아 HTTP 응답 본문으로 전송한다.
 
 사용자 홈페이지 접속
 → 브라우저가 GET / 요청

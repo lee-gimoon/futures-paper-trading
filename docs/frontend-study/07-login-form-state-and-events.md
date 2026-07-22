@@ -34,6 +34,12 @@
 
 `frontend/package.json`의 `"build": "tsc && vite build"`는 먼저 TypeScript 타입을 검사한 뒤, `vite build`로 애플리케이션 코드와 import된 React·ReactDOM 패키지 코드를 브라우저가 실행할 JavaScript 결과물로 만드는 빌드 명령이다.
 
+#### 로컬 개발과 배포의 전달 방식
+
+로컬 개발에서 `npm run dev`를 실행하면 Vite 개발 서버가 브라우저 요청에 맞춰 React 앱 코드를 변환해 직접 전달한다. 이때는 `vite build`나 `dist` 폴더를 사용하지 않는다.
+
+배포할 때는 `npm run build`의 `vite build`가 `dist` 결과물을 만들고, Spring·Nginx·CDN 같은 서버가 그 파일을 브라우저에 전달한다.
+
 ---
 
 ## 1. 사용자가 페이지에 접속한다: React 앱 시작

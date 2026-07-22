@@ -30,6 +30,10 @@
 
 이 프로젝트에서는 `.tsx` 파일에 JSX로 화면 구조를 작성한다. TypeScript의 `"jsx": "react-jsx"` 설정(`frontend/tsconfig.json`)은 이 JSX를 `react` 패키지의 `jsx-runtime` 호출 코드로 변환한다. 또한 `react`에서 `useState` 같은 상태 기능을 가져오고, `react-dom`의 `ReactDOM.createRoot(...).render(<App />)`로 React가 계산한 화면을 브라우저 DOM에 표시한다. 이처럼 화면 구조·상태·렌더링에 React와 ReactDOM을 사용하므로 React 프로젝트라고 한다.
 
+### React 코드가 브라우저에 전달되는 과정
+
+`frontend/package.json`의 `"build": "tsc && vite build"`는 먼저 TypeScript 타입을 검사한 뒤, `vite build`로 애플리케이션 코드와 import된 React·ReactDOM 패키지 코드를 브라우저가 실행할 JavaScript 결과물로 만드는 빌드 명령이다.
+
 ---
 
 ## 1. 사용자가 페이지에 접속한다: React 앱 시작

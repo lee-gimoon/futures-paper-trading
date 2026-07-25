@@ -97,7 +97,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 ### 이때 처음 나오는 React 개념
 
-**React**는 `props`와 state를 바탕으로 다음 화면에 필요한 UI 구조를 결정하는 JavaScript 라이브러리다. 별도의 React 엔진이 있는 것이 아니라, 브라우저의 JavaScript 엔진이 React 라이브러리 코드와 애플리케이션 코드를 함께 실행한다.
+**React**는 props, state, context를 바탕으로 컴포넌트가 보여 줄 UI 구조를 결정하는 JavaScript 라이브러리다. 이 프로젝트에서는 브라우저의 JavaScript 엔진이 React 라이브러리 코드와 애플리케이션 코드를 함께 실행한다. React는 별도의 브라우저 엔진이 아니며, 실제 브라우저 DOM 반영은 ReactDOM이 담당한다.
 
 **ReactDOM**은 React가 결정한 UI 구조를 실제 브라우저 DOM에 반영하는 웹용 렌더러다. `createRoot(div#root)`를 호출하면 ReactDOM이 `div#root` 내부를 React 앱이 관리할 영역으로 사용한다.
 

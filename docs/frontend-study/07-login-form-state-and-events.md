@@ -97,24 +97,24 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 ### 이때 처음 나오는 React 개념
 
-**React**는 컴포넌트와 state를 이용해 현재 화면 구조를 계산하는 JavaScript 라이브러리다. 별도의 React 엔진이 있는 것이 아니라 브라우저의 JavaScript 엔진이 React 라이브러리 코드와 우리 코드를 함께 실행한다.
+**React**는 `props`와 state를 바탕으로 다음 화면에 필요한 UI 구조를 결정하는 JavaScript 라이브러리다. 별도의 React 엔진이 있는 것이 아니라, 브라우저의 JavaScript 엔진이 React 라이브러리 코드와 애플리케이션 코드를 함께 실행한다.
 
-**ReactDOM**은 React의 계산 결과를 브라우저 DOM에 반영하는 렌더러다. `createRoot`를 호출하면 `div#root` 내부를 관리하고, 브라우저 이벤트를 받을 내부 리스너도 설정한다.
+**ReactDOM**은 React가 결정한 UI 구조를 실제 브라우저 DOM에 반영하는 웹용 렌더러다. `createRoot(div#root)`를 호출하면 ReactDOM이 `div#root` 내부를 React 앱이 관리할 영역으로 사용한다.
 
-**컴포넌트(component)**는 React가 렌더링 중 호출하여 JSX를 받는 함수다. `<App />`은 `App()`을 이 줄에서 직접 호출한다는 뜻이 아니라, React에게 App 컴포넌트를 렌더링하라고 설명하는 JSX다.
+**컴포넌트(component)**는 React가 렌더링 중 호출하는 함수다. 컴포넌트는 props를 받고 Hook을 사용한 뒤, 화면 구조를 담은 JSX(또는 `null`)를 반환한다. `<App />`은 이 자리에서 `App()`을 직접 호출하는 코드가 아니라, React에게 App 컴포넌트를 렌더링하라고 전달하는 React 요소다.
 
-**JSX**는 현재 화면에 무엇이 있어야 하는지를 적는 문법이다. 빌드 과정에서 브라우저가 실행할 JavaScript 표현으로 변환된다.
+**JSX**는 화면에 필요한 UI 구조를 JavaScript/TypeScript 안에 작성하는 문법이다. Vite가 JSX를 브라우저가 실행할 JavaScript 코드로 변환한다. 실행된 JSX 코드는 실제 DOM이 아니라 React가 처리할 UI 요소를 만든다.
 
 **render와 commit**은 구분한다.
 
 ```text
-render: React가 컴포넌트를 호출하여 새 JSX를 계산
-commit: ReactDOM이 계산 결과의 필요한 차이를 실제 DOM에 반영
+render: React가 App과 하위 컴포넌트를 호출해 다음 UI 요소 트리를 결정하는 단계
+commit: ReactDOM이 이전 화면과 비교해 필요한 변경만 실제 DOM에 반영하는 단계
 ```
 
-렌더링은 페이지 새로고침이 아니다. React는 기존 페이지 안에서 필요한 DOM만 갱신한다.
+렌더링은 페이지 새로고침이 아니다. state가 바뀌면 React가 다음 UI를 다시 결정하고, ReactDOM은 실제로 달라진 DOM만 갱신한다.
 
-App은 첫 화면을 반영한 뒤 `useAuth`의 Effect로 기존 세션을 확인한다. 세션이 있으면 바로 로그인된 화면을 보여 주고, 없을 때만 로그인 버튼을 보여 준다. Effect는 10장에서 이벤트 핸들러와 비교한다. 이 시점의 `form`은 `null`이므로 `LoginForm`은 아직 없다.
+첫 렌더링에서 `form`은 `null`이므로 `LoginForm`은 아직 UI 요소 트리에 없다. 이후 첫 DOM 반영이 끝나면 `useAuth`의 Effect가 실행되어 기존 세션을 확인한다. 요청 중에는 `loading`이 `true`라 로그인·회원가입 버튼을 표시하지 않고, 요청이 끝난 뒤 세션이 있으면 로그인된 화면을, 없으면 로그인·회원가입 버튼을 보여 준다. Effect는 10장에서 이벤트 핸들러와 비교한다.
 
 ---
 

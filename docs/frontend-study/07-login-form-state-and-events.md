@@ -42,6 +42,8 @@
 
 ## Docker 배포에서 React 앱이 전달되는 과정
 
+현재 구조는 **백엔드 API와 프론트엔드 정적 파일을 Spring Boot 하나가 함께 제공하는 방식**이다. Vite 개발 서버는 배포 환경에서 실행하지 않고, Vite가 미리 빌드한 React 정적 파일을 Spring Boot JAR에 포함한다. 실행 중인 Spring Boot는 API 요청과 이 정적 파일 요청을 모두 처리한다.
+
 ```text
 Docker 빌드
 → RUN npm run build

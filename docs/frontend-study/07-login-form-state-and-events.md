@@ -91,8 +91,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 → ReactDOM.createRoot(div#root)로 React가 관리할 root 만들기
 → render(<App />)로 최초 렌더링 요청
 → React가 App 컴포넌트 호출
-→ App이 JSX 계산
-→ ReactDOM이 계산 결과를 실제 브라우저 DOM에 반영
+→ App이 JSX를 반환해 UI 요소 트리를 만듦
+→ ReactDOM이 이 UI 요소 트리를 실제 브라우저 DOM에 반영
 ```
 
 ### 이때 처음 나오는 React 개념

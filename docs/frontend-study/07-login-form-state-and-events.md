@@ -101,9 +101,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 **ReactDOM**은 React가 결정한 UI 구조를 실제 브라우저 DOM에 반영하는 웹용 렌더러다. `createRoot(div#root)`를 호출하면 ReactDOM이 `div#root` 내부를 React 앱이 관리할 영역으로 사용한다.
 
-**컴포넌트(component)**는 React가 렌더링 중 호출하는 함수다. 컴포넌트는 props를 받고 Hook을 사용한 뒤, 화면 구조를 담은 JSX(또는 `null`)를 반환한다. `<App />`은 이 자리에서 `App()`을 직접 호출하는 코드가 아니라, React에게 App 컴포넌트를 렌더링하라고 전달하는 React 요소다.
+**컴포넌트(component)**는 React가 렌더링 중 호출하는 함수다. 컴포넌트는 props를 받고 Hook을 사용한 뒤, 화면 구조를 담은 JSX(또는 `null`)를 반환한다. `<App />`은 `App()`을 직접 호출하는 코드가 아니라, JSX 문법으로 App 컴포넌트를 나타내는 React 요소를 만드는 코드다. 이후 React가 렌더링 과정에서 이 요소를 보고 `App` 함수를 호출한다.
 
-**JSX**는 화면에 필요한 UI 구조를 JavaScript/TypeScript 안에 작성하는 문법이다. Vite가 JSX를 브라우저가 실행할 JavaScript 코드로 변환한다. 실행된 JSX 코드는 실제 DOM이 아니라 React가 처리할 UI 요소를 만든다.
+**JSX**는 화면에 필요한 UI 구조를 JavaScript/TypeScript 안에 작성하는 문법이다. Vite는 JSX를 브라우저가 실행할 수 있는 JavaScript 코드로 변환한다. 브라우저가 이 JavaScript를 실행하면 실제 DOM이 아닌 React 요소가 만들어지고, React가 이를 처리해 다음 UI 구조를 결정한다.
 
 **render와 commit**은 구분한다.
 

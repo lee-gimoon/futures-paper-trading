@@ -120,8 +120,6 @@ React는 스스로 임의로 화면을 다시 그리지 않는다. 최초 렌더
 → ReactDOM이 실제 DOM의 필요한 부분만 갱신
 ```
 
-여기서 `<App />` 자체가 렌더링을 시작하는 것은 아니다. `<App />`은 `render(...)`에 전달되는 JSX이며, `render(<App />)`가 최초 렌더링을 요청하면 React가 `App` 함수를 호출한다.
-
 **render와 commit**은 구분한다.
 
 ```text
@@ -163,7 +161,13 @@ const [form, setForm] = useState<FormMode>(null);
 )}
 ```
 
-인증 상태는 `frontend/src/auth/hooks/useAuth.ts`의 Effect가 확인한다.
+#### Effect: 렌더링 뒤 외부와 동기화하는 코드
+
+**Effect**는 React가 UI를 DOM에 반영한 뒤, 서버 통신·이벤트 구독·타이머처럼 React 바깥의 대상과 동기화하려고 실행하는 코드다. 컴포넌트 함수는 JSX를 반환해 UI 구조를 결정하는 데 집중하고, 서버에 요청을 보내는 일은 Effect에 둔다.
+
+`useEffect(실행할 함수, 의존성 배열)`은 React에 Effect를 등록하는 Hook이다. 두 번째 인자인 빈 배열 `[]`은 이 Effect가 지켜볼 값이 없다는 뜻이므로, 일반적으로 컴포넌트가 처음 화면에 들어온 뒤 한 번 실행된다. 이 프로젝트는 개발 환경에서 `React.StrictMode`를 사용하므로, React가 Effect의 문제를 찾기 위해 처음 실행을 한 번 더 수행할 수 있다.
+
+이 프로젝트에서는 `frontend/src/auth/hooks/useAuth.ts`의 Effect가 기존 로그인 세션을 확인한다.
 
 ```tsx
 const [user, setUser] = useState<User | null>(null);
@@ -181,7 +185,7 @@ useEffect(() => {
 }, []);
 ```
 
-첫 DOM 반영이 끝난 뒤 이 Effect가 실행되어 기존 세션을 확인한다. 요청 중에는 `loading`이 `true`라 `App.tsx`의 `{loading ? null : ...}` 조건에 따라 로그인·회원가입 버튼을 표시하지 않는다. 요청이 끝난 뒤 세션이 있으면 로그인된 화면을, 없으면 로그인·회원가입 버튼을 보여 준다. Effect는 10장에서 이벤트 핸들러와 비교한다.
+첫 DOM 반영이 끝난 뒤 이 Effect가 실행되어 기존 세션을 확인한다. 요청 중에는 `loading`이 `true`라 `App.tsx`의 `{loading ? null : ...}` 조건에 따라 로그인·회원가입 버튼을 표시하지 않는다. 요청이 끝난 뒤 세션이 있으면 로그인된 화면을, 없으면 로그인·회원가입 버튼을 보여 준다. Effect와 이벤트 핸들러의 차이는 10장에서 다시 비교한다.
 
 ---
 

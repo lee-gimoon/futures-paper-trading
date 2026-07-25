@@ -105,6 +105,23 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 **JSX**는 화면에 필요한 UI 구조를 JavaScript/TypeScript 안에 작성하는 문법이다. Vite는 JSX를 브라우저가 실행할 수 있는 JavaScript 코드로 변환한다. 브라우저가 이 JavaScript를 실행하면 실제 DOM이 아닌 React 요소가 만들어지고, React가 이를 처리해 다음 UI 구조를 결정한다.
 
+#### React는 언제 렌더링을 시작하는가?
+
+React는 스스로 임의로 화면을 다시 그리지 않는다. 최초 렌더링 요청이나 state·props·context 변경이 발생하면 렌더링 작업을 시작한다.
+
+```text
+최초 렌더링
+→ ReactDOM.createRoot(div#root).render(<App />)로 App 렌더링 요청
+→ React가 App 함수를 호출해 첫 UI 구조를 결정
+
+이후 렌더링
+→ state 변경, 부모 컴포넌트의 props 변경, 사용 중인 context 변경
+→ React가 영향을 받은 컴포넌트의 렌더링을 다시 수행
+→ ReactDOM이 실제 DOM의 필요한 부분만 갱신
+```
+
+여기서 `<App />` 자체가 렌더링을 시작하는 것은 아니다. `<App />`은 `render(...)`에 전달되는 JSX이며, `render(<App />)`가 최초 렌더링을 요청하면 React가 `App` 함수를 호출한다.
+
 **render와 commit**은 구분한다.
 
 ```text
@@ -114,7 +131,57 @@ commit: ReactDOM이 이전 화면과 비교해 필요한 변경만 실제 DOM에
 
 렌더링은 페이지 새로고침이 아니다. state가 바뀌면 React가 다음 UI를 다시 결정하고, ReactDOM은 실제로 달라진 DOM만 갱신한다.
 
-첫 렌더링에서 `form`은 `null`이므로 `LoginForm`은 아직 UI 요소 트리에 없다. 이후 첫 DOM 반영이 끝나면 `useAuth`의 Effect가 실행되어 기존 세션을 확인한다. 요청 중에는 `loading`이 `true`라 로그인·회원가입 버튼을 표시하지 않고, 요청이 끝난 뒤 세션이 있으면 로그인된 화면을, 없으면 로그인·회원가입 버튼을 보여 준다. Effect는 10장에서 이벤트 핸들러와 비교한다.
+#### 첫 화면에서 로그인 상태를 확인한다
+
+`App.tsx`는 `useAuth`에서 현재 사용자와 인증 확인 상태를 받고, `form` state에는 처음에 `null`을 넣는다.
+
+```tsx
+const { user, loading, error: authError, login, signup, logout, expireSession } = useAuth();
+const [form, setForm] = useState<FormMode>(null);
+```
+
+`form`이 `null`이면 아래 조건이 거짓이므로, 첫 렌더링에는 `LoginForm`이 UI 요소 트리에 들어가지 않는다.
+
+```tsx
+{form === 'login' && <LoginForm onLogin={login} onClose={() => setForm(null)} />}
+{form === 'signup' && <SignupForm onSignup={signup} onClose={() => setForm(null)} />}
+```
+
+상단의 로그인·회원가입 버튼도 `loading`과 `user` 값에 따라 조건부로 표시한다.
+
+```tsx
+{loading ? null : user ? (
+  <>
+    <span className="auth-user">{user.displayName || user.email}님</span>
+    <button className="ghost" onClick={logout}>로그아웃</button>
+  </>
+) : (
+  <>
+    <button onClick={() => setForm('login')}>로그인</button>
+    <button onClick={() => setForm('signup')}>회원가입</button>
+  </>
+)}
+```
+
+인증 상태는 `frontend/src/auth/hooks/useAuth.ts`의 Effect가 확인한다.
+
+```tsx
+const [user, setUser] = useState<User | null>(null);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  authApi
+    .fetchMe()
+    .then(setUser)
+    .catch((err) => {
+      setUser(null);
+      setError(err instanceof Error ? err.message : '로그인 상태를 확인하지 못했습니다.');
+    })
+    .finally(() => setLoading(false));
+}, []);
+```
+
+첫 DOM 반영이 끝난 뒤 이 Effect가 실행되어 기존 세션을 확인한다. 요청 중에는 `loading`이 `true`라 `App.tsx`의 `{loading ? null : ...}` 조건에 따라 로그인·회원가입 버튼을 표시하지 않는다. 요청이 끝난 뒤 세션이 있으면 로그인된 화면을, 없으면 로그인·회원가입 버튼을 보여 준다. Effect는 10장에서 이벤트 핸들러와 비교한다.
 
 ---
 

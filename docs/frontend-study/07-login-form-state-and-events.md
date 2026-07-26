@@ -226,11 +226,11 @@ export default function App() {
 }
 ```
 
-여기서 처음 **Hook(훅)**이 나온다. Hook은 함수형 컴포넌트에서 state를 기억하거나 Effect를 등록하는 등 React 기능을 사용할 때 호출하는 `use...` 형태의 함수다.
+여기서 처음 **Hook(훅)**이 나온다. Hook은 함수형 컴포넌트가 React 기능을 요청하고 연결할 때 호출하는 `use...` 형태의 특별한 함수다. 컴포넌트 함수는 렌더링될 때마다 다시 호출되지만, Hook을 통해 React는 컴포넌트별 state를 렌더링 사이에도 기억하고, DOM 반영 뒤 실행할 Effect도 관리할 수 있다.
 
-- `useState`: 컴포넌트가 렌더링 사이에 기억할 state를 만든다.
-- `useEffect`: DOM commit 뒤 외부 시스템과 동기화할 작업을 등록한다.
-- `useAuth`: 이 프로젝트가 만든 커스텀 Hook으로, 내부에서 React Hook들을 조합한다.
+- `useState`: React에게 이 컴포넌트의 값을 렌더링 사이에도 기억해 달라고 요청한다.
+- `useEffect`: React에게 DOM 반영 뒤 이 작업을 실행해 달라고 등록한다.
+- `useAuth`: 이 프로젝트가 만든 커스텀 Hook으로, 내부에서 다른 React Hook을 조합해 인증 관련 state와 함수를 제공한다.
 
 Hook은 다음 규칙을 지켜야 한다.
 

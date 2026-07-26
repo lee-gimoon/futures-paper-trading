@@ -120,7 +120,7 @@ export default function App() {
 }
 ```
 
-`<App />`은 이 자리에서 개발자가 `App()`을 직접 호출하는 일반 함수 호출이 아니다. JSX 문법으로 “여기에 App 컴포넌트를 둔다”는 React 요소를 만든다. `root.render(<App />)`가 그 요소를 받으면 React는 요소의 타입이 `App`인 것을 보고 렌더링 중 `App` 함수를 호출한다.
+`<App />`은 `App()`을 직접 실행하는 함수 호출이 아니라, 이 위치에 App 컴포넌트를 렌더링하라고 작성하는 JSX다. `root.render(<App />)`가 최초 렌더링을 요청하면 React가 `App` 함수를 호출하고, App이 반환한 JSX를 바탕으로 화면을 만든다.
 
 **JSX**는 JavaScript/TypeScript 안에서 UI 구조를 작성하는 문법이다.
 

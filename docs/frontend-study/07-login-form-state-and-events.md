@@ -128,7 +128,41 @@ export default function App() {
 <button onClick={logout}>로그아웃</button>
 ```
 
-Vite는 JSX를 브라우저가 실행할 JavaScript로 변환한다. 브라우저가 변환된 코드를 실행하면 실제 DOM 버튼이 즉시 생기는 것이 아니라, 먼저 React가 처리할 **React 요소**가 만들어진다. React 요소는 “어떤 타입의 UI가 어떤 props와 자식을 가져야 하는가”를 담은 값이다. 요소가 중첩되면 React가 다음 UI를 판단할 때 사용할 요소 트리가 된다. 이 요소가 실제 DOM으로 이어지는 순서는 바로 다음 render·commit 설명에서 확인한다.
+Vite는 JSX를 브라우저가 실행할 JavaScript로 변환한다. 브라우저가 변환된 코드를 실행하면 실제 DOM 버튼이 즉시 생기는 것이 아니라, 먼저 React가 처리할 **React 요소**가 만들어진다.
+
+위 JSX를 예로 React 요소가 무엇인지 조금 더 구체적으로 보자. React 요소는 JSX를 실행했을 때 만들어지는 **JavaScript 객체 형태의 UI 설명서**라고 생각하면 된다. 실제 DOM은 아니다.
+
+```text
+type: button
+props:
+  onClick: logout 함수
+  children: "로그아웃"
+```
+
+여기서:
+
+- `type`: 어떤 UI인지 — `button`, `div`, 또는 `LoginForm` 같은 컴포넌트
+- `props`: 그 UI에 전달할 값 — `onClick`, `className` 등
+- `children`: 내부에 들어갈 내용 — 글자나 다른 JSX
+
+JSX가 중첩되면 이 설명도 부모·자식 구조가 된다.
+
+```tsx
+<div>
+  <h1>로그인</h1>
+  <button>로그인</button>
+</div>
+```
+
+```text
+div
+├─ h1
+│  └─ "로그인"
+└─ button
+   └─ "로그인"
+```
+
+이 부모·자식 설명 구조를 **React 요소 트리**라고 한다. React는 이전 요소 트리와 새 요소 트리를 비교해 버튼을 새로 만들지, 문구만 바꿀지, 폼을 제거할지를 결정한다. ReactDOM은 그 결정대로 실제 브라우저 DOM을 수정한다. 이 요소 트리가 실제 DOM으로 이어지는 순서는 바로 다음 render·commit 설명에서 확인한다.
 
 ### 1-3. React, ReactDOM, 브라우저가 나누어 맡는 일
 

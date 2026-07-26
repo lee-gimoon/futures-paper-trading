@@ -226,7 +226,7 @@ export default function App() {
 }
 ```
 
-여기서 처음 **Hook(훅)**이 나온다. Hook은 함수형 컴포넌트가 React의 state, Effect 같은 기능을 사용하도록 하는 `use...` 함수다.
+여기서 처음 **Hook(훅)**이 나온다. Hook은 함수형 컴포넌트에서 state를 기억하거나 Effect를 등록하는 등 React 기능을 사용할 때 호출하는 `use...` 형태의 함수다.
 
 - `useState`: 컴포넌트가 렌더링 사이에 기억할 state를 만든다.
 - `useEffect`: DOM commit 뒤 외부 시스템과 동기화할 작업을 등록한다.

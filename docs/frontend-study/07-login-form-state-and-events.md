@@ -130,7 +130,7 @@ export default function App() {
 
 Vite는 JSX를 브라우저가 실행할 JavaScript로 변환한다. 브라우저가 변환된 코드를 실행하면 실제 DOM 버튼이 즉시 생기는 것이 아니라, 먼저 React가 처리할 **React 요소**가 만들어진다.
 
-위 JSX를 예로 React 요소가 무엇인지 조금 더 구체적으로 보자. React 요소는 JSX를 실행했을 때 만들어지는 **JavaScript 객체 형태의 UI 설명서**라고 생각하면 된다. 실제 DOM은 아니다.
+React 요소는 JSX가 변환된 JavaScript 코드가 실행될 때 만들어지는 **JavaScript 객체 형태의 UI 설명서**라고 생각하면 된다. 실제 DOM은 아니다.
 
 ```text
 type: button

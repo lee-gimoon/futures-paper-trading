@@ -209,7 +209,7 @@ browser paint
 
 `root.render(<App />)`가 최초 렌더링을 요청하면 React가 App을 호출하고, App은 render 중 Hook을 호출한 뒤 JSX를 반환한다. 그 결과가 commit되어(즉, JSX에 해당하는 UI가 브라우저 DOM에 처음 반영되면) App의 **mount(마운트)**가 완료된다.
 
-**mount(마운트)**는 컴포넌트가 React 화면에 처음 추가되는 것을 말한다. `App` 자체가 실제 `<App>` DOM 태그로 생기는 것은 아니다. App이 반환한 `div`, `button` 같은 UI가 브라우저 DOM에 처음 반영되고, React가 App을 화면의 컴포넌트로 관리하기 시작한 상태를 App이 mount되었다고 한다.
+**mount(마운트)**는 React가 컴포넌트를 자신의 **컴포넌트 트리**에 처음 추가하여, 해당 컴포넌트의 상태와 이벤트 등을 관리하기 시작하는 것을 말한다. `<App />` 자체가 브라우저의 실제 `<App>` DOM 태그로 생성되는 것은 아니다. 이 예제에서는 `App`이 반환한 `div`, `button` 같은 UI가 commit 과정에서 브라우저 DOM에 처음 반영되는 시점에 `App`도 mount된다. 단, 컴포넌트가 `null`을 반환하는 경우처럼 DOM 요소가 없어도 컴포넌트는 mount될 수 있다.
 
 컴포넌트가 이미 mount된 뒤에는 state·props·context 변경으로 화면이 다시 반영되어도 mount가 아니라 **update(업데이트)**다. 반대로 조건부 렌더링 결과에서 컴포넌트가 사라지면 **unmount(언마운트)**라고 한다. 예를 들어 나중에 `form`이 `null`에서 `'login'`으로 바뀌어 `LoginForm`이 처음 나타나면 LoginForm이 mount되고, 다시 `null`이 되어 사라지면 unmount된다.
 

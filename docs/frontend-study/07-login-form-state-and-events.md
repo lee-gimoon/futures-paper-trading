@@ -226,7 +226,9 @@ export default function App() {
 }
 ```
 
-여기서 처음 **Hook(훅)**이 나온다. Hook은 함수형 컴포넌트가 React 기능을 요청하고 연결할 때 호출하는 `use...` 형태의 특별한 함수다. **컴포넌트 함수는 렌더링될 때마다 처음부터 다시 실행된다.** **Hook을 사용하면 React가 컴포넌트별 state를 다음 렌더링까지 기억한다.** 또한 React는 **Hook으로 등록한 Effect를 DOM 반영 뒤에 실행한다.**
+#### 꼭 알아야 할 Hook 핵심 개념
+
+여기서 처음 **Hook(훅)**이 나온다. Hook은 함수형 컴포넌트가 React 기능을 요청하고 연결할 때 호출하는 `use...` 형태의 특별한 함수다. 컴포넌트 함수는 렌더링될 때마다 처음부터 다시 실행된다. Hook을 사용하면 React가 컴포넌트별 state를 다음 렌더링까지 기억한다. 또한 React는 Hook으로 등록한 Effect를 DOM 반영 뒤에 실행한다.
 
 - `useState`: React에게 이 컴포넌트의 값을 렌더링 사이에도 기억해 달라고 요청한다.
 - `useEffect`: React에게 DOM 반영 뒤 이 작업을 실행해 달라고 등록한다.

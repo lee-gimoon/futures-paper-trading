@@ -6,6 +6,8 @@ import * as authApi from '../api/authApi';
 // - user: 로그인한 사용자 (없으면 null)
 // - loading: 첫 me() 확인이 끝나기 전 true (버튼이 잠깐 깜빡이는 것 방지)
 export function useAuth() {
+  // <User | null>은 useState에 전달하는 타입 인자다.
+  // user state에는 User 객체 또는 null이 들어갈 수 있고, (null)은 최초 초기값이다.
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -307,7 +307,10 @@ export function useAuth() {
 }
 ```
 
-커스텀 Hook이 별도의 컴포넌트 인스턴스나 전역 singleton state를 만드는 것은 아니다. App이 `useAuth()`를 호출했으므로 이 Hook의 `user`, `loading`, `error` state는 App의 Hook state 일부로 React가 관리한다. 다른 컴포넌트가 `useAuth()`를 별도로 호출하면 같은 state를 공유하는 것이 아니라 그 컴포넌트에 연결된 새 state가 생긴다. `useAuth`는 관련 state와 동작을 다루는 코드를 별도 파일로 정리해 준다.
+커스텀 Hook이 별도의 컴포넌트 인스턴스나 전역 singleton state를 만드는 것은 아니다.<br />
+App이 `useAuth()`를 호출했으므로 이 Hook의 `user`, `loading`, `error` state는 App의 Hook state 일부로 React가 관리한다.<br />
+다른 컴포넌트가 `useAuth()`를 별도로 호출하면 같은 state를 공유하는 것이 아니라 그 컴포넌트에 연결된 새 state가 생긴다.<br />
+`useAuth`는 관련 state와 동작을 다루는 코드를 별도 파일로 정리해 준다.
 
 ### 1-7. `useState`는 렌더링 사이에 값을 기억한다
 

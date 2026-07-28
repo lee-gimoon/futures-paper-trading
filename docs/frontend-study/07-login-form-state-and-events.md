@@ -246,6 +246,49 @@ Hook은 다음 규칙을 지켜야 한다.
 
 React는 변수 이름이 아니라, **컴포넌트 함수가 위에서 아래로 실행되며 Hook을 호출한 순서**로 state와 Effect를 구분한다. 예를 들어 첫 번째 `useState`는 첫 번째 state 자리와 연결되고, 다음 렌더링에서도 같은 순서로 호출되어야 이전 state를 올바르게 이어서 사용할 수 있다. 어떤 렌더링에서는 첫 번째 Hook을 호출하고 다른 렌더링에서는 건너뛰면 React가 state의 자리를 올바르게 연결할 수 없다.
 
+#### `useState`는 렌더링 사이의 값을 기억한다
+
+`useState`를 하나만 사용하는 간단한 컴포넌트를 보면 Hook의 기본 동작을 확인할 수 있다.
+
+```tsx
+import { useState } from 'react';
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>현재 값: {count}</p>
+      <button onClick={() => setCount(count + 1)}>1 증가</button>
+    </div>
+  );
+}
+```
+
+처음 `<Counter />`가 렌더링되면 React가 `Counter()`를 호출한다.
+
+```text
+첫 렌더링
+React → Counter() 호출
+      → useState(0) 실행
+      → JSX 반환
+      → DOM에 표시
+```
+
+버튼을 눌러 `setCount(1)`이 호출되면 `count` state가 바뀌므로 React가 `Counter()`를 다시 호출한다.
+
+```text
+버튼 클릭
+setCount(1)
+  ↓
+React → Counter() 다시 호출
+      → useState(0) 호출
+      → 이전 state인 1을 count로 받음
+      → 새 JSX 반환
+```
+
+다시 렌더링될 때도 `useState(0)`은 호출되지만, `0`은 최초 mount 때만 사용하는 초기값이다. 이후에는 React가 저장한 이전 state를 `count`로 돌려준다.
+
 ### 1-6. `useAuth`는 컴포넌트가 아니라 커스텀 Hook이다
 
 `useAuth()`는 JSX를 반환하는 컴포넌트가 아니다. 커스텀 Hook은 Hook 규칙을 지키면서 다른 Hook을 조합하는 JavaScript 함수이며, React와 린터가 Hook으로 식별할 수 있도록 이름을 `use`로 시작한다.

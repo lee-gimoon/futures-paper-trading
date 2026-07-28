@@ -57,5 +57,7 @@ export function useAuth() {
     setError('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
   }, []);
 
+  // user, loading, error, login 등은 useAuth 함수 내부의 변수다.
+  // return은 이 변수들을 속성으로 담은 객체를 호출한 컴포넌트에 반환한다.
   return { user, loading, error, login, signup, logout, expireSession };
 }

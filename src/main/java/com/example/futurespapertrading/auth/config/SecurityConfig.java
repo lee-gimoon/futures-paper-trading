@@ -48,7 +48,18 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange(ex -> ex
                         // Docker/배포 모드에서는 React 빌드 결과물을 Spring Boot가 직접 서빙한다.
-                        .pathMatchers("/", "/index.html", "/assets/**", "/*.ico", "/*.png", "/*.svg").permitAll()
+                        .pathMatchers(
+                                "/",
+                                "/index.html",
+                                "/project",
+                                "/project/**",
+                                "/robots.txt",
+                                "/sitemap.xml",
+                                "/assets/**",
+                                "/*.ico",
+                                "/*.png",
+                                "/*.svg")
+                        .permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
                         // 기존 시세/호가 API는 로그인 없이도 접근 가능하게 유지
                         .pathMatchers("/api/binance-futures/**").permitAll()

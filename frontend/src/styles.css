@@ -248,6 +248,19 @@ button:disabled {
   gap: 8px;
 }
 
+.project-link {
+  color: #a7c7ff;
+  font-size: 12px;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.project-link:hover,
+.project-link:focus-visible {
+  color: #fff;
+  border-bottom-color: #2563eb;
+}
+
 .auth-box button,
 .auth-actions button {
   margin-bottom: 0;
@@ -632,6 +645,13 @@ button.tiny {
 
   .auth-box {
     gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .project-link {
+    flex-basis: 100%;
+    text-align: right;
   }
 
   .auth-box button {

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>비트코인 선물 모의투자 서비스 소개 | Futures Paper Trading</title>
+    <meta
+      name="description"
+      content="Binance BTCUSDT 실시간 호가를 활용해 시장가·지정가 주문, 레버리지, 포지션 손익과 강제청산을 연습하는 학습용 모의 선물거래 프로젝트를 소개합니다."
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://futures-paper-trading-production.up.railway.app/project/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/project.css" />
+    <meta name="theme-color" content="#08111f" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:site_name" content="Futures Paper Trading" />
+    <meta property="og:title" content="비트코인 선물 모의투자 서비스 소개" />
+    <meta
+      property="og:description"
+      content="실시간 호가 기반 체결부터 레버리지·포지션·강제청산까지 학습하는 모의 선물거래 프로젝트"
+    />
+    <meta
+      property="og:url"
+      content="https://futures-paper-trading-production.up.railway.app/project/"
+    />
+    <meta
+      property="og:image"
+      content="https://futures-paper-trading-production.up.railway.app/project-og.svg"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "https://futures-paper-trading-production.up.railway.app/#app",
+            "name": "Futures Paper Trading",
+            "alternateName": "비트코인 선물 모의투자",
+            "url": "https://futures-paper-trading-production.up.railway.app/",
+            "description": "Binance BTCUSDT 공개 시세를 이용해 선물 주문, 레버리지, 포지션 손익과 강제청산을 연습하는 학습용 모의투자 웹 애플리케이션",
+            "applicationCategory": "FinanceApplication",
+            "operatingSystem": "Web",
+            "isAccessibleForFree": true,
+            "dateModified": "2026-07-29",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "KRW"
+            },
+            "sameAs": "https://github.com/lee-gimoon/futures-paper-trading"
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://futures-paper-trading-production.up.railway.app/project/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "실제 돈이 사용되나요?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "아닙니다. 가입 시 제공되는 10,000 USDT 모의 자산만 사용하며 실제 거래소 주문이나 자금 이동은 발생하지 않습니다."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "어떤 시세 데이터를 사용하나요?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Binance USDⓈ-M Futures의 BTCUSDT 공개 호가 스트림과 캔들 REST 데이터를 사용합니다."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "실제 거래 결과와 같나요?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "아닙니다. 수수료, 펀딩비, 유지증거금, 호가 깊이와 시장 충격 등이 단순화되어 실제 거래 결과와 다를 수 있습니다."
+                }
+              }
+            ]
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "모의투자 앱",
+                "item": "https://futures-paper-trading-production.up.railway.app/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "프로젝트 소개",
+                "item": "https://futures-paper-trading-production.up.railway.app/project/"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">본문 바로가기</a>
+    <header class="site-header">
+      <a class="brand" href="/project/" aria-label="Futures Paper Trading 프로젝트 소개">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Futures Paper Trading</span>
+      </a>
+      <nav aria-label="주요 메뉴">
+        <a href="#features">핵심 기능</a>
+        <a href="#architecture">데이터 흐름</a>
+        <a href="#faq">FAQ</a>
+        <a class="nav-cta" href="/">앱 실행</a>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">REAL-TIME PAPER TRADING LAB</p>
+          <h1 id="hero-title">실제 자금 없이 배우는<br />비트코인 선물 모의투자</h1>
+          <p class="answer-first">
+            Futures Paper Trading은 Binance의 BTCUSDT 공개 시세를 이용해
+            <strong>호가 기반 주문 체결, 레버리지, 포지션 손익과 강제청산</strong>을
+            연습하는 학습용 웹 애플리케이션입니다.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="/">실시간 앱 체험</a>
+            <a
+              class="button secondary"
+              href="https://github.com/lee-gimoon/futures-paper-trading"
+              rel="noopener noreferrer"
+            >GitHub 소스 보기</a>
+          </div>
+          <ul class="signal-list" aria-label="프로젝트 핵심 정보">
+            <li><span>시세</span> BTCUSDT depth20 · 100ms</li>
+            <li><span>계좌</span> 10,000 USDT 모의 자산</li>
+            <li><span>스택</span> WebFlux · R2DBC · React</li>
+          </ul>
+        </div>
+
+        <div class="terminal" aria-label="호가 기반 체결 흐름 예시">
+          <div class="terminal-head">
+            <span>BTCUSDT</span>
+            <span class="live"><i></i> LIVE DATA</span>
+          </div>
+          <div class="price">$64,010.60 <small>MARK / MID</small></div>
+          <div class="chart-line" aria-hidden="true">
+            <svg viewBox="0 0 520 190" role="img" aria-label="상승과 하락을 반복하는 예시 가격 차트">
+              <defs>
+                <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#33d6a6" stop-opacity=".35"/>
+                  <stop offset="1" stop-color="#33d6a6" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path class="area" d="M0 155 L42 138 L80 145 L120 92 L158 105 L198 72 L238 92 L276 55 L316 69 L357 49 L398 73 L438 34 L476 48 L520 18 L520 190 L0 190 Z"/>
+              <path class="stroke" d="M0 155 L42 138 L80 145 L120 92 L158 105 L198 72 L238 92 L276 55 L316 69 L357 49 L398 73 L438 34 L476 48 L520 18"/>
+            </svg>
+          </div>
+          <div class="terminal-grid">
+            <div><span>ORDER</span><strong>LIMIT BUY</strong></div>
+            <div><span>LEVERAGE</span><strong>10x</strong></div>
+            <div><span>ENGINE</span><strong>DEPTH FILL</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="problem-strip" aria-label="프로젝트가 해결하는 학습 문제">
+        <p>“마지막 가격 한 줄로 체결하면 실제 호가의 잔량과 슬리피지를 배울 수 없다.”</p>
+        <strong>그래서 주문 수량이 호가 레벨을 순서대로 소진하도록 구현했습니다.</strong>
+      </section>
+
+      <section class="section" id="features" aria-labelledby="features-title">
+        <div class="section-heading">
+          <p class="eyebrow">WHAT YOU CAN PRACTICE</p>
+          <h2 id="features-title">무엇을 연습할 수 있나요?</h2>
+          <p>기능 이름만 나열하지 않고, 각 기능이 어떤 선물거래 개념을 학습하게 하는지 설명합니다.</p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span class="feature-number">01</span>
+            <h3>실시간 호가와 캔들</h3>
+            <p>BTCUSDT 상위 20호가와 여러 시간 단위의 캔들을 한 화면에서 확인합니다.</p>
+          </article>
+          <article>
+            <span class="feature-number">02</span>
+            <h3>호가 레벨 기반 체결</h3>
+            <p>시장가·지정가 주문이 호가 잔량을 순서대로 소진하며 수량가중평균 체결가를 만듭니다.</p>
+          </article>
+          <article>
+            <span class="feature-number">03</span>
+            <h3>레버리지와 격리 마진</h3>
+            <p>1배부터 50배까지 레버리지를 선택하고 필요한 증거금과 청산가 변화를 확인합니다.</p>
+          </article>
+          <article>
+            <span class="feature-number">04</span>
+            <h3>포지션과 손익</h3>
+            <p>롱·숏 포지션의 평균 진입가, 실현·미실현 PnL, equity와 가용 잔고를 계산합니다.</p>
+          </article>
+          <article>
+            <span class="feature-number">05</span>
+            <h3>대기 주문과 자동청산</h3>
+            <p>지정가 주문을 호가 변화에 따라 재평가하고 청산가 도달 여부를 주기적으로 검사합니다.</p>
+          </article>
+          <article>
+            <span class="feature-number">06</span>
+            <h3>사용자별 모의 계좌</h3>
+            <p>세션 인증으로 사용자의 계좌·주문·체결 내역을 분리해 개인별 학습 기록을 유지합니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section architecture" id="architecture" aria-labelledby="architecture-title">
+        <div class="section-heading">
+          <p class="eyebrow">HOW DATA MOVES</p>
+          <h2 id="architecture-title">실시간 데이터는 어떻게 전달되나요?</h2>
+          <p>서버의 Binance 연결은 하나만 유지하고, 최신 호가를 브라우저와 내부 거래 로직에 나눠 전달합니다.</p>
+        </div>
+        <ol class="flow">
+          <li>
+            <span>01</span>
+            <div><strong>Binance WebSocket</strong><small>depth20@100ms 공개 호가 수신</small></div>
+          </li>
+          <li>
+            <span>02</span>
+            <div><strong>Reactor Snapshot Hub</strong><small>최신 스냅샷 1건 보관·공유</small></div>
+          </li>
+          <li>
+            <span>03</span>
+            <div><strong>거래 엔진과 모니터</strong><small>지정가 재평가·청산 검사</small></div>
+          </li>
+          <li>
+            <span>04</span>
+            <div><strong>브라우저 SSE</strong><small>접속자에게 실시간 fan-out</small></div>
+          </li>
+        </ol>
+        <div class="stack-list" aria-label="기술 스택">
+          <span>Java 21</span><span>Spring WebFlux</span><span>Reactor</span>
+          <span>R2DBC</span><span>PostgreSQL</span><span>React 18</span><span>TypeScript</span>
+        </div>
+      </section>
+
+      <section class="section terms" aria-labelledby="terms-title">
+        <div class="section-heading">
+          <p class="eyebrow">TERMS IN PLAIN LANGUAGE</p>
+          <h2 id="terms-title">핵심 용어를 먼저 설명합니다</h2>
+        </div>
+        <dl>
+          <div>
+            <dt>선물 모의투자</dt>
+            <dd>실제 돈이나 거래소 주문 없이 가상의 자산으로 선물거래 과정을 연습하는 방식입니다.</dd>
+          </div>
+          <div>
+            <dt>호가 기반 체결</dt>
+            <dd>주문 수량이 매수·매도 호가의 잔량을 순서대로 소진한다고 가정해 체결가를 계산합니다.</dd>
+          </div>
+          <div>
+            <dt>격리 마진</dt>
+            <dd>포지션에 사용되는 증거금을 별도로 계산하는 방식입니다. 이 프로젝트에서는 학습을 위해 단순화했습니다.</dd>
+          </div>
+          <div>
+            <dt>강제청산</dt>
+            <dd>평가가격이 계산된 청산가에 도달하면 시스템이 반대 주문을 기록해 포지션을 종료하는 과정입니다.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="section limits" aria-labelledby="limits-title">
+        <div class="section-heading">
+          <p class="eyebrow">SCOPE &amp; LIMITATIONS</p>
+          <h2 id="limits-title">실제 거래와 무엇이 다른가요?</h2>
+        </div>
+        <div class="limit-grid">
+          <p><strong>반영</strong> 상위 20호가의 잔량 소진, 부분 체결, 평균 체결가, 롱·숏 손익과 단순 청산가</p>
+          <p><strong>미반영</strong> maker/taker 수수료, 펀딩비, queue priority, 유지증거금, depth20 밖 유동성과 별도 시장 충격</p>
+        </div>
+        <p class="disclaimer">
+          본 서비스는 학습용 모의투자 도구이며 실제 거래·투자 조언을 제공하지 않습니다.
+          시세는 Binance 공개 데이터를 사용하며 Binance와 제휴·보증 관계가 없습니다.
+          단순화된 계산 때문에 실제 거래 결과와 다를 수 있습니다.
+        </p>
+      </section>
+
+      <section class="section faq" id="faq" aria-labelledby="faq-title">
+        <div class="section-heading">
+          <p class="eyebrow">FREQUENTLY ASKED QUESTIONS</p>
+          <h2 id="faq-title">자주 묻는 질문</h2>
+        </div>
+        <div class="faq-list">
+          <article>
+            <h3>실제 돈이 사용되나요?</h3>
+            <p>아닙니다. 가입 시 제공되는 10,000 USDT 모의 자산만 사용하며 실제 거래소 주문이나 자금 이동은 발생하지 않습니다.</p>
+          </article>
+          <article>
+            <h3>어떤 시세 데이터를 사용하나요?</h3>
+            <p>Binance USDⓈ-M Futures의 BTCUSDT 공개 호가 스트림과 캔들 REST 데이터를 사용합니다.</p>
+          </article>
+          <article>
+            <h3>실제 거래 결과와 같나요?</h3>
+            <p>아닙니다. 수수료, 펀딩비, 유지증거금, 호가 깊이와 시장 충격 등이 단순화되어 실제 거래 결과와 다를 수 있습니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section references" aria-labelledby="references-title">
+        <div class="section-heading">
+          <p class="eyebrow">SOURCES &amp; EVIDENCE</p>
+          <h2 id="references-title">근거와 구현을 확인할 수 있습니다</h2>
+        </div>
+        <ul>
+          <li>
+            <a href="https://github.com/lee-gimoon/futures-paper-trading" rel="noopener noreferrer">
+              GitHub 저장소와 구현 문서
+            </a>
+            <span>기능, 계산 가정, 테스트와 아키텍처</span>
+          </li>
+          <li>
+            <a href="https://developers.binance.com/en/docs/products/derivatives-trading-usds-futures/Introduction" rel="noopener noreferrer">
+              Binance USDⓈ-M Futures 공식 개발자 문서
+            </a>
+            <span>프로젝트가 사용하는 공개 시장 데이터의 공식 참고 자료</span>
+          </li>
+        </ul>
+        <p class="updated">최종 업데이트: <time datetime="2026-07-29">2026년 7월 29일</time></p>
+      </section>
+    </main>
+
+    <footer>
+      <div>
+        <strong>Futures Paper Trading</strong>
+        <p>실시간 데이터와 도메인 규칙을 학습하기 위한 개인 프로젝트</p>
+      </div>
+      <div class="footer-links">
+        <a href="/">앱 실행</a>
+        <a href="https://github.com/lee-gimoon/futures-paper-trading" rel="noopener noreferrer">GitHub</a>
+      </div>
+    </footer>
+  </body>
+</html>

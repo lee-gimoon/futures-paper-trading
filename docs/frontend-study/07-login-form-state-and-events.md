@@ -250,6 +250,8 @@ React는 변수 이름이 아니라, **컴포넌트 함수가 위에서 아래�
 
 `useAuth()`는 JSX를 반환하는 컴포넌트가 아니다. 커스텀 Hook은 Hook 규칙을 지키면서 다른 Hook을 조합하는 JavaScript 함수이며, React와 린터가 Hook으로 식별할 수 있도록 이름을 `use`로 시작한다.
 
+커스텀 Hook은 여러 state·Effect·이벤트 처리 로직을 하나로 묶어 컴포넌트에서 재사용하고, 컴포넌트가 화면 구성에 집중하도록 돕기 위해 만든다.
+
 ```tsx
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);

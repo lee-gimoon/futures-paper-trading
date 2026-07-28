@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /api/
-
-Sitemap: https://futures-paper-trading-production.up.railway.app/sitemap.xml

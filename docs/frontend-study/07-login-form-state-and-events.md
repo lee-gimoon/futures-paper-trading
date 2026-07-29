@@ -291,7 +291,7 @@ React → Counter() 다시 호출
 
 ### 1-6. `useAuth`는 컴포넌트가 아니라 커스텀 Hook이다
 
-`useAuth()`는 JSX를 반환하는 컴포넌트가 아니다. 커스텀 Hook은 Hook 규칙을 지키면서 다른 Hook을 조합하는 JavaScript 함수이며, React와 린터가 Hook으로 식별할 수 있도록 이름을 `use`로 시작한다.
+`useAuth()`는 JSX를 반환하는 컴포넌트가 아니다. 커스텀 Hook은 Hook 규칙을 지키면서 다른 Hook을 조합하는 JavaScript 함수다. 이름을 `use`로 시작하는 것은 React 개발자들이 따르는 관례이며, Hook 린터가 커스텀 Hook으로 인식해 Hook 규칙을 검사할 수 있게 한다.
 
 커스텀 Hook은 여러 state·Effect·이벤트 처리 로직을 하나로 묶어 컴포넌트에서 재사용하고, 컴포넌트가 화면 구성에 집중하도록 돕기 위해 만든다.
 

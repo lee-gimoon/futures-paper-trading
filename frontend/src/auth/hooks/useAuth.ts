@@ -43,15 +43,20 @@ export function useAuth() {
     setUser(authenticatedUser);
   }, []);
 
+  // useCallback: 렌더링 사이에 같은 함수 자체를 기억(재사용)하는 React 훅이다.
+  // 함수 참조가 불필요하게 바뀌는 것을 막아, 자식 컴포넌트 재렌더링이나 Effect 재실행을 줄일 수 있다.
+  // 빈 의존성 배열([]): 이 콜백은 변경되는 state나 props 값에 의존하지 않아 기존 함수 참조를 재사용한다.
+  // 반대로 [user]처럼 의존성이 있으면 user가 바뀔 때 최신 값을 반영한 새 함수를 만든다.
+  // 즉, useCallback의 두 번째 매개변수인 의존성 배열은 첫 번째 매개변수 함수의 재생성 여부를 결정한다.
   const logout = useCallback(async () => {
-    setError(null);
-    try {
-      await authApi.logout();
-      setUser(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '로그아웃에 실패했습니다.');
+    setError(null); // 이전에 표시된 인증 오류 상태를 초기화한다.
+    try { // 로그아웃 요청이 성공하는 경우의 작업을 실행한다.
+      await authApi.logout(); // Promise가 완료될 때까지 기다린다.
+      setUser(null); // 화면의 현재 사용자 상태도 로그아웃 상태로 변경한다.
+    } catch (err) { // 요청 중 오류가 발생하면 err 오류 값을 받아 처리한다.
+      setError(err instanceof Error ? err.message : '로그아웃에 실패했습니다.'); // Error면 메시지를, 아니면 기본 문구를 저장한다.
     }
-  }, []);
+  }, []); // 빈 의존성 배열: 이전 logout 함수 참조를 유지한다.
 
   // 보호 API가 401을 반환하면 만료된 서버 세션을 화면 상태에도 반영한다.
   const expireSession = useCallback(() => {

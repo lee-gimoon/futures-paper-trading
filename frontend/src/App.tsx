@@ -149,6 +149,8 @@ export default function App() {
 
   // 현재 로그인 사용자, 인증 처리 상태, 인증 동작을 useAuth 훅에서 가져온다.
   const { user, loading, error: authError, login, signup, logout, expireSession } = useAuth();
+  // useAuth() 반환 예시: { user: { id: 1, email: "user@example.com" }, loading: false, error: null, login, signup, logout, expireSession }
+  // useAuth()가 반환한 객체의 속성 이름은 error인데, 이 값을 꺼내서 이 파일에서는 authError라는 변수명으로 사용한다는 뜻이다.
 
   // 어떤 인증 폼을 열지 저장한다. setForm으로 값을 바꾸면 해당 폼이 화면에 표시된다.
   const [form, setForm] = useState<FormMode>(null);
@@ -171,6 +173,7 @@ export default function App() {
           {loading ? null : user ? (
             <>
               <span className="auth-user">{user.displayName || user.email}님</span>
+              {/* 버튼을 클릭하면 logout 콜백 함수가 실행된다. */}
               <button className="ghost" onClick={logout}>
                 로그아웃
               </button>

@@ -32,21 +32,18 @@ export async function login(email: string, password: string): Promise<void> {
 }
 
 // 로그아웃: 서버 세션을 무효화한다.
+// 서버에 로그아웃 요청을 보내고 응답을 기다리는 네트워크 작업이므로 async 비동기 함수로 선언한다.
 export async function logout(): Promise<void> {
+  // 세션 쿠키를 포함해 /api/auth/logout에 POST 요청을 보내고, 서버 응답을 res에 담는다.
   const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  // HTTP 응답이 실패면 응답의 오류 메시지로 HttpError(HTTP 오류)를 만든 뒤 예외를 던진다.
   if (!res.ok) throw await toHttpError(res, '로그아웃에 실패했습니다.');
 }
 
-// 내 정보: 로그인 상태면 User, 아니면 null.
-// 비로그인일 때 오는 401은 에러가 아니라 "로그인 안 됨"이라는 정상 신호이므로 null로 처리한다.
+// 현재 로그인한 사용자 정보를 조회한다. 로그인 상태가 아니면 null을 반환한다.
 export async function fetchMe(): Promise<User | null> {
-  // JavaScript 코드가 fetch(...)를 호출한다.
-  // → 브라우저가 제공하는 fetch 기능이 실행되어 이 URL(/api/auth/me)로 HTTP 요청을 보낸다.
-  // 개발 중에는 Vite proxy가 이 /api 요청을 Spring 서버(localhost:8080)로 전달한다.
-  // 두 번째 인자는 요청 옵션 객체다.
-  // credentials: 'include'는 조건에 맞는 SESSION 쿠키를 브라우저가 이 요청에 자동으로 붙이게 한다.
-  const res = await fetch('/api/auth/me', { credentials: 'include' });
-  if (res.status === 401) return null;
-  if (!res.ok) throw await toHttpError(res, '로그인 상태를 확인하지 못했습니다.');
-  return res.json();
+  const res = await fetch('/api/auth/me', { credentials: 'include' }); // 세션 쿠키를 포함해 사용자 조회 요청을 보낸다.
+  if (res.status === 401) return null; // 401은 오류가 아닌 비로그인 상태로 처리한다.
+  if (!res.ok) throw await toHttpError(res, '로그인 상태를 확인하지 못했습니다.'); // 그 외 HTTP 오류는 예외로 처리한다.
+  return res.json(); // 성공 응답의 JSON을 User 객체로 반환한다.
 }

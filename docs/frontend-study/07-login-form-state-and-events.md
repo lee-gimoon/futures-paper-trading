@@ -277,6 +277,8 @@ React → Counter() 호출
 
 버튼을 눌러 `setCount(1)`이 호출되면 `count` state가 바뀌므로 React가 `Counter()`를 다시 호출한다.
 
+**즉, state가 업데이트되면 React는 그 state를 소유한 컴포넌트를 다시 렌더링하며, 그 과정에서 컴포넌트 함수가 다시 실행된다.**
+
 ```text
 버튼 클릭
 setCount(1)

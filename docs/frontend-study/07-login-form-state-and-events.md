@@ -358,41 +358,45 @@ App의 상단 인증 영역은 `loading`과 `user`로 화면을 선택한다.
 )}
 ```
 
-이것이 **조건부 렌더링**이다. 별도의 HTML 페이지를 선택하는 것이 아니라, 현재 state로 이번 렌더링에서 어떤 React 요소를 반환할지 결정한다.
+이것이 **조건부 렌더링**이다. 별도의 HTML 페이지를 고르는 것이 아니라, JSX의 **이 위치**에 이번 render에서 어떤 React 요소를 둘지 state로 결정한다.
+
+위 코드의 조건은 상단 인증 영역만 결정하며, 다음 순서로 읽는다.
 
 ```text
 loading=true
-→ 인증 버튼 영역에 null 반환
-→ React는 그 위치에 아무 DOM도 만들지 않음
+→ 아직 로그인 상태를 확인하는 중
+→ 이 위치에는 null: 상단 인증 버튼 영역을 비워 둠
 
-loading=false, user 있음
+loading=false, user=User 객체
 → 사용자 이름과 로그아웃 버튼
 
 loading=false, user=null
 → 로그인·회원가입 버튼
 ```
 
-`loading=true`가 숨기는 것은 상단 인증 버튼 영역이다. 이때도 `user=null` 조건을 사용하는 공개 차트 영역은 렌더링될 수 있다.
+여기서 `user=null`은 “현재 로그인 사용자가 없다”는 뜻이고, `loading=true`는 “그 판단이 아직 확정되지 않았다”는 뜻이다. 그래서 인증 확인 전에는 로그인·회원가입 버튼을 잠시 숨긴다.
+
+`null`을 반환해도 App 전체가 사라지는 것은 아니다. 이 조건식이 있는 자리만 비어 있고, App의 다른 JSX는 각각 자신의 조건에 따라 렌더링된다. 예를 들어 공개 차트가 `user=null`일 때 보이도록 별도 조건으로 작성되어 있다면, 첫 render에도 그 차트는 렌더링될 수 있다. 이 코드 조각만으로 공개 차트의 렌더링 여부를 결정하는 것은 아니다.
 
 `<>...</>`는 **Fragment**다. 형제 요소 여러 개를 묶되 불필요한 `<div>` DOM은 만들지 않는다.
 
-첫 렌더링에서 `form=null`이므로 아래 조건도 거짓이다. 따라서 `LoginForm`은 아직 호출되지도, mount되지도 않는다.
+첫 render에서 `form=null`이므로 아래 조건도 거짓이다. 따라서 `LoginForm`은 아직 렌더링되지 않고 mount되지도 않는다.
 
 ```tsx
 {form === 'login' && <LoginForm onLogin={login} onClose={() => setForm(null)} />}
 ```
 
-첫 렌더링의 인증 관련 결과를 정리하면 다음과 같다.
+따라서 첫 render의 초기 state가 `user=null`, `loading=true`, `form=null`이라면 인증 관련 결과는 다음과 같다.
 
 ```text
-user=null
-→ 공개 차트 영역 렌더링
-
 loading=true
 → 로그인·회원가입 버튼은 아직 숨김
 
 form=null
 → LoginForm은 아직 없음
+
+user=null
+→ 로그인 여부는 아직 확정 전이며, 공개 차트 같은 다른 영역은 해당 영역의 별도 조건에 따라 결정됨
 ```
 
 ### 1-9. 첫 commit 뒤 Effect가 기존 세션을 확인한다

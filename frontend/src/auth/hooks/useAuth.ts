@@ -3,8 +3,11 @@ import type { User } from '../../shared/types';
 import * as authApi from '../api/authApi';
 
 // 로그인 상태를 들고 있는 단 하나의 출처.
+// 새로고침하면 user state는 null로 초기화되지만 (기존 JavaScript 실행 환경이 종료되고 React 앱이 처음부터 다시 실행되기 때문),
+// 브라우저의 SESSION 쿠키와 서버 세션은 남아 있을 수 있다.
+// useAuth는 마운트 시 fetchMe()로 현재 사용자를 다시 조회해 로그인 상태를 복원한다.
 // - user: 로그인한 사용자 (없으면 null)
-// - loading: 첫 me() 확인이 끝나기 전 true (버튼이 잠깐 깜빡이는 것 방지)
+// - loading: 첫 사용자 조회가 끝나기 전 true (버튼이 잠깐 깜빡이는 것 방지)
 export function useAuth() {
   // <User | null>은 useState에 전달하는 타입 인자다.
   // user state에는 User 객체 또는 null이 들어갈 수 있고, (null)은 최초 초기값이다.
@@ -12,7 +15,10 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 마운트 시 1회: 쿠키가 살아 있으면 누구인지 가져온다 → 새로고침해도 로그인 유지.
+  // useEffect는 렌더링 후 부수 효과를 실행하는 Hook으로, useAuth를 호출한 컴포넌트가 처음 렌더링된 뒤 현재 사용자 정보를 조회하는 fetchMe() 요청을 한 번 실행한다.
+  // fetchMe()는 SESSION 쿠키를 포함해 GET /api/auth/me를 요청한다.
+  // 렌더링 중에 하면 안 되는 비동기 요청이므로 useEffect에서 처리한다 (렌더링 중 state를 변경하면 다시 렌더링되어 API 요청이 반복될 수 있기 때문).
+  // 빈 의존성 배열([]) 때문에 마운트 시 한 번만 실행한다.
   useEffect(() => {
     authApi
       .fetchMe()

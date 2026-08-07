@@ -388,10 +388,8 @@ loading=false, user=null
 
 ### 1-9. 첫 commit 뒤 Effect가 기존 세션을 확인한다
 
-페이지를 새로 열었을 때는 사용자가 버튼을 누르지 않아도 기존 SESSION 쿠키가 유효한지 확인해야 한다.
-
-같은 일반 브라우저 프로필의 탭은 SESSION 쿠키를 공유하지만, 각 탭의 React state는 별개다.
-
+페이지를 새로 열었을 때는 사용자가 버튼을 누르지 않아도 기존 SESSION 쿠키가 유효한지 확인해야 한다.<br />
+같은 일반 브라우저 프로필의 탭은 SESSION 쿠키를 공유하지만, 각 탭의 React state는 별개다.<br />
 `useAuth`는 `useEffect`에서 서버에 현재 로그인 상태를 확인하고, 응답에 맞춰 React의 `user` state를 갱신한다.
 
 ```tsx

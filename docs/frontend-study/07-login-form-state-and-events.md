@@ -421,6 +421,8 @@ useEffect(실행할_함수, [관찰할_값]);
 
 개발 StrictMode에서는 첫 mount 때 Effect의 `setup → cleanup → setup` 검사가 추가로 수행될 수 있다. 현재 Effect는 cleanup이나 요청 취소가 없으므로 개발 환경에서 `GET /api/auth/me`가 두 번 전송될 수 있다. 운영 빌드에서는 이 개발용 추가 검사가 없다.
 
+`fetchMe()` 요청이 끝나면 응답에 따라 `user`와 `loading` state가 갱신되고, App의 상단 인증 UI는 다음처럼 갈린다.
+
 ```text
 기존 세션 있음
 → fetchMe()가 User 반환
@@ -433,8 +435,6 @@ useEffect(실행할_함수, [관찰할_값]);
 → user=null, loading=false
 → 로그인·회원가입 버튼 표시
 ```
-
-세션 확인이 끝난 뒤 App은 갱신된 `user`와 `loading` state로 화면을 다시 결정하며, 다음 절에서는 기존 세션이 없어 로그인 버튼이 보이는 경우를 따라간다.
 
 ---
 

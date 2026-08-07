@@ -376,7 +376,7 @@ loading=false, user=null
 
 여기서 `user=null`은 “현재 로그인 사용자가 없다”는 뜻이고, `loading=true`는 “그 판단이 아직 확정되지 않았다”는 뜻이다. 그래서 인증 확인 전에는 로그인·회원가입 버튼을 잠시 숨긴다.
 
-`null`을 반환해도 App 전체가 사라지는 것은 아니다. 이 조건식이 있는 자리만 비어 있고, App의 다른 JSX는 각각 자신의 조건에 따라 렌더링된다. 예를 들어 공개 차트가 `user=null`일 때 보이도록 별도 조건으로 작성되어 있다면, 첫 render에도 그 차트는 렌더링될 수 있다. 이 코드 조각만으로 공개 차트의 렌더링 여부를 결정하는 것은 아니다.
+`null`을 반환해도 App 전체가 사라지는 것은 아니다. 이 조건식이 있는 상단 인증 영역만 비어 있다.
 
 `<>...</>`는 **Fragment**다. 형제 요소 여러 개를 묶되 불필요한 `<div>` DOM은 만들지 않는다.
 
@@ -384,19 +384,6 @@ loading=false, user=null
 
 ```tsx
 {form === 'login' && <LoginForm onLogin={login} onClose={() => setForm(null)} />}
-```
-
-따라서 첫 render의 초기 state가 `user=null`, `loading=true`, `form=null`이라면 인증 관련 결과는 다음과 같다.
-
-```text
-loading=true
-→ 로그인·회원가입 버튼은 아직 숨김
-
-form=null
-→ LoginForm은 아직 없음
-
-user=null
-→ 로그인 여부는 아직 확정 전이며, 공개 차트 같은 다른 영역은 해당 영역의 별도 조건에 따라 결정됨
 ```
 
 ### 1-9. 첫 commit 뒤 Effect가 기존 세션을 확인한다

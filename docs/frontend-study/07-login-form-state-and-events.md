@@ -411,7 +411,13 @@ useEffect(() => {
 
 render의 역할은 props와 state로 JSX를 계산하는 것이다. 서버 요청·이벤트 구독·타이머·브라우저 API처럼 React 밖에 영향을 주는 작업을 render 중에 하면 render할 때마다 의도치 않게 반복될 수 있다. 그래서 DOM을 먼저 반영한 뒤 Effect에서 처리한다.
 
-`useEffect(setup 함수, 의존성 배열)`의 두 번째 인자는 Effect가 사용하는 반응형 값의 목록이다. 여기서는 빈 배열 `[]`로 이 Effect에 반응형 의존성이 없음을 선언했으므로, 같은 mount에서 props나 state 변화 때문에 다시 실행되지는 않는다. 첫 commit 뒤 setup 함수가 실행된다.
+`useEffect`의 두 번째 인자인 의존성 배열은 “Effect를 언제 다시 실행할지” 정하는 관찰 목록이다.
+
+```tsx
+useEffect(실행할_함수, [관찰할_값]);
+```
+
+배열 안의 값이 이전 render와 달라지면 Effect를 다시 실행한다. 빈 배열 `[]`은 관찰할 값이 없다는 뜻이므로, 이 Effect는 컴포넌트가 처음 화면에 나타난 뒤에만 실행된다. 이후 `setUser`나 `setLoading`으로 재render되어도 다시 실행되지 않는다.
 
 개발 StrictMode에서는 첫 mount 때 Effect의 `setup → cleanup → setup` 검사가 추가로 수행될 수 있다. 현재 Effect는 cleanup이나 요청 취소가 없으므로 개발 환경에서 `GET /api/auth/me`가 두 번 전송될 수 있다. 운영 빌드에서는 이 개발용 추가 검사가 없다.
 

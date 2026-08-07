@@ -426,13 +426,13 @@ App 첫 render
 → user=null, loading=true, form=null로 첫 UI 결정
 → ReactDOM 첫 commit
 → useAuth의 Effect 실행
-→ GET /api/auth/me
-→ 응답에 따라 setUser(...)
+→ authApi.fetchMe()가 GET /api/auth/me 요청 전송
+→ 응답 결과에 따라 setUser(User 또는 null)
 → setLoading(false)
 → App 재렌더링 요청
 ```
 
-이 요청은 렌더링 중이 아니라 Effect에서 실행된다. 컴포넌트 render는 UI 계산에 집중하고, 페이지가 나타난 뒤 서버 상태와 맞추는 작업은 Effect가 맡는다.
+여기서 말하는 서버 요청은 `authApi.fetchMe()`가 보내는 `GET /api/auth/me` 요청이다. 이 요청은 render 중이 아니라 Effect에서 실행된다. 컴포넌트 render는 UI 계산에 집중하고, 페이지가 나타난 뒤 서버 상태와 맞추는 작업은 Effect가 맡는다.
 
 ```text
 기존 세션 있음
@@ -447,7 +447,9 @@ App 첫 render
 → 로그인·회원가입 버튼 표시
 ```
 
-이후에는 앞에서 정한 대로 기존 세션이 없는 경로를 따라간다. App의 재렌더링 결과 로그인 버튼이 나타난 상태에서 다음 단계가 시작된다.
+네트워크 오류나 서버 오류가 나면 `catch`가 실행되어 `user=null`과 오류 메시지를 설정하고, `finally`가 `loading=false`를 설정한다.
+
+다음 절부터는 기존 세션이 없는 경우를 따라 로그인 버튼을 클릭하는 과정을 설명한다.
 
 ---
 

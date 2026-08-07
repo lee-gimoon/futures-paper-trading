@@ -421,35 +421,7 @@ useEffect(실행할_함수, [관찰할_값]);
 
 개발 StrictMode에서는 첫 mount 때 Effect의 `setup → cleanup → setup` 검사가 추가로 수행될 수 있다. 현재 Effect는 cleanup이나 요청 취소가 없으므로 개발 환경에서 `GET /api/auth/me`가 두 번 전송될 수 있다. 운영 빌드에서는 이 개발용 추가 검사가 없다.
 
-```text
-App 첫 render
-→ user=null, loading=true, form=null로 첫 UI 결정
-→ ReactDOM 첫 commit
-→ useAuth의 Effect 실행
-→ authApi.fetchMe()가 GET /api/auth/me 요청 전송
-→ 응답 결과에 따라 setUser(User 또는 null)
-→ setLoading(false)
-→ App 재렌더링 요청
-```
-
-여기서 말하는 서버 요청은 `authApi.fetchMe()`가 보내는 `GET /api/auth/me` 요청이다. 이 요청은 render 중이 아니라 Effect에서 실행된다. 컴포넌트 render는 UI 계산에 집중하고, 페이지가 나타난 뒤 서버 상태와 맞추는 작업은 Effect가 맡는다.
-
-```text
-기존 세션 있음
-→ fetchMe()가 User 반환
-→ user=User, loading=false
-→ 사용자 이름과 로그아웃 버튼 표시
-
-기존 세션 없음
-→ /api/auth/me가 401
-→ fetchMe()가 null 반환
-→ user=null, loading=false
-→ 로그인·회원가입 버튼 표시
-```
-
-네트워크 오류나 서버 오류가 나면 `catch`가 실행되어 `user=null`과 오류 메시지를 설정하고, `finally`가 `loading=false`를 설정한다.
-
-다음 절부터는 기존 세션이 없는 경우를 따라 로그인 버튼을 클릭하는 과정을 설명한다.
+세션 확인이 끝난 뒤 App은 갱신된 `user`와 `loading` state로 화면을 다시 결정하며, 다음 절에서는 기존 세션이 없어 로그인 버튼이 보이는 경우를 따라간다.
 
 ---
 

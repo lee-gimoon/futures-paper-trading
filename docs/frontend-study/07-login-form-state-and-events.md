@@ -489,7 +489,7 @@ setForm('login');
 
 이 코드는 `form = 'login'` 같은 변수 대입이 아니다. React에 다음 state가 `'login'`이라고 알리고 App의 재렌더링을 예약한다.
 
-state는 각 렌더링에서 고정된 **스냅샷(snapshot)**처럼 동작한다.
+state는 각 렌더링에서 고정된 **스냅샷(snapshot)**처럼 동작한다. 즉, `form`은 현재 호출된 App 함수가 React에게서 받은 값이며, setter를 호출해도 이 호출 안에서 이미 받은 `form` 값 자체가 바뀌지는 않는다. React가 다음 렌더링을 처리할 때 App을 다시 호출하고, 그 새 호출에 변경된 state를 전달한다.
 
 ```text
 현재 렌더링의 form
@@ -499,11 +499,20 @@ setForm('login') 호출
 → 현재 함수 안의 form을 즉시 바꾸지 않음
 → 다음 렌더링을 요청
 
-다음 App 호출에서 받은 form
+다음 렌더링에서 App이 읽는 form
 → 'login'
 ```
 
-setter 호출 직후 같은 이벤트 핸들러 안에서 `form`을 읽으면 아직 현재 렌더링의 값인 `null`이다. 새 값은 다음 렌더링에서 받는다.
+따라서 setter 호출 직후 같은 이벤트 핸들러 안에서 `form`을 읽으면 아직 현재 렌더링의 값인 `null`이다. 새 값은 다음 렌더링에서 받는다.
+
+```tsx
+function openLoginForm() {
+  setForm('login');
+  console.log(form); // null: 현재 렌더링의 스냅샷
+}
+```
+
+이 이벤트 핸들러가 끝난 뒤 React가 재렌더링을 처리하면 App 함수가 다시 호출되고, 그때의 `form`은 `'login'`이다. 그 새 값으로 조건부 렌더링을 다시 계산하므로 `LoginForm`이 JSX 결과에 포함된다.
 
 ### 2-3. 조건부 렌더링이 LoginForm을 mount한다
 

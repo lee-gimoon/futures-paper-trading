@@ -461,6 +461,8 @@ useEffect(실행할_함수, [관찰할_값]);
 
 `onClick`은 JSX에서 사용하는 이벤트 prop이고, `() => setForm('login')`은 나중에 클릭되었을 때 실행할 **이벤트 핸들러 함수**다.
 
+참고로 `<button>`은 JSX 요소이며, `onClick`은 이 요소에 전달되어 클릭 시의 동작을 지정하는 속성(prop)이다.
+
 ```tsx
 onClick={() => setForm('login')} // 함수를 전달: 클릭할 때 실행
 onClick={setForm('login')}       // 렌더링 중 즉시 호출: 잘못된 형태

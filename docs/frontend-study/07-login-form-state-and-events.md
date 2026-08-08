@@ -506,13 +506,19 @@ setForm('login') 호출
 따라서 setter 호출 직후 같은 이벤트 핸들러 안에서 `form`을 읽으면 아직 현재 렌더링의 값인 `null`이다. 새 값은 다음 렌더링에서 받는다.
 
 ```tsx
-function openLoginForm() {
-  setForm('login');
-  console.log(form); // null: 현재 렌더링의 스냅샷
+function App() {
+  const [form, setForm] = useState<FormMode>(null);
+
+  function openLoginForm() {
+    setForm('login');
+    console.log(form); // null: 현재 렌더링의 스냅샷
+  }
+
+  return <button onClick={openLoginForm}>로그인</button>;
 }
 ```
 
-이 이벤트 핸들러가 끝난 뒤 React가 재렌더링을 처리하면 App 함수가 다시 호출되고, 그때의 `form`은 `'login'`이다. 그 새 값으로 조건부 렌더링을 다시 계산하므로 `LoginForm`이 JSX 결과에 포함된다.
+`openLoginForm`은 함수 선언만으로는 일반 함수지만, `onClick={openLoginForm}`으로 클릭 이벤트에 전달했기 때문에 이벤트 핸들러가 된다. 이 이벤트 핸들러가 끝난 뒤 React가 재렌더링을 처리하면 App 함수가 다시 호출되고, 그때의 `form`은 `'login'`이다. 그 새 값으로 조건부 렌더링을 다시 계산하므로 `LoginForm`이 JSX 결과에 포함된다.
 
 ### 2-3. 조건부 렌더링이 LoginForm을 mount한다
 

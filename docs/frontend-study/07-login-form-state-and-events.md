@@ -470,6 +470,17 @@ onClick={setForm('login')}       // 렌더링 중 즉시 호출: 잘못된 형�
 
 React는 이벤트가 생길 때 호출할 함수를 prop으로 받는다. 함수 호출 결과를 넘기는 것이 아니라 함수 자체를 넘긴다는 점이 중요하다.
 
+참고로 **속성(property)**은 객체 안에 저장된 하나의 항목을 말한다. 객체에서는 `키: 값` 형태로 표현하며, 키는 속성 이름이고 값은 속성 값이다.
+
+```js
+{
+  onLogin: login,
+  onClose: close,
+}
+```
+
+위 객체에서 `onLogin: login`과 `onClose: close`가 각각 하나의 속성이다. `onLogin`, `onClose`는 속성 이름이고, `login`, `close`는 그 속성에 저장된 함수 값이다. React에서는 컴포넌트에 전달한 이러한 속성들을 줄여서 props라고 부른다.
+
 ### 2-2. setter는 state를 즉시 대입하지 않고 다음 렌더링을 요청한다
 
 ```tsx

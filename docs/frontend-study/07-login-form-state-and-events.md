@@ -550,8 +550,9 @@ React는 이전 render 결과와 다음 render 결과를 비교한다. 이 비�
 이전 render: 이 위치에 LoginForm이 없음
 다음 render: 이 위치에 LoginForm이 있음
 → React: LoginForm을 새로 추가해야 함
-→ React: LoginForm을 렌더링하여 어떤 UI가 필요한지 계산
+→ React: LoginForm 함수를 호출해 필요한 UI 구조를 계산
 → ReactDOM: 계산된 결과에 맞춰 form 등의 DOM을 추가
+→ 브라우저: 변경된 DOM을 화면에 그림
 ```
 
 이처럼 컴포넌트가 React 트리에 처음 추가되고, 필요한 DOM 변경까지 반영된 상태를 **mount(마운트)**라고 한다. 컴포넌트는 DOM 요소를 반환하지 않아도 mount될 수 있지만, 이 예제에서는 LoginForm의 폼 DOM도 함께 처음 추가된다.

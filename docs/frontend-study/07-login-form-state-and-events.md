@@ -572,7 +572,7 @@ React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하�
 
 #### DOM 이벤트 prop과 컴포넌트 callback prop은 다르다
 
-`button`처럼 실제 브라우저 DOM 요소에 쓰는 `onClick`은 React가 알아보는 이벤트 prop이다.
+`button`처럼 최종적으로 실제 브라우저 DOM 요소에 대응하는 JSX 태그에 쓰는 `onClick`은 React가 알아보는 이벤트 prop이다.
 JSX의 `<button>`은 React 엘리먼트를 만든다. ReactDOM은 그 엘리먼트 설명을 바탕으로 실제 브라우저 DOM `<button>` 요소(`HTMLButtonElement`)를 생성하거나, 이미 존재하는 요소를 갱신한다.
 소문자로 쓴 `button`은 HTML DOM 요소로 처리하라는 뜻이다.
 
@@ -582,7 +582,9 @@ JSX의 `<button>`은 React 엘리먼트를 만든다. ReactDOM은 그 엘리먼�
 
 사용자가 버튼을 클릭하면 브라우저가 click 이벤트를 발생시키고, React는 `onClick`에 전달된 `someFunction`을 실행한다.
 
-반면 `LoginForm`은 브라우저 DOM 요소가 아니라 개발자가 만든 컴포넌트다. JSX 단계에서는 `<button>`과 `<LoginForm>` 모두 React 엘리먼트이지만, 대문자로 쓴 `<LoginForm>`은 React가 `LoginForm` 함수를 호출해 렌더링할 컴포넌트다. 그 함수가 반환한 `<form>`, `<button>` 같은 요소가 최종적으로 실제 브라우저 DOM이 된다.
+반면 `LoginForm`은 브라우저 DOM 요소가 아니라 개발자가 만든 컴포넌트다.
+JSX의 `<LoginForm>`은 `LoginForm`을 타입으로 가지는 React 엘리먼트를 만든다. React는 렌더링 과정에서 이 엘리먼트의 props를 `LoginForm`에 전달하고 컴포넌트를 호출한다. `LoginForm`이 반환한 `<form>`, `<button>` 같은 엘리먼트를 바탕으로 ReactDOM이 실제 브라우저 DOM 요소를 생성하거나, 이미 존재하는 요소를 갱신한다.
+대문자로 쓴 `LoginForm`은 HTML DOM 요소가 아니라 React 컴포넌트로 처리하라는 뜻이다.
 
 ```tsx
 <LoginForm

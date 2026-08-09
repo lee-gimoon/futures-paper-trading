@@ -537,15 +537,16 @@ JavaScript의 `&&` 단축 평가 때문에 결과가 달라진다.
 
 ```text
 form === 'login'이 false
-→ 오른쪽 <LoginForm />을 결과에 포함하지 않음
+→ 표현식의 값은 false
+→ React는 false를 화면에 렌더링하지 않으므로 이 위치에 LoginForm이 없음
 
 form === 'login'이 true
 → 오른쪽 <LoginForm />을 결과에 포함
 ```
 
-React는 이전 요소 트리와 다음 요소 트리를 비교한다. 이 비교를 **reconciliation(재조정)**이라고 한다. 이전에는 없던 `LoginForm`이 같은 위치에 새로 나타났으므로 React는 LoginForm을 호출하고 그 결과를 트리에 추가하며, ReactDOM은 필요한 DOM을 commit한다. 이 첫 추가와 commit이 완료되어 LoginForm이 트리에 들어온 상태를 mount라고 한다.
+React는 이전 요소 트리와 다음 요소 트리를 비교한다. 이 비교를 **reconciliation(재조정)**이라고 한다. 이전에는 없던 `LoginForm`이 이 위치에 새로 나타났으므로 React는 `LoginForm`을 렌더링하여 새 컴포넌트를 트리에 추가하고, ReactDOM은 필요한 DOM 변경을 commit한다. 이 첫 추가와 commit이 완료되어 `LoginForm`이 React 트리에 들어온 상태를 **mount(마운트)**라고 한다. 컴포넌트는 DOM 요소가 없어도 mount될 수 있지만, 이 예제에서는 폼 DOM도 함께 처음 추가된다.
 
-React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하지 않는다. `form` state일 때 어떤 JSX가 있어야 하는지 선언하면 React와 ReactDOM이 필요한 추가·수정을 처리한다. 이것이 React의 **선언적 UI** 방식이다.
+React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하지 않는다. `form === 'login'`일 때 이 위치에 어떤 JSX가 있어야 하는지를 선언하면 React와 ReactDOM이 필요한 추가·수정을 처리한다. 이것이 React의 **선언적 UI** 방식이다.
 
 ### 2-4. App이 LoginForm에 props를 전달한다
 

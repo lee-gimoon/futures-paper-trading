@@ -612,12 +612,9 @@ function LoginForm({ onLogin, onClose }: Props) {
 }
 ```
 
-즉 `onSubmit`, `onClick`은 실제 DOM 이벤트를 React의 이벤트 시스템에서 처리하도록 하는 prop이고, `onLogin`, `onClose`는 `LoginForm`에 전달되는 사용자 정의 callback prop이다. 다만 `LoginForm` 내부에서는 `onClose`를 `<button onClick={onClose}>`처럼 DOM 이벤트 prop의 값으로 연결할 수 있다.
+`onLogin`은 부모가 `useAuth`에서 받아 전달한 `login` 함수이고, `onClose`는 부모가 전달한 `() => setForm(null)` 함수다. `LoginForm`은 제출·취소처럼 필요한 순간에 이 함수들을 호출한다.
 
-- `onLogin`: `useAuth`가 만든 실제 로그인 함수
-- `onClose`: App의 `form`을 `null`로 바꾸는 함수
-
-부모인 App은 앱 전체 state와 동작을 알고 있고, 자식인 LoginForm은 전달받은 함수를 필요한 순간 호출한다. LoginForm이 부모의 state를 직접 수정하지 않는 이 흐름을 **단방향 데이터 흐름**이라고 볼 수 있다.
+이처럼 부모가 state 변경 동작을 함수로 전달하고, 자식이 그 함수를 호출해 변경을 요청하는 흐름은 **단방향 데이터 흐름**의 한 형태다. 자식은 부모의 `form` state를 직접 수정하지 않는다.
 
 ---
 

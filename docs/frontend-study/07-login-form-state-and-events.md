@@ -665,20 +665,22 @@ const [submitting, setSubmitting] = useState(false);
 
 ### 3-2. state는 JSX나 변수 안이 아니라 React가 보존한다
 
-`email`이라는 지역 변수 자체가 다음 렌더링까지 살아 있는 것이 아니다. React가 LoginForm의 첫 번째 Hook state를 보존하고, 다음 LoginForm 호출 때 그 시점의 값을 `email`로 돌려준다.
+`email` 지역 변수가 다음 렌더링까지 살아 있는 것은 아니다. `LoginForm`이 다시 호출될 때마다 `email`은 새 지역 변수로 만들어진다. React는 렌더 트리에서 `LoginForm`이 놓인 위치의 Hook state를 별도로 보관하고, 다음 렌더링에서 그 값을 `useState`의 반환값으로 돌려준다.
 
 ```text
-첫 LoginForm 호출
-→ 첫 번째 useState: ''
+첫 렌더링
+React가 보관한 첫 번째 state: ''
+→ LoginForm 안의 email: ''
 
-setEmail('a')
-→ React가 첫 번째 Hook state의 다음 값을 'a'로 기록
+사용자가 입력해 setEmail('a') 호출
+→ React가 첫 번째 state에 대한 업데이트를 예약
 
-다음 LoginForm 호출
-→ 첫 번째 useState가 'a'를 반환
+다음 렌더링
+React가 보관한 첫 번째 state: 'a'
+→ 새로 호출된 LoginForm 안의 email: 'a'
 ```
 
-React는 state를 컴포넌트 타입과 트리 위치에 연결하고, 그 컴포넌트 안에서는 “첫 번째 Hook은 email, 두 번째 Hook은 password”처럼 Hook 호출 순서로 구분한다. 이 때문에 Hook 호출 순서를 바꾸면 안 된다.
+React는 `email` 같은 변수 이름이 아니라 Hook 호출 순서로 state를 구분한다. 따라서 같은 컴포넌트에서 첫 번째 `useState`는 항상 첫 번째 state, 두 번째 `useState`는 항상 두 번째 state를 가리켜야 한다. 이 때문에 Hook은 조건문이나 반복문 안에서 호출해 순서를 바꾸면 안 된다.
 
 ### 3-3. LoginForm의 첫 render와 commit
 

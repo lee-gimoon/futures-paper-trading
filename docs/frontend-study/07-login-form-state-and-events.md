@@ -665,7 +665,7 @@ const [submitting, setSubmitting] = useState(false);
 
 ### 3-2. state는 JSX나 변수 안이 아니라 React가 보존한다
 
-`email` 지역 변수가 다음 렌더링까지 살아 있는 것은 아니다. `LoginForm`이 다시 호출될 때마다 `email`은 새 지역 변수로 만들어진다. React는 렌더 트리에서 `LoginForm`이 놓인 위치의 Hook state를 별도로 보관하고, 다음 렌더링에서 그 값을 `useState`의 반환값으로 돌려준다.
+`email` 지역 변수가 다음 렌더링까지 살아 있는 것은 아니다. `LoginForm`이 다시 호출될 때마다 `email`은 새 지역 변수로 만들어진다. React는 렌더 트리에서 `LoginForm`이 놓인 위치의 Hook state와 대기 중인 업데이트를 별도로 보관한다. 이후 `LoginForm`이 다시 렌더링되어 같은 `useState` 호출 위치에 도달하면, React는 최신 state를 `useState`의 첫 번째 반환값으로 제공하고 그 값이 새 지역 변수 `email`에 할당된다.
 
 ```text
 첫 렌더링

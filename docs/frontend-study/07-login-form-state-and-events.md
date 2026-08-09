@@ -559,6 +559,46 @@ React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하�
 
 **props**는 부모 컴포넌트가 자식 컴포넌트에 전달하는 읽기 전용 입력값이다. 문자열·객체뿐 아니라 함수도 props로 전달할 수 있다.
 
+#### DOM 이벤트 prop과 컴포넌트 callback prop은 다르다
+
+`button`처럼 실제 브라우저 DOM 요소에 쓰는 `onClick`은 React가 알아보는 이벤트 prop이다.
+
+```tsx
+<button onClick={someFunction}>클릭</button>
+```
+
+사용자가 버튼을 클릭하면 브라우저가 click 이벤트를 발생시키고, React는 `onClick`에 전달된 `someFunction`을 실행한다.
+
+반면 `LoginForm`은 브라우저 DOM 요소가 아니라 개발자가 만든 컴포넌트다.
+
+```tsx
+<LoginForm
+  onLogin={login}
+  onClose={() => setForm(null)}
+/>
+```
+
+여기의 `onLogin`, `onClose`는 `LoginForm` 함수에 전달하는 일반 props다. 이름이 `on...`으로 시작해도 React가 자동으로 이벤트에 연결하거나 함수를 실행하지 않는다. `on...`은 “어떤 일이 일어났을 때 부모에게 알려 줄 함수”라는 관례적인 이름일 뿐이다. 이 JSX를 평가하는 시점에는 `login`이나 `setForm(null)`이 실행되지 않고, 함수 자체가 전달된다.
+
+LoginForm은 전달받은 함수를 직접 호출하거나 실제 DOM 이벤트 prop에 연결해야 한다.
+
+```tsx
+function LoginForm({ onLogin, onClose }: Props) {
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    await onLogin(email, password);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <button type="button" onClick={onClose}>취소</button>
+    </form>
+  );
+}
+```
+
+즉 `onSubmit`, `onClick`은 실제 DOM 이벤트에 React가 연결하는 prop이고, `onLogin`, `onClose`는 자식 컴포넌트가 필요할 때 사용하는 사용자 정의 callback prop이다.
+
 - `onLogin`: `useAuth`가 만든 실제 로그인 함수
 - `onClose`: App의 `form`을 `null`로 바꾸는 함수
 

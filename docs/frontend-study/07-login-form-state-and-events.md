@@ -572,7 +572,9 @@ React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하�
 
 #### DOM 이벤트 prop과 컴포넌트 callback prop은 다르다
 
-`button`처럼 실제 브라우저 DOM 요소에 쓰는 `onClick`은 React가 알아보는 이벤트 prop이다. JSX를 평가한 직후의 `<button>`은 React가 만든 UI 설명인 **React 엘리먼트**이지만, ReactDOM이 화면에 반영하면 브라우저의 실제 `<button>` DOM 요소(`HTMLButtonElement`)가 된다. 소문자로 쓴 `button`은 이처럼 HTML DOM 요소를 뜻한다.
+`button`처럼 실제 브라우저 DOM 요소에 쓰는 `onClick`은 React가 알아보는 이벤트 prop이다.
+JSX의 `<button>`은 React 엘리먼트를 만든다. ReactDOM은 그 엘리먼트 설명을 바탕으로 실제 브라우저 DOM `<button>` 요소(`HTMLButtonElement`)를 생성하거나, 이미 존재하는 요소를 갱신한다.
+소문자로 쓴 `button`은 HTML DOM 요소로 처리하라는 뜻이다.
 
 ```tsx
 <button onClick={someFunction}>클릭</button>

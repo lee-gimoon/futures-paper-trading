@@ -684,16 +684,16 @@ React는 `email` 같은 변수 이름이 아니라 Hook 호출 순서로 state�
 
 ### 3-3. LoginForm의 첫 render와 commit
 
-LoginForm은 네 state의 최초 값으로 JSX를 반환한다.
+`LoginForm`이 처음 렌더링될 때 React는 props를 전달해 `LoginForm` 함수를 호출한다. 이때 각 `useState`는 최초 state 값과 setter 함수를 반환한다.
 
 ```text
 React가 LoginForm(props) 호출
-→ useState가 최초 state 네 개 반환
-→ LoginForm이 form·input·button React 요소 반환
-→ ReactDOM이 실제 form·input·button DOM을 추가
+→ email='', password='', error='', submitting=false 상태 값을 얻음
+→ LoginForm이 이 값으로 JSX(React 엘리먼트)를 반환
+→ ReactDOM이 실제 form·input·button DOM을 생성해 화면에 반영
 ```
 
-첫 commit이 끝나 LoginForm이 트리에 들어오면 mount가 완료된다. 이후 state 업데이트나 부모의 재렌더링 때문에 같은 LoginForm이 다시 호출되는 것은 **re-render(재렌더링)**이며 새로운 mount가 아니다.
+마지막처럼 ReactDOM이 실제 DOM 변경을 화면에 적용하는 과정을 **commit**이라고 한다. 첫 commit이 끝나 `LoginForm`이 트리에 들어오면 mount가 완료된다. 이후 state 업데이트나 부모의 재렌더링 때문에 같은 `LoginForm`이 다시 호출되는 것은 **re-render(재렌더링)**이며 새로운 mount가 아니다.
 
 ---
 

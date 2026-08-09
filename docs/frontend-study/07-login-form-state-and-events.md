@@ -572,7 +572,7 @@ React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하�
 
 #### DOM 이벤트 prop과 컴포넌트 callback prop은 다르다
 
-`button`처럼 실제 브라우저 DOM 요소에 쓰는 `onClick`은 React가 알아보는 이벤트 prop이다.
+`button`처럼 실제 브라우저 DOM 요소에 쓰는 `onClick`은 React가 알아보는 이벤트 prop이다. JSX를 평가한 직후의 `<button>`은 React가 만든 UI 설명인 **React 엘리먼트**이지만, ReactDOM이 화면에 반영하면 브라우저의 실제 `<button>` DOM 요소(`HTMLButtonElement`)가 된다. 소문자로 쓴 `button`은 이처럼 HTML DOM 요소를 뜻한다.
 
 ```tsx
 <button onClick={someFunction}>클릭</button>
@@ -580,7 +580,7 @@ React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하�
 
 사용자가 버튼을 클릭하면 브라우저가 click 이벤트를 발생시키고, React는 `onClick`에 전달된 `someFunction`을 실행한다.
 
-반면 `LoginForm`은 브라우저 DOM 요소가 아니라 개발자가 만든 컴포넌트다.
+반면 `LoginForm`은 브라우저 DOM 요소가 아니라 개발자가 만든 컴포넌트다. JSX 단계에서는 `<button>`과 `<LoginForm>` 모두 React 엘리먼트이지만, 대문자로 쓴 `<LoginForm>`은 React가 `LoginForm` 함수를 호출해 렌더링할 컴포넌트다. 그 함수가 반환한 `<form>`, `<button>` 같은 요소가 최종적으로 실제 브라우저 DOM이 된다.
 
 ```tsx
 <LoginForm
@@ -589,7 +589,7 @@ React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하�
 />
 ```
 
-여기의 `onLogin`, `onClose`는 `LoginForm` 함수에 전달하는 일반 props다. 이름이 `on...`으로 시작해도 React가 자동으로 이벤트에 연결하거나 함수를 실행하지 않는다. `on...`은 “어떤 일이 일어났을 때 부모에게 알려 줄 함수”라는 관례적인 이름일 뿐이다. 이 JSX를 평가하는 시점에는 `login`이나 `setForm(null)`이 실행되지 않고, 함수 자체가 전달된다.
+여기의 `onLogin`, `onClose`는 `LoginForm` 함수에 전달하는 일반 props다. 이름이 `on...`으로 시작해도 React가 자동으로 이벤트에 연결하거나 함수를 실행하지 않는다. `on...`은 “어떤 일이 일어났을 때 부모에게 알려 줄 함수”라는 관례적인 이름일 뿐이다. `onLogin={login}`은 `login` 함수 자체를 전달하고, `onClose={() => setForm(null)}`은 `setForm(null)`을 나중에 실행할 새 함수를 전달한다. 따라서 이 JSX를 평가하는 시점에는 `login`도 `setForm(null)`도 실행되지 않는다.
 
 LoginForm은 전달받은 함수를 직접 호출하거나 실제 DOM 이벤트 prop에 연결해야 한다.
 
@@ -608,7 +608,7 @@ function LoginForm({ onLogin, onClose }: Props) {
 }
 ```
 
-즉 `onSubmit`, `onClick`은 실제 DOM 이벤트에 React가 연결하는 prop이고, `onLogin`, `onClose`는 자식 컴포넌트가 필요할 때 사용하는 사용자 정의 callback prop이다.
+즉 `onSubmit`, `onClick`은 실제 DOM 이벤트를 React의 이벤트 시스템에서 처리하도록 하는 prop이고, `onLogin`, `onClose`는 `LoginForm`에 전달되는 사용자 정의 callback prop이다. 다만 `LoginForm` 내부에서는 `onClose`를 `<button onClick={onClose}>`처럼 DOM 이벤트 prop의 값으로 연결할 수 있다.
 
 - `onLogin`: `useAuth`가 만든 실제 로그인 함수
 - `onClose`: App의 `form`을 `null`로 바꾸는 함수

@@ -544,9 +544,19 @@ form === 'login'이 true
 → 오른쪽 <LoginForm />을 결과에 포함
 ```
 
-React는 이전 요소 트리와 다음 요소 트리를 비교한다. 이 비교를 **reconciliation(재조정)**이라고 한다. 이전에는 없던 `LoginForm`이 이 위치에 새로 나타났으므로 React는 `LoginForm`을 렌더링하여 새 컴포넌트를 트리에 추가하고, ReactDOM은 필요한 DOM 변경을 commit한다. 이 첫 추가와 commit이 완료되어 `LoginForm`이 React 트리에 들어온 상태를 **mount(마운트)**라고 한다. 컴포넌트는 DOM 요소가 없어도 mount될 수 있지만, 이 예제에서는 폼 DOM도 함께 처음 추가된다.
+React는 이전 render 결과와 다음 render 결과를 비교한다. 이 비교를 **reconciliation(재조정)**이라고 한다.
 
-React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하지 않는다. `form === 'login'`일 때 이 위치에 어떤 JSX가 있어야 하는지를 선언하면 React와 ReactDOM이 필요한 추가·수정을 처리한다. 이것이 React의 **선언적 UI** 방식이다.
+```text
+이전 render: 이 위치에 LoginForm이 없음
+다음 render: 이 위치에 LoginForm이 있음
+→ React: LoginForm을 새로 추가해야 함
+→ React: LoginForm을 렌더링하여 어떤 UI가 필요한지 계산
+→ ReactDOM: 계산된 결과에 맞춰 form 등의 DOM을 추가
+```
+
+이처럼 컴포넌트가 React 트리에 처음 추가되고, 필요한 DOM 변경까지 반영된 상태를 **mount(마운트)**라고 한다. 컴포넌트는 DOM 요소를 반환하지 않아도 mount될 수 있지만, 이 예제에서는 LoginForm의 폼 DOM도 함께 처음 추가된다.
+
+React식 코드는 “폼 DOM을 직접 만들어 붙여라”라고 명령하지 않는다. 대신 “`form === 'login'`이면 이 위치에 LoginForm이 있어야 한다”라고 선언한다. 그러면 React와 ReactDOM이 이전 화면과 비교해 필요한 추가·수정을 처리한다. 이것이 React의 **선언적 UI** 방식이다.
 
 ### 2-4. App이 LoginForm에 props를 전달한다
 

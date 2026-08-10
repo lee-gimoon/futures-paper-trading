@@ -729,48 +729,36 @@ onChange={(e) => setEmail(e.target.value)}
 
 사용자가 글자를 입력하거나 지우면 이 함수가 실행된다. `e.target.value`에는 그 순간 input에 들어 있는 최신 문자열이 있고, `setEmail(...)`은 그 문자열을 `email` state에 저장한다.
 
-정리하면 `value`는 **state의 값을 input에 보여 주는 통로**이고, `onChange`는 **사용자의 입력을 state에 저장하는 통로**이다.
+### 4-2. 글자를 입력하거나 지울 때 화면에는 어떻게 반영될까?
+
+처음에는 `email` state가 빈 문자열(`''`)이라고 가정한다. 따라서 `value={email}`에 의해 input도 비어 있다.
+
+이 상태에서 사용자가 이메일 칸에 `a`를 입력하면, 아주 짧은 시간 안에 다음 일이 순서대로 일어난다.
 
 ```text
-표시할 값
-state email → value={email} → 실제 input에 표시
-
-새 사용자 입력
-실제 input의 값 변경 → onChange → setEmail(...) → state email
+1. 브라우저가 키보드 입력을 받아 실제 input의 값을 ''에서 'a'로 바꾼다.
+2. input 값이 바뀌었다는 이벤트가 발생한다.
+3. React가 이벤트를 받아 `onChange`에 등록한 함수를 실행한다.
+4. 함수 안의 `e.target.value`는 방금 바뀐 실제 input의 값, 즉 'a'이다.
+5. `setEmail('a')`가 실행되어 React에 email state를 'a'로 바꿔 달라고 요청한다.
+6. React가 LoginForm을 다시 렌더링한다. 이때 email state는 'a'이다.
+7. JSX의 `value={email}`도 'a'가 된다.
+8. React가 input에 표시할 값이 'a'가 되도록 DOM을 반영한다.
 ```
 
-이처럼 React state를 input 값의 원천으로 사용하는 input을 **제어되는 입력(controlled input)**이라고 한다. 사용자가 입력하는 순간에는 `onChange`가 state를 바꾸고, 바뀐 state는 다시 `value`를 통해 input에 표시된다.
+사용자는 보통 1번 직후부터 `a`가 보이는 것처럼 느낀다. React는 사용자 입력처럼 즉시 반응해야 하는 이벤트의 state 변경을 매우 빠르게 처리해, 대개 다음 화면 그리기 전에 6~8번까지 마친다. 처음에 브라우저가 보여 준 `a`와 React가 최종적으로 반영한 `a`가 같으므로, 화면이 다시 바뀌는 느낌은 나지 않는다.
 
-`value={email}`만 두고 `onChange`에서 state를 바꾸지 않으면 `email`은 계속 같은 값이다. 따라서 사용자가 글자를 입력해도 React가 같은 값을 다시 보여 주므로, 입력이 수정되지 않는 것처럼 보인다.
+중요한 점은 `setEmail(...)`이 input을 직접 수정하는 함수가 아니라는 것이다. `setEmail('a')`는 state를 바꾸고, React가 다시 렌더링한 뒤 `value={email}`을 통해 input 값이 'a'가 되게 한다. 그래서 React state가 input에 표시되는 값의 기준이 된다.
 
-반대로 `onChange`만 있고 `value`가 없으면 input의 값은 브라우저 DOM이 자체적으로 관리한다. React는 입력값이 바뀌었다는 사실만 받아볼 뿐, input에 표시할 값을 직접 정하지 않는다. 이것을 **비제어 입력(uncontrolled input)**이라고 한다.
+글자를 추가할 때도, 지울 때도 같은 흐름이 반복된다. 예를 들어 input에 `ab`가 있을 때 Backspace를 누르면 브라우저의 input 값이 먼저 `a`가 되고, `e.target.value`가 `'a'`가 되며, `setEmail('a')` 이후 React가 다시 `value="a"`를 반영한다.
 
-`type="password"`는 브라우저가 글자를 가려 표시하게 할 뿐, React state에 저장된 문자열을 암호화하지는 않는다. 비밀번호는 서버에 전송할 때 HTTPS를 사용하고, 서버에서 안전하게 처리해야 한다.
+만약 `onChange`에서 입력값을 그대로 저장하지 않고 바꿔서 저장하면, 최종 표시값은 state에 저장한 값이 된다.
 
-### 4-2. 한 글자를 입력하면 state 변경과 재렌더링이 이어진다
-
-사용자가 이메일 칸에 `a`를 입력하면 다음 순서로 흐른다.
-
-```text
-브라우저가 input 입력 이벤트 감지
-→ React가 onChange에 등록된 함수에 이벤트 객체 e 전달
-→ e.target.value는 'a'
-→ setEmail('a')
-→ LoginForm 재렌더링 예약
-→ 다음 LoginForm 호출에서 email은 'a'
-→ JSX의 value={email}도 'a'
-→ ReactDOM이 실제 input 값과 state를 맞춤
+```tsx
+onChange={(e) => setEmail(e.target.value.toUpperCase())}
 ```
 
-이 업데이트는 LoginForm 자신의 state에서 시작되므로 App까지 다시 호출할 필요 없이 LoginForm과 필요한 하위 UI가 렌더링 대상이 된다.
-
-여기서:
-
-- `e`: React가 이벤트 핸들러에 전달한 이벤트 객체
-- `e.target`: 이벤트가 시작된 실제 DOM input
-- `e.target.value`: 그 input의 현재 문자열 값
-
-브라우저가 실제 입력 사건을 만들고, ReactDOM의 이벤트 시스템이 JSX의 `onChange` 핸들러를 찾아 호출한다. React가 input 값을 반복해서 감시하는 방식은 아니다.
+이 경우 사용자가 `a`를 입력하면 브라우저는 잠시 `a`를 만들지만, React state에는 `A`가 저장되고 다음 렌더링에서 input에는 `A`가 표시된다. 이처럼 React state가 input 값을 관리하는 방식을 **제어되는 입력(controlled input)**이라고 한다.
 
 ### 4-3. 이벤트 핸들러는 해당 렌더링의 state를 기억한다
 

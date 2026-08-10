@@ -746,21 +746,46 @@ onChange={(e) => setEmail(e.target.value)}
 
 `setEmail(...)`은 input을 직접 수정하지 않는다. state를 바꾸고, 다음 렌더링에서 `value={email}`을 통해 input에 보여 줄 최종 값을 정한다. 이처럼 React state가 input 값을 관리하는 방식을 **제어되는 입력(controlled input)**이라고 한다.
 
-### 4-3. 이벤트 핸들러는 해당 렌더링의 state를 기억한다
+### 4-3. 이벤트 핸들러는 자신이 만들어진 렌더링의 state를 기억한다
 
-LoginForm 함수 안에 선언된 `handleSubmit`과 인라인 `onChange` 함수는 렌더링마다 만들어진다. 각 함수는 그 렌더링의 `email`, `password` 같은 값을 기억하는 **클로저(closure)**다.
+이벤트 핸들러를 컴포넌트 함수 안에서 선언하면, React가 `LoginForm()`을 다시 호출할 때마다 새 함수가 만들어진다. 다음 `handleSubmit`은 바깥의 `email`, `password`를 읽는다.
 
-```text
-email=''인 렌더링
-→ email=''을 보는 핸들러 생성
+```tsx
+function LoginForm({ onLogin }: Props) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-setEmail('a') 뒤 새 렌더링
-→ email='a'를 보는 새 핸들러 생성
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    await onLogin(email, password);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+    </form>
+  );
+}
 ```
 
-사용자가 제출할 때 DOM에는 최신 렌더링에서 연결된 `handleSubmit`이 있으므로, 그 함수는 최신 렌더링의 이메일과 비밀번호를 사용한다.
+`handleSubmit` 안에는 `email`과 `password`를 선언한 코드가 없는데도 두 값을 사용할 수 있다. 함수가 만들어질 때 바깥 `LoginForm()` 실행의 변수에 접근할 수 있기 때문이다. 이런 JavaScript 함수를 **클로저(closure)**라고 한다.
 
-setter는 현재 클로저의 값을 바꾸지 않는다. `setEmail(...)`은 다음 렌더링을 요청하며, 현재 이벤트 핸들러 안의 `email`은 끝까지 현재 렌더링의 스냅샷이다.
+```text
+첫 렌더링: email=''
+→ email=''을 보는 handleSubmit A 생성
+
+setEmail('a') 뒤 다음 렌더링: email='a'
+→ email='a'를 보는 handleSubmit B 생성
+```
+
+React는 화면을 갱신할 때 최신 렌더링에서 만든 `handleSubmit B`를 form에 연결한다. 따라서 사용자가 `a`를 입력한 뒤 제출하면 `handleSubmit B`가 실행되고 `onLogin('a', password)`를 호출한다.
+
+setter는 현재 실행 중인 핸들러의 변수를 직접 바꾸지 않는다. 예를 들어 첫 렌더링에서 만들어진 핸들러 안에서는 `setEmail('a')`를 호출해도 `email` 변수는 끝까지 `''`이다. `setEmail(...)`은 다음 렌더링에 새 state를 전달해 달라고 React에 요청한다.
+
+현재 예제의 인라인 `onChange`도 렌더링마다 새로 만들어지는 함수다. 다만 이 함수는 `email`이나 `password`를 읽지 않고 `setEmail`만 호출하므로, state 값을 기억하는 예시는 `handleSubmit`으로 이해하는 것이 알맞다.
 
 ---
 

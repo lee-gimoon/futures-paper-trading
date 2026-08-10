@@ -771,30 +771,23 @@ function LoginForm({ onLogin }: Props) {
 }
 ```
 
-`handleSubmit`은 자신의 함수 안에 선언되지 않은 `email`, `password`를 사용할 수 있다. 함수가 만들어진 바깥쪽 `LoginForm()`의 지역 변수 환경과 연결되어, 나중에도 그 변수에 접근할 수 있기 때문이다. 이런 함수를 **클로저(closure)**라고 한다.
+`handleSubmit`은 자신의 함수 안에 없는 `email`, `password`도 사용할 수 있다. 함수가 만들어진 바깥 `LoginForm()` 실행의 지역 변수 환경과 연결되어 있기 때문이다.
 
-`closure`라는 이름은 함수가 바깥 변수 환경을 **감싸서(close over)** 함께 가진다는 뜻에서 나왔다. 즉 클로저는 함수 코드만이 아니라, 그 함수가 접근할 수 있도록 연결된 바깥 지역 변수 환경까지 포함해 생각하면 된다.
+이처럼 함수가 바깥 지역 변수 환경에 나중에도 접근할 수 있는 것을 **클로저(closure)**라고 한다. `closure`는 함수가 바깥 변수 환경을 감싸서(close over) 함께 가진다는 뜻이다.
 
 ```text
-첫 LoginForm() 실행
-→ email 지역 변수 = ''
-→ handleSubmit A가 이 email 변수 환경에 연결
+첫 렌더링(t1): email='' → handleSubmit A 생성
+→ A는 t1의 email 변수 환경에 연결됨
 
 setEmail('a')
 
-두 번째 LoginForm() 실행
-→ 새 email 지역 변수 = 'a'
-→ handleSubmit B가 새 email 변수 환경에 연결
+다음 렌더링(t2): 새 email='a' → handleSubmit B 생성
+→ B는 t2의 새 email 변수 환경에 연결됨
 ```
 
-`setEmail('a')`은 첫 번째 실행의 `email` 변수를 `''`에서 `'a'`로 바꾸지 않는다. React의 state를 갱신하고 `LoginForm()`을 다시 실행하도록 요청한다. 두 번째 실행에서 새 `email` 변수에 `'a'`가 들어가고, React는 화면을 갱신하며 새 `handleSubmit B`를 form에 연결한다. 그래서 사용자가 `a`를 입력한 뒤 제출하면 B가 실행되어 최신 값인 `onLogin('a', password)`를 호출한다.
+`setEmail('a')`은 A가 연결된 t1의 `email=''` 변수를 바꾸지 않는다. React state를 갱신한 뒤 다음 렌더링에서 새 `email='a'` 변수와 B를 만든다.
 
-```text
-handleSubmit A를 호출하면 → 첫 번째 email 변수인 ''을 읽음
-handleSubmit B를 호출하면 → 두 번째 email 변수인 'a'를 읽음
-```
-
-같은 변수의 값을 직접 바꾸는 일반 JavaScript라면 기존 클로저도 바뀐 값을 읽는다. 하지만 React의 state 업데이트는 현재 렌더링의 지역 변수를 바꾸는 방식이 아니라 다음 렌더링에서 새 지역 변수를 만드는 방식이다. 그래서 이전 핸들러 A는 이전 state를, 화면에 연결된 최신 핸들러 B는 새 state를 읽는다. 이것을 **렌더링마다 state 스냅샷이 있다**고 표현한다.
+따라서 나중에 A를 호출해도 A는 `''`을 읽고, B를 호출하면 B는 `'a'`를 읽는다. A가 남아 있는 동안에는 A가 참조하는 t1의 변수 환경도 유지되며, A를 더 이상 참조하지 않으면 그 환경은 GC 대상이 된다.
 
 ---
 

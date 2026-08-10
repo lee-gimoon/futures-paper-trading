@@ -819,7 +819,8 @@ submitting === true  → disabled={true}  → 버튼은 보이지만 누를 수 
 
 ```text
 사용자가 로그인 버튼 클릭
-→ 브라우저 click 이벤트 발생
+→ 브라우저가 button의 click 이벤트를 발생시킴
+→ React onClick 핸들러는 없음
 → type="submit" 기본 동작으로 form 제출 시도
 → 브라우저 기본 유효성 검사
 → 검증 성공 시 submit 이벤트 발생

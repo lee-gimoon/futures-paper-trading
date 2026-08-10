@@ -771,17 +771,19 @@ function LoginForm({ onLogin }: Props) {
 }
 ```
 
-`handleSubmit`은 바깥 `LoginForm()` 실행의 `email`, `password` 변수에 접근할 수 있다. 이런 JavaScript 함수를 **클로저(closure)**라고 한다. 나중에 함수가 호출되면, 최신 state를 자동으로 찾는 것이 아니라 **자신이 만들어진 렌더링의 변수**를 읽는다.
+`handleSubmit`은 자신의 함수 안에 선언되지 않은 `email`, `password`를 사용할 수 있다. 함수가 만들어진 바깥쪽 `LoginForm()`의 지역 변수에, 나중에도 접근할 수 있기 때문이다. 이렇게 바깥 함수의 지역 변수에 접근할 수 있는 함수를 **클로저(closure)**라고 한다.
 
 ```text
-첫 렌더링: email=''
-→ 첫 렌더링의 email을 읽는 handleSubmit A 생성
+첫 LoginForm() 실행
+→ email이라는 지역 변수에 ''
+→ 그 변수에 접근하는 handleSubmit A 생성
 
-setEmail('a') 뒤 다음 렌더링: email='a'
-→ 다음 렌더링의 email을 읽는 handleSubmit B 생성
+setEmail('a') 뒤 다음 LoginForm() 실행
+→ 새로운 email 지역 변수에 'a'
+→ 새 변수에 접근하는 handleSubmit B 생성
 ```
 
-React는 화면에 최신 렌더링의 `handleSubmit B`를 연결한다. 따라서 `a`를 입력한 뒤 제출하면 B가 실행되어 `onLogin('a', password)`를 호출한다. `setEmail(...)`은 현재 핸들러의 `email`을 바꾸지 않고, 다음 렌더링을 요청한다.
+`setEmail('a')`은 첫 번째 실행의 `email` 변수를 바꾸지 않는다. React에게 `LoginForm()`을 다시 실행해 달라고 요청할 뿐이다. 화면을 갱신할 때 React는 새로 만든 `handleSubmit B`를 form에 연결한다. 따라서 `a`를 입력한 뒤 제출하면 B가 실행되어 `onLogin('a', password)`를 호출한다.
 
 ---
 

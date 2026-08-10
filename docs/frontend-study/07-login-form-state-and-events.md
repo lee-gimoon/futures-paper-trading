@@ -785,7 +785,7 @@ setEmail('a')
 → B는 t2의 새 email 변수 환경에 연결됨
 ```
 
-`setEmail('a')`은 A가 연결된 t1의 `email=''` 변수를 바꾸지 않는다. 대신 React에 다음 렌더링을 요청한다. 다음 `LoginForm()` 실행에서는 `'a'`를 가진 새 `email` 지역 변수와 handleSubmit B가 만들어진다.
+`setEmail('a')`은 A가 연결된 t1의 `email=''` 변수를 바꾸지 않는다. 대신 React가 관리하는 email state에 `'a'` 업데이트를 등록하고, 그 변경을 반영할 다음 렌더링을 요청한다. 다음 `LoginForm()` 실행에서는 `'a'`를 가진 새 `email` 지역 변수와 handleSubmit B가 만들어진다.
 
 따라서 나중에 A를 호출해도 A는 `''`을 읽고, B를 호출하면 B는 `'a'`를 읽는다. A가 남아 있는 동안에는 A가 참조하는 t1의 변수 환경도 유지되며, A를 더 이상 참조하지 않으면 그 환경은 GC 대상이 된다.
 

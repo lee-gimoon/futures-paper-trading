@@ -806,7 +806,12 @@ LoginForm은 버튼의 `onClick`이 아니라 form의 `onSubmit`에서 로그인
 
 `type="submit"`은 클릭하거나 input에서 Enter를 눌렀을 때 form의 `submit` 이벤트를 발생시킨다. 따라서 React는 `onSubmit={handleSubmit}`의 `handleSubmit`을 호출한다.
 
-`disabled={submitting}`은 로그인 요청 중(`submitting=true`) 버튼을 비활성화해 중복 제출을 막는다.
+`disabled={submitting}`은 `submitting` 값에 따라 버튼을 누를 수 있는지 정한다. 버튼은 비활성화되어도 화면에서 사라지지 않는다.
+
+```text
+submitting === false → disabled={false} → 버튼을 누를 수 있음
+submitting === true  → disabled={true}  → 버튼은 보이지만 누를 수 없음
+```
 
 ### 5-1. HTML form 동작과 React 이벤트 핸들러가 연결된다
 

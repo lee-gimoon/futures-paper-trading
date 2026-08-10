@@ -731,36 +731,20 @@ onChange={(e) => setEmail(e.target.value)}
 
 ### 4-2. 글자를 입력하거나 지울 때 화면에는 어떻게 반영될까?
 
-처음에는 `email` state가 빈 문자열(`''`)이라고 가정한다. 따라서 `value={email}`에 의해 input도 비어 있다.
-
-이 상태에서 사용자가 이메일 칸에 `a`를 입력하면, 아주 짧은 시간 안에 다음 일이 순서대로 일어난다.
+처음 `email` state와 input은 모두 빈 문자열(`''`)이라고 가정한다. 사용자가 이메일 칸에 `a`를 입력하면 다음 일이 아주 짧은 시간 안에 일어난다.
 
 ```text
-1. 브라우저가 키보드 입력을 받아 실제 input의 값을 ''에서 'a'로 바꾼다.
-2. input 값이 바뀌었다는 이벤트가 발생한다.
-3. React가 이벤트를 받아 `onChange`에 등록한 함수를 실행한다.
-4. 함수 안의 `e.target.value`는 방금 바뀐 실제 input의 값, 즉 'a'이다.
-5. `setEmail('a')`가 실행되어 React에 email state를 'a'로 바꿔 달라고 요청한다.
-6. React가 LoginForm을 다시 렌더링한다. 이때 email state는 'a'이다.
-7. JSX의 `value={email}`도 'a'가 된다.
-8. React가 input에 표시할 값이 'a'가 되도록 DOM을 반영한다.
+1. 브라우저가 input DOM의 현재 값(`input.value`)을 ''에서 'a'로 바꾼다.
+2. 값 변경 이벤트가 발생하고 React가 `onChange` 함수를 실행한다.
+3. `e.target.value`에서 'a'를 읽어 `setEmail('a')`를 호출한다.
+4. React가 email state가 'a'인 LoginForm을 다시 렌더링한다.
+5. `value={email}`도 'a'가 되고, React가 DOM에 그 값을 반영한다.
+6. 브라우저가 최종 결과인 'a'를 화면에 그린다.
 ```
 
-여기서 **1번은 input DOM의 내부 값(`input.value`)이 먼저 바뀌는 시점**이다. 이것이 곧 사용자가 화면에서 `a`를 보는 시점이라는 뜻은 아니다. 브라우저는 보통 이벤트 핸들러와 React의 업데이트 처리가 끝날 때까지 화면을 그리는 일을 기다린다. 따라서 사용자가 눈으로 보는 갱신은 일반적으로 6~8번까지 끝난 **최종 결과**다.
+1번은 input의 **내부 값**이 먼저 바뀌는 시점이지, 화면에 `a`가 그려지는 시점은 아니다. 사용자는 보통 React의 처리까지 끝난 6번의 최종 결과를 본다. 따라서 `a`가 두 번 보이는 것이 아니라, 한 번 자연스럽게 표시된다.
 
-즉 사용자는 1번의 `a`와 8번의 `a`를 따로 두 번 보지 않는다. 이 예제에서는 브라우저의 내부 값도 `a`이고 React state에서 다시 계산한 `value`도 `a`이므로, 처리 전체가 끝난 뒤 화면에는 `a`가 한 번 자연스럽게 보인다. 사용자가 `abc`를 입력하면 글자마다 이 과정이 매우 빠르게 반복되어 `a`, `ab`, `abc`라는 최종 결과가 차례로 보인다.
-
-중요한 점은 `setEmail(...)`이 input을 직접 수정하는 함수가 아니라는 것이다. `setEmail('a')`는 state를 바꾸고, React가 다시 렌더링한 뒤 `value={email}`을 통해 input 값이 'a'가 되게 한다. 그래서 React state가 input에 표시되는 값의 기준이 된다.
-
-글자를 추가할 때도, 지울 때도 같은 흐름이 반복된다. 예를 들어 input에 `ab`가 있을 때 Backspace를 누르면 브라우저의 input 값이 먼저 `a`가 되고, `e.target.value`가 `'a'`가 되며, `setEmail('a')` 이후 React가 다시 `value="a"`를 반영한다.
-
-만약 `onChange`에서 입력값을 그대로 저장하지 않고 바꿔서 저장하면, 최종 표시값은 state에 저장한 값이 된다.
-
-```tsx
-onChange={(e) => setEmail(e.target.value.toUpperCase())}
-```
-
-이 경우 사용자가 `a`를 입력하면 input DOM의 내부 값은 먼저 `a`가 되지만, React state에는 `A`가 저장된다. 이후 렌더링이 끝난 최종 input 값은 `A`이므로, 사용자는 보통 화면에서 `A`를 보게 된다. 중간의 `a`가 반드시 화면에 따로 보이는 것은 아니다. 이처럼 React state가 input 값을 관리하는 방식을 **제어되는 입력(controlled input)**이라고 한다.
+`setEmail(...)`은 input을 직접 수정하지 않는다. state를 바꾸고, 다음 렌더링에서 `value={email}`을 통해 input에 보여 줄 최종 값을 정한다. 이처럼 React state가 input 값을 관리하는 방식을 **제어되는 입력(controlled input)**이라고 한다.
 
 ### 4-3. 이벤트 핸들러는 해당 렌더링의 state를 기억한다
 

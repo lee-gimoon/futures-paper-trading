@@ -713,21 +713,39 @@ React가 LoginForm(props) 호출
 
 ### 4-1. `value`와 `onChange`가 input을 state에 연결한다
 
-`value={email}`은 input에 표시할 값을 React state에서 가져온다. `onChange`는 사용자의 입력을 다시 state로 옮긴다.
+입력칸을 사용할 때 `value`와 `onChange`는 서로 다른 일을 한다. 먼저 `value`는 **입력칸에 지금 보여 줄 글자**를 정하는 속성이다.
+
+```tsx
+value={email}
+```
+
+즉 React에게 “이 입력칸에는 `email` state에 들어 있는 값을 보여 줘”라고 지시한다. 예를 들어 `email`이 `"user@example.com"`이면 input에도 `user@example.com`이 표시된다.
+
+`onChange`는 **사용자가 입력칸의 내용을 바꿨을 때 실행할 함수**를 정하는 속성이다.
+
+```tsx
+onChange={(e) => setEmail(e.target.value)}
+```
+
+사용자가 글자를 입력하거나 지우면 이 함수가 실행된다. `e.target.value`에는 그 순간 input에 들어 있는 최신 문자열이 있고, `setEmail(...)`은 그 문자열을 `email` state에 저장한다.
+
+정리하면 `value`는 **state의 값을 input에 보여 주는 통로**이고, `onChange`는 **사용자의 입력을 state에 저장하는 통로**이다.
 
 ```text
 표시할 값
-state email → value={email} → 실제 input
+state email → value={email} → 실제 input에 표시
 
 새 사용자 입력
-실제 input → onChange → setEmail(...) → state email
+실제 input의 값 변경 → onChange → setEmail(...) → state email
 ```
 
-이처럼 React state를 값의 원천으로 사용하는 input을 **제어되는 입력(controlled input)**이라고 한다.
+이처럼 React state를 input 값의 원천으로 사용하는 input을 **제어되는 입력(controlled input)**이라고 한다. 사용자가 입력하는 순간에는 `onChange`가 state를 바꾸고, 바뀐 state는 다시 `value`를 통해 input에 표시된다.
 
-`value={email}`만 두고 `onChange`로 state를 바꾸지 않으면 React가 계속 같은 값을 내려 주므로 사용자가 입력을 수정할 수 없는 것처럼 보인다. 반대로 `onChange`만 있고 `value`가 없으면 DOM이 자체 값을 관리하는 비제어 입력이 된다.
+`value={email}`만 두고 `onChange`에서 state를 바꾸지 않으면 `email`은 계속 같은 값이다. 따라서 사용자가 글자를 입력해도 React가 같은 값을 다시 보여 주므로, 입력이 수정되지 않는 것처럼 보인다.
 
-`type="password"`는 브라우저가 글자를 가려 표시하게 할 뿐, React state에 저장된 문자열을 암호화하지는 않는다.
+반대로 `onChange`만 있고 `value`가 없으면 input의 값은 브라우저 DOM이 자체적으로 관리한다. React는 입력값이 바뀌었다는 사실만 받아볼 뿐, input에 표시할 값을 직접 정하지 않는다. 이것을 **비제어 입력(uncontrolled input)**이라고 한다.
+
+`type="password"`는 브라우저가 글자를 가려 표시하게 할 뿐, React state에 저장된 문자열을 암호화하지는 않는다. 비밀번호는 서버에 전송할 때 HTTPS를 사용하고, 서버에서 안전하게 처리해야 한다.
 
 ### 4-2. 한 글자를 입력하면 state 변경과 재렌더링이 이어진다
 

@@ -773,7 +773,7 @@ function LoginForm({ onLogin }: Props) {
 
 `handleSubmit`은 자신의 함수 안에 없는 `email`, `password`도 사용할 수 있다. 함수가 만들어진 바깥 `LoginForm()` 실행의 지역 변수 환경과 연결되어 있기 때문이다.
 
-이처럼 함수가 바깥 지역 변수 환경에 나중에도 접근할 수 있는 것을 **클로저(closure)**라고 한다. `closure`는 함수가 바깥 변수 환경을 감싸서(close over) 함께 가진다는 뜻이다.
+**클로저(closure)**는 함수와 그 함수가 만들어질 당시의 바깥 변수 환경이 묶여 있는 것을 뜻한다. 그래서 함수가 나중에 호출되어도 바깥 지역 변수에 접근할 수 있다. `closure`라는 이름은 함수가 바깥 변수 환경을 감싸서(close over) 함께 가진다는 뜻에서 왔다.
 
 ```text
 첫 렌더링(t1): email='' → handleSubmit A 생성

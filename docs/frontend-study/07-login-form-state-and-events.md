@@ -835,8 +835,8 @@ form 제출을 시도하면, `submit` 이벤트를 발생시키기 전에 브라
 
 `type="email"`과 `required`는 React가 아니라 브라우저의 HTML 기능이다.
 
-- `required`: 빈 값 제출을 막는다.
 - `type="email"`: 브라우저의 기본 이메일 형식 검사를 사용한다.
+- `required`: 빈 값 제출을 막는다.
 
 검증에 실패하면 브라우저가 안내를 표시하고 submit 이벤트를 실행하지 않으므로 `handleSubmit`도 호출되지 않는다. 실제 계정 존재 여부와 비밀번호 일치는 서버가 검사한다.
 
@@ -850,7 +850,9 @@ async function handleSubmit(e: FormEvent) {
 }
 ```
 
-`FormEvent`는 `e`가 폼 이벤트이며 `preventDefault()` 같은 메서드를 가진다고 TypeScript에 알려 준다. 실행 중 submit 이벤트를 만드는 것은 브라우저이고, 등록된 함수를 연결하는 것은 ReactDOM의 이벤트 시스템이다.
+사용자가 form을 제출하면 브라우저가 `submit` 이벤트를 만들고, ReactDOM은 이를 받아 `onSubmit`의 `handleSubmit(e)`를 호출한다. 이때 `e`는 그 submit 이벤트를 React가 전달한 객체다.
+
+`FormEvent`는 React가 제공하는 TypeScript 타입으로, `e`에 `preventDefault()` 같은 메서드가 있음을 TypeScript에 알려 준다. 타입은 실행 중 이벤트를 만들지 않고, 코드의 타입 검사에만 사용된다.
 
 ### 5-3. `preventDefault()`는 페이지 이동을 막는다
 

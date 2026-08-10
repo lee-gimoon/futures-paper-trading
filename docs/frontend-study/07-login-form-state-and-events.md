@@ -827,7 +827,7 @@ submitting === true  → disabled={true}  → 버튼은 보이지만 누를 수 
 → React가 onSubmit의 handleSubmit(e) 호출
 ```
 
-input에서 Enter를 눌러도 같은 submit 경로로 모인다. 그래서 로그인 동작을 버튼 `onClick`에 중복하지 않고 form의 `onSubmit` 한 곳에 둔다.
+form 제출을 시도하면, `submit` 이벤트를 발생시키기 전에 브라우저가 input의 HTML 유효성 조건을 먼저 검사한다.
 
 ```tsx
 <input type="email" required />

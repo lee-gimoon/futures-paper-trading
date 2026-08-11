@@ -858,7 +858,7 @@ async function handleSubmit(e: FormEvent) {
 }
 ```
 
-브라우저가 실제 `submit` 이벤트를 발생시키면 ReactDOM의 이벤트 시스템이 이를 감지하고, 원본 이벤트 정보를 감싼 React 이벤트 객체 `e`를 자동으로 만든 뒤 `onSubmit`에 등록된 `handleSubmit(e)`를 호출한다.
+브라우저가 실제 `submit` 이벤트를 발생시키면 ReactDOM이 이를 감지한다. ReactDOM은 원본 이벤트 정보를 감싼 React 이벤트 객체 `e`를 자동으로 만들고, `onSubmit`에 등록된 `handleSubmit(e)`를 호출한다.
 
 `FormEvent`는 React가 제공하는 TypeScript 타입으로, `e`에 `preventDefault()` 같은 메서드가 있음을 TypeScript에 알려 준다. 타입은 실행 중 이벤트를 만들지 않고, 코드의 타입 검사에만 사용된다.
 

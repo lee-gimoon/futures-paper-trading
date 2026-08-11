@@ -827,6 +827,20 @@ submitting === true  → disabled={true}  → 버튼은 보이지만 누를 수 
 → React가 onSubmit의 handleSubmit(e) 호출
 ```
 
+#### `onSubmit`은 제출을 만드는 함수가 아니라 `submit` 이벤트를 받는 핸들러다
+
+`onSubmit`의 유무는 form이 제출을 시도하는지와 별개다. 브라우저의 기본 form 제출은 `type="submit"` 버튼의 기본 동작으로 시작되고, `onSubmit`은 그 과정에서 발생한 `submit` 이벤트를 처리한다.
+
+유효성 검사를 통과했다는 전제에서 결과는 다음과 같다.
+
+| `onSubmit` 설정 | `preventDefault()` 호출 | 결과 |
+| --- | --- | --- |
+| 없음 | 해당 없음 | 브라우저가 form의 기본 제출을 수행한다. |
+| 있음 | 없음 | `handleSubmit` 실행 후 브라우저가 기본 제출을 수행한다. |
+| 있음 | 있음 | 브라우저의 기본 제출은 취소되고, React 코드가 로그인 API 호출 등을 직접 처리한다. |
+
+브라우저의 기본 제출은 form의 `action`과 `method`를 사용해 요청을 보내는 동작이다. 현재 로그인 폼은 React가 API 요청을 직접 처리하므로, `handleSubmit(e)` 안에서 `e.preventDefault()`를 호출한다.
+
 form 제출을 시도하면, `submit` 이벤트를 발생시키기 전에 브라우저가 input의 HTML 유효성 조건을 먼저 검사한다.
 
 ```tsx

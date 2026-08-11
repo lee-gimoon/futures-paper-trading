@@ -848,7 +848,7 @@ form 제출을 시도하면, `submit` 이벤트를 발생시키기 전에 브라
 
 `onSubmit`이 없으면 React가 호출할 함수만 없을 뿐, 브라우저의 기본 form 제출은 계속 진행된다. 반대로 `handleSubmit(e)` 안에서 `e.preventDefault()`를 호출하면 브라우저의 기본 제출은 취소되고, React 코드가 로그인 API 요청 등을 직접 처리한다.
 
-### 5-2. `FormEvent`는 실행 기능이 아니라 TypeScript 타입이다
+### 5-2. `FormEvent`는 이벤트 객체의 TypeScript 타입이다
 
 ```tsx
 import { useState, type FormEvent } from 'react';
@@ -858,7 +858,7 @@ async function handleSubmit(e: FormEvent) {
 }
 ```
 
-브라우저가 실제 `submit` 이벤트를 발생시키면 ReactDOM이 이를 감지해, 이 이벤트 정보를 담은 React 이벤트 객체를 만들고, 이를 `handleSubmit(e)`의 `e`에 넣어 함수를 호출한다.
+브라우저가 실제 `submit` 이벤트를 발생시키면 ReactDOM의 이벤트 시스템이 이를 감지하고, 원본 이벤트 정보를 감싼 React 이벤트 객체 `e`를 자동으로 만든 뒤 `onSubmit`에 등록된 `handleSubmit(e)`를 호출한다.
 
 `FormEvent`는 React가 제공하는 TypeScript 타입으로, `e`에 `preventDefault()` 같은 메서드가 있음을 TypeScript에 알려 준다. 타입은 실행 중 이벤트를 만들지 않고, 코드의 타입 검사에만 사용된다.
 

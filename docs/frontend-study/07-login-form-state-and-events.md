@@ -840,19 +840,13 @@ form 제출을 시도하면, `submit` 이벤트를 발생시키기 전에 브라
 
 검증에 실패하면 브라우저가 안내를 표시하고 submit 이벤트를 실행하지 않으므로 `handleSubmit`도 호출되지 않는다. 실제 계정 존재 여부와 비밀번호 일치는 서버가 검사한다.
 
-#### `onSubmit`은 제출을 만드는 함수가 아니라 `submit` 이벤트를 받는 핸들러다
+#### `onSubmit`은 `submit` 이벤트가 발생했을 때 실행할 함수를 React에 알려 주는 속성이다
 
-`onSubmit`의 유무는 form이 제출을 시도하는지와 별개다. 브라우저의 기본 form 제출은 `type="submit"` 버튼의 기본 동작으로 시작되고, `onSubmit`은 그 과정에서 발생한 `submit` 이벤트를 처리한다.
+`on`은 “~이 발생했을 때”라는 뜻이다. 따라서 `onSubmit={handleSubmit}`은 “이 `<form>`에서 `submit` 이벤트가 발생했을 때 `handleSubmit(e)`를 실행해 줘”라고 React에 알려 주는 코드다.
 
-유효성 검사를 통과했다는 전제에서 결과는 다음과 같다.
+`submit` 이벤트 자체는 React가 아니라 브라우저가 발생시킨다. `<button type="submit">`의 기본 동작으로 form 제출을 시도하고, HTML 유효성 검사를 통과하면 브라우저가 form의 `submit` 이벤트를 발생시킨다. React는 이 이벤트를 받으면 `onSubmit`에 연결된 `handleSubmit(e)`를 호출한다.
 
-| `onSubmit` 설정 | `preventDefault()` 호출 | 결과 |
-| --- | --- | --- |
-| 없음 | 해당 없음 | 브라우저가 form의 기본 제출을 수행한다. |
-| 있음 | 없음 | `handleSubmit` 실행 후 브라우저가 기본 제출을 수행한다. |
-| 있음 | 있음 | 브라우저의 기본 제출은 취소되고, React 코드가 로그인 API 호출 등을 직접 처리한다. |
-
-브라우저의 기본 제출은 form의 `action`과 `method`를 사용해 요청을 보내는 동작이다. 현재 로그인 폼은 React가 API 요청을 직접 처리하므로, `handleSubmit(e)` 안에서 `e.preventDefault()`를 호출한다.
+`onSubmit`이 없으면 React가 호출할 함수만 없을 뿐, 브라우저의 기본 form 제출은 계속 진행된다. 반대로 `handleSubmit(e)` 안에서 `e.preventDefault()`를 호출하면 브라우저의 기본 제출은 취소되고, React 코드가 로그인 API 요청 등을 직접 처리한다.
 
 ### 5-2. `FormEvent`는 실행 기능이 아니라 TypeScript 타입이다
 

@@ -820,12 +820,25 @@ submitting === true  → disabled={true}  → 버튼은 보이지만 누를 수 
 ```text
 사용자가 로그인 버튼 클릭
 → 브라우저가 button의 click 이벤트를 발생시킴
-→ React onClick 핸들러는 없음
+→ 이 버튼에는 React onClick 핸들러가 없음
 → type="submit" 기본 동작으로 form 제출 시도
 → 브라우저 기본 유효성 검사
 → 검증 성공 시 submit 이벤트 발생
 → React가 onSubmit의 handleSubmit(e) 호출
 ```
+
+form 제출을 시도하면, `submit` 이벤트를 발생시키기 전에 브라우저가 input의 HTML 유효성 조건을 먼저 검사한다.
+
+```tsx
+<input type="email" required />
+```
+
+`type="email"`과 `required`는 React가 아니라 브라우저의 HTML 기능이다.
+
+- `type="email"`: 브라우저의 기본 이메일 형식 검사를 사용한다.
+- `required`: 빈 값 제출을 막는다.
+
+검증에 실패하면 브라우저가 안내를 표시하고 submit 이벤트를 실행하지 않으므로 `handleSubmit`도 호출되지 않는다. 실제 계정 존재 여부와 비밀번호 일치는 서버가 검사한다.
 
 #### `onSubmit`은 제출을 만드는 함수가 아니라 `submit` 이벤트를 받는 핸들러다
 
@@ -840,19 +853,6 @@ submitting === true  → disabled={true}  → 버튼은 보이지만 누를 수 
 | 있음 | 있음 | 브라우저의 기본 제출은 취소되고, React 코드가 로그인 API 호출 등을 직접 처리한다. |
 
 브라우저의 기본 제출은 form의 `action`과 `method`를 사용해 요청을 보내는 동작이다. 현재 로그인 폼은 React가 API 요청을 직접 처리하므로, `handleSubmit(e)` 안에서 `e.preventDefault()`를 호출한다.
-
-form 제출을 시도하면, `submit` 이벤트를 발생시키기 전에 브라우저가 input의 HTML 유효성 조건을 먼저 검사한다.
-
-```tsx
-<input type="email" required />
-```
-
-`type="email"`과 `required`는 React가 아니라 브라우저의 HTML 기능이다.
-
-- `type="email"`: 브라우저의 기본 이메일 형식 검사를 사용한다.
-- `required`: 빈 값 제출을 막는다.
-
-검증에 실패하면 브라우저가 안내를 표시하고 submit 이벤트를 실행하지 않으므로 `handleSubmit`도 호출되지 않는다. 실제 계정 존재 여부와 비밀번호 일치는 서버가 검사한다.
 
 ### 5-2. `FormEvent`는 실행 기능이 아니라 TypeScript 타입이다
 

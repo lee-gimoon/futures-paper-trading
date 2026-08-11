@@ -815,7 +815,7 @@ submitting === true  → disabled={true}  → 버튼은 보이지만 누를 수 
 
 ### 5-1. HTML form 동작과 React 이벤트 핸들러가 연결된다
 
-버튼을 클릭하면 브라우저의 HTML 동작이 먼저 submit 절차를 만든다.
+`<form>` 내부의 `<button type="submit">`을 클릭하면 버튼의 `click` 이벤트가 발생하고, 그 이벤트가 취소되지 않았다면 기본 동작으로 해당 form의 제출을 시도합니다.
 
 ```text
 사용자가 로그인 버튼 클릭

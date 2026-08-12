@@ -944,36 +944,40 @@ async function handleSubmit(e: FormEvent) {
 
 ### 6-1. `async`, Promise, `await`는 비동기 작업의 완료를 연결한다
 
-`async` 함수는 항상 Promise를 반환한다. `await onLogin(...)`은 `onLogin`이 반환한 Promise가 성공하거나 실패할 때까지 `handleSubmit`의 나머지 코드만 잠시 멈춘다.
+`async` 함수는 항상 Promise를 반환한다. 여기서 `onLogin(email, password)`도 로그인 작업의 완료를 나타내는 Promise를 반환한다. `await onLogin(...)`은 그 Promise가 성공하거나 실패할 때까지 `handleSubmit`의 **`await` 아래 코드만** 잠시 멈춘다.
 
 ```text
 handleSubmit 시작
-→ setSubmitting(true)
-→ onLogin 호출
-→ await에서 handleSubmit 일시 중단
-→ 브라우저는 이벤트·렌더링·네트워크 응답 처리를 계속함
-→ Promise 성공이면 try의 다음 줄
-→ Promise 실패면 catch
-→ 마지막에 finally
+→ setSubmitting(true)로 "로그인 중" state 변경을 요청
+→ onLogin(email, password) 호출: 로그인 작업 시작, Promise 반환
+→ await: onClose(), catch, finally는 아직 실행하지 않고 대기
+
+이 대기 중
+→ React가 submitting=true를 반영해 [ 로그인 중... ] 화면을 표시할 수 있음
+→ 브라우저가 다른 입력, 타이머, 네트워크 응답 등의 작업을 처리할 수 있음
+
+onLogin Promise 성공
+→ handleSubmit 재개 → onClose() 실행 → finally 실행
+
+onLogin Promise 실패
+→ handleSubmit 재개 → catch 실행 → finally 실행
 ```
 
-`await`가 브라우저의 JavaScript 스레드 전체를 막는 것은 아니다. 따라서 앞에서 호출한 `setSubmitting(true)`의 state 변경을 React가 렌더링하고 화면에 반영할 수 있다.
+`setSubmitting(true)`를 호출한 즉시 버튼 DOM이 바뀌는 것은 아니다. 이 호출은 React에 다음 state를 등록한다. 이어서 `await`에서 `handleSubmit`의 동기 실행이 멈추고 브라우저에 제어권이 돌아가면, React는 등록된 state 변경을 렌더링하고 화면에 반영할 수 있다. 즉 서버 응답을 받아 `handleSubmit` 전체가 끝날 때까지 기다릴 필요는 없다.
 
-여기서 잠시 멈추는 것은 **현재 `handleSubmit` 함수에서 `await` 아래에 있는 코드**다. `onClose()`, `catch`, `finally`는 아직 실행되지 않는다. 반면 브라우저는 React의 화면 갱신, 다른 사용자 입력, 타이머, 네트워크 응답 같은 다른 작업을 처리할 수 있다.
+예를 들어 submit 이벤트에서 시작된 `handleSubmit`은 다음 순서로 동작한다.
 
 ```text
-handleSubmit이 await에서 대기
-→ [ 로그인 중... ] 화면을 React가 반영할 수 있음
-→ 브라우저가 다른 이벤트와 네트워크 응답을 처리할 수 있음
-→ onLogin Promise가 성공 또는 실패
-→ handleSubmit이 이어서 onClose() 또는 catch, finally를 실행
+사용자가 로그인 버튼 클릭
+→ 브라우저가 submit 이벤트 발생
+→ React가 handleSubmit 호출
+→ setSubmitting(true): React에 state 업데이트 등록
+→ await onLogin(...): handleSubmit의 나머지 코드를 미루고 브라우저에 제어권을 돌려줌
+→ React가 등록된 state 업데이트를 처리
+→ [ 로그인 중... ] 문구와 disabled=true를 화면에 반영
 ```
 
-JavaScript가 이 작업들을 한순간에 여러 개 병렬 실행한다는 뜻은 아니다. JavaScript는 한 번에 한 작업씩 실행하지만, `await`를 만난 `handleSubmit`이 브라우저에 제어권을 돌려주므로 그 사이에 다른 작업을 처리할 수 있다.
-
-React가 async 이벤트 핸들러의 Promise를 대신 관리해 주는 것도 아니다. 성공·실패·마무리 UI는 이 코드의 `try`, `catch`, `finally`와 state setter가 직접 관리한다.
-
-4장에서 본 state 스냅샷 때문에 `onLogin(email, password)`에는 제출 시점의 문자열이 전달된다. 요청을 시작한 뒤 사용자가 input을 바꾸더라도 이미 함수 인자로 넘긴 문자열은 바뀌지 않는다.
+JavaScript가 이 작업들을 한순간에 여러 개 병렬 실행한다는 뜻은 아니다. JavaScript는 한 번에 한 작업씩 실행한다. 다만 `await`로 현재 함수의 나머지 실행을 미뤄 두었기 때문에, 그 사이에 브라우저와 React가 다른 작업을 처리할 수 있다.
 
 ### 6-2. React는 같은 이벤트의 state 업데이트를 모을 수 있다
 

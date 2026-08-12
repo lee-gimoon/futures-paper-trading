@@ -890,9 +890,9 @@ Effect는 렌더링 뒤 또는 의존성 값 변경 뒤에 실행되는 후속 �
 
 ---
 
-## 6. `handleSubmit`은 로그인 처리에 맞춰 폼 state를 관리한다
+## 6. `handleSubmit`은 로그인 요청과 그 결과를 처리한다
 
-5번에서 본 것처럼 form이 제출되면 React가 `handleSubmit`을 호출한다. 이 함수의 역할은 로그인 API를 호출하고, 그 진행 결과에 맞게 폼의 state를 바꾸는 것이다. 버튼 문구·비활성화 여부·오류 메시지는 `return`의 JSX가 이 state를 읽어 결정한다.
+5번에서 본 것처럼 사용자가 로그인 버튼을 누르거나 Enter를 누르면 form의 `submit` 이벤트가 발생하고, React가 `handleSubmit`을 호출한다. 이 함수는 브라우저의 기본 form 제출을 막은 뒤 로그인 요청을 시작하고, 성공·실패 결과에 맞는 후속 동작을 처리한다. `submitting`과 `error` state 변경은 이 과정에서 버튼과 오류 메시지를 현재 상황에 맞게 보여 주기 위한 것이다.
 
 전체 제출 함수는 다음과 같다.
 
@@ -915,21 +915,30 @@ async function handleSubmit(e: FormEvent) {
 
 코드의 흐름은 다음과 같다.
 
-1. `e.preventDefault()`로 브라우저의 기본 form 제출을 막는다.
-2. 이전 오류를 지우고 `setSubmitting(true)`로 로그인 처리가 진행 중임을 state에 기록한다.
-3. `onLogin(email, password)`로 로그인 API를 호출하고, `await`로 성공 또는 실패 결과를 기다린다.
-4. 성공하면 폼을 닫고, 실패하면 `error` state에 오류 메시지를 저장한다.
-5. 성공·실패와 관계없이 마지막에 `setSubmitting(false)`로 로그인 처리가 끝났음을 기록한다.
-
-특히 `submitting`은 API 요청 그 자체가 아니라, **로그인 API의 결과를 기다리는 동안 폼이 어떤 모습이어야 하는지 나타내는 state**다. `setSubmitting(true)`가 실행되면 React가 `LoginForm`을 다시 렌더링한다. 그 결과 버튼은 `로그인 중...`으로 바뀌고 클릭할 수 없게 된다. `await onLogin(...)`이 끝난 뒤 `setSubmitting(false)`가 실행되면 버튼은 다시 `로그인` 상태가 된다.
+1. `e.preventDefault()`로 브라우저가 form을 기본 방식으로 제출하면서 페이지를 이동하거나 새로고침하는 것을 막는다.
+2. `setError('')`로 이전 로그인 실패 메시지를 지운다.
+3. `setSubmitting(true)`로 로그인 결과를 기다리는 중임을 기록한다. React는 이 state를 읽어 버튼을 `로그인 중...`으로 바꾸고 비활성화한다.
+4. `onLogin(email, password)`로 로그인 API를 호출하고, `await`로 그 성공 또는 실패 결과를 기다린다.
+5. 성공하면 `onClose()`로 로그인 폼을 닫는다. 이 경우 버튼은 다시 `로그인`으로 바뀌는 것이 아니라 폼 자체가 화면에서 사라진다.
+6. 실패하면 `catch`에서 `error` state에 오류 메시지를 저장한다.
+7. 마지막으로 `finally`에서 `setSubmitting(false)`를 호출한다. 실패한 경우 폼은 계속 보이므로 버튼이 다시 `로그인`으로 바뀌고 클릭할 수 있게 된다.
 
 ```text
-제출 전                  → [ 로그인 ]       (클릭 가능)
-로그인 API 결과를 기다림  → [ 로그인 중... ] (클릭 불가)
-로그인 처리 완료          → [ 로그인 ]       (다시 클릭 가능)
+제출 전
+→ [ 로그인 ] (클릭 가능)
+
+제출 직후: setSubmitting(true)
+→ [ 로그인 중... ] (클릭 불가)
+
+로그인 성공
+→ onClose() → LoginForm이 화면에서 사라짐
+
+로그인 실패
+→ 오류 메시지 표시 + setSubmitting(false)
+→ [ 로그인 ] (다시 클릭 가능)
 ```
 
-`handleSubmit`이 버튼을 직접 만들거나 DOM을 수정하는 것은 아니다. state가 바뀔 때마다 React가 `return`의 JSX를 다시 계산하고, 기존 버튼에서 달라진 문구와 `disabled` 속성만 화면에 반영한다.
+`handleSubmit`이 버튼을 직접 만들거나 DOM을 수정하는 것은 아니다. `setSubmitting`과 `setError`가 state 변경을 요청하면 React가 `LoginForm`을 다시 렌더링한다. 그러면 `return`의 JSX가 현재 state를 읽어 버튼 문구, `disabled` 속성, 오류 메시지를 결정하고 ReactDOM이 달라진 부분을 화면에 반영한다.
 
 ### 6-1. `async`, Promise, `await`는 비동기 작업의 완료를 연결한다
 

@@ -944,7 +944,7 @@ async function handleSubmit(e: FormEvent) {
 
 ### 6-1. `async`, Promise, `await`는 비동기 작업의 완료를 연결한다
 
-`async` 함수는 항상 Promise를 반환한다. `await onLogin(...)`은 onLogin의 Promise 결과가 정해질 때까지 `handleSubmit`의 나머지 부분만 잠시 멈춘다.
+`async` 함수는 항상 Promise를 반환한다. `await onLogin(...)`은 `onLogin`이 반환한 Promise가 성공하거나 실패할 때까지 `handleSubmit`의 나머지 코드만 잠시 멈춘다.
 
 ```text
 handleSubmit 시작
@@ -957,7 +957,7 @@ handleSubmit 시작
 → 마지막에 finally
 ```
 
-`await`가 브라우저의 JavaScript 스레드 전체를 막는 것은 아니다. 그래서 네트워크를 기다리는 동안 React가 `submitting=true` 화면을 commit할 수 있다.
+`await`가 브라우저의 JavaScript 스레드 전체를 막는 것은 아니다. 따라서 앞에서 호출한 `setSubmitting(true)`의 state 변경을 React가 렌더링하고 화면에 반영할 수 있다.
 
 React가 async 이벤트 핸들러의 Promise를 대신 관리해 주는 것도 아니다. 성공·실패·마무리 UI는 이 코드의 `try`, `catch`, `finally`와 state setter가 직접 관리한다.
 

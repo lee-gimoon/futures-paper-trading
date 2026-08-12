@@ -977,9 +977,9 @@ setError('');
 setSubmitting(true);
 ```
 
-React 18은 같은 이벤트 처리 구간의 여러 state 업데이트를 **batching(일괄 처리)**하여 불필요한 중간 렌더링을 줄인다. 두 setter를 호출했다고 반드시 화면을 두 번 commit하는 것은 아니다.
+위 두 호출은 `handleSubmit`이 `await`에 도달하기 전, 같은 동기 실행 구간에서 발생한다. React 18은 이처럼 함께 발생한 여러 state 업데이트를 **batching(일괄 처리)**하여 한 묶음으로 처리할 수 있다.
 
-중요한 것은 setter가 호출된 순서마다 즉시 DOM이 바뀐다고 생각하지 않는 것이다. React는 업데이트를 모아 다음 UI를 계산하고 commit한다.
+따라서 `setError('')`와 `setSubmitting(true)`를 호출했다고 화면을 반드시 두 번 commit하는 것은 아니다. React는 `error: ''`와 `submitting: true`를 함께 반영한 한 번의 재렌더링으로 다음 UI를 계산하고 DOM에 commit할 수 있다. 즉 오류 메시지만 먼저 사라지고 버튼은 아직 활성화된 중간 화면이 꼭 나타나는 것은 아니다.
 
 ### 6-3. `submitting` 하나로 버튼 상태와 문구를 결정한다
 

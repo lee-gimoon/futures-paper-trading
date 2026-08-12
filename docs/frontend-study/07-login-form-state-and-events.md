@@ -890,7 +890,9 @@ Effect는 렌더링 뒤 또는 의존성 값 변경 뒤에 실행되는 후속 �
 
 ---
 
-## 6. `handleSubmit`이 요청 중 UI를 만든다
+## 6. `handleSubmit`이 state를 바꿔 요청 중 UI가 렌더링된다
+
+`handleSubmit`은 submit 이벤트가 발생했을 때 React가 호출하는 콜백 함수다. 이 함수가 UI를 직접 만들거나 DOM을 수정하는 것은 아니다. 대신 `setSubmitting(true)`처럼 state 변경을 요청하면 React가 컴포넌트를 다시 렌더링하고, JSX의 `submitting` 값에 따라 요청 중 UI가 계산되어 반영된다.
 
 전체 제출 함수는 다음과 같다.
 

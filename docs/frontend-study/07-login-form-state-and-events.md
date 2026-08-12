@@ -890,9 +890,19 @@ Effect는 렌더링 뒤 또는 의존성 값 변경 뒤에 실행되는 후속 �
 
 ---
 
-## 6. `handleSubmit`이 state를 바꿔 요청 중 UI가 렌더링된다
+## 6. `handleSubmit`이 제출 상태를 바꾸면 버튼 화면도 바뀐다
 
-`handleSubmit`은 submit 이벤트가 발생했을 때 React가 호출하는 콜백 함수다. 이 함수가 UI를 직접 만들거나 DOM을 수정하는 것은 아니다. 대신 `setSubmitting(true)`처럼 state 변경을 요청하면 React가 컴포넌트를 다시 렌더링하고, JSX의 `submitting` 값에 따라 요청 중 UI가 계산되어 반영된다.
+여기서 **요청 중**은 로그인 API 요청을 보낸 뒤, 서버의 성공 또는 실패 응답을 아직 기다리는 시간이다.
+
+`handleSubmit`은 submit 이벤트가 발생했을 때 React가 호출하는 콜백 함수다. 이 함수가 버튼 UI를 직접 만들거나 DOM을 수정하는 것은 아니다. 대신 `setSubmitting(true)`로 “지금 로그인 요청을 기다리고 있다”는 state를 바꾸도록 React에 요청한다.
+
+그러면 React가 `LoginForm` 함수를 다시 호출하고 `return` 안의 JSX를 다시 계산한다. 이때 `submitting`이 `true`이므로 버튼은 `로그인 중...` 문구를 표시하고 비활성화된다. React는 기존 버튼을 보통 그대로 두고, 필요한 글자와 `disabled` 속성만 바꿔 화면에 반영한다.
+
+```text
+제출 전: submitting=false → [ 로그인 ] (클릭 가능)
+제출 후, 서버 응답 대기 중: submitting=true → [ 로그인 중... ] (클릭 불가)
+서버 응답 후: submitting=false → [ 로그인 ] (다시 클릭 가능)
+```
 
 전체 제출 함수는 다음과 같다.
 

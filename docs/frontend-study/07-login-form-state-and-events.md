@@ -946,35 +946,20 @@ async function handleSubmit(e: FormEvent) {
 
 `async` 함수는 항상 Promise를 반환한다. 여기서 `onLogin(email, password)`도 로그인 작업의 완료를 나타내는 Promise를 반환한다. `await onLogin(...)`은 그 Promise가 성공하거나 실패할 때까지 `handleSubmit`의 **`await` 아래 코드만** 잠시 멈춘다.
 
-```text
-handleSubmit 시작
-→ setSubmitting(true)로 "로그인 중" state 변경을 요청
-→ onLogin(email, password) 호출: 로그인 작업 시작, Promise 반환
-→ await: onClose(), catch, finally는 아직 실행하지 않고 대기
+`setSubmitting(true)`는 React에 “`LoginForm`의 `submitting` state를 `true`로 바꾸고, 그 변경을 반영하도록 다시 렌더링해 줘”라고 요청한다. 이 호출만으로 버튼 DOM이 즉시 바뀌는 것은 아니다. `await`에서 `handleSubmit`의 동기 실행이 멈추고 브라우저에 제어권이 돌아가면 React가 state 변경을 처리해 화면에 반영할 수 있다. 즉 서버 응답을 받아 `handleSubmit` 전체가 끝날 때까지 기다릴 필요는 없다.
 
-이 대기 중
-→ React가 submitting=true를 반영해 [ 로그인 중... ] 화면을 표시할 수 있음
-→ 브라우저가 다른 입력, 타이머, 네트워크 응답 등의 작업을 처리할 수 있음
-
-onLogin Promise 성공
-→ handleSubmit 재개 → onClose() 실행 → finally 실행
-
-onLogin Promise 실패
-→ handleSubmit 재개 → catch 실행 → finally 실행
-```
-
-`setSubmitting(true)`를 호출한 즉시 버튼 DOM이 바뀌는 것은 아니다. 이 호출은 React에 다음 state를 등록한다. 이어서 `await`에서 `handleSubmit`의 동기 실행이 멈추고 브라우저에 제어권이 돌아가면, React는 등록된 state 변경을 렌더링하고 화면에 반영할 수 있다. 즉 서버 응답을 받아 `handleSubmit` 전체가 끝날 때까지 기다릴 필요는 없다.
-
-예를 들어 submit 이벤트에서 시작된 `handleSubmit`은 다음 순서로 동작한다.
+submit 이벤트에서 시작된 `handleSubmit`의 실행 순서는 다음과 같다.
 
 ```text
 사용자가 로그인 버튼 클릭
 → 브라우저가 submit 이벤트 발생
 → React가 handleSubmit 호출
-→ setSubmitting(true): React에 state 업데이트 등록
+→ setSubmitting(true): LoginForm의 submitting state를 true로 바꾸고 재렌더링하도록 React에 요청
 → await onLogin(...): handleSubmit의 나머지 코드를 미루고 브라우저에 제어권을 돌려줌
-→ React가 등록된 state 업데이트를 처리
+→ React가 state 업데이트를 처리
 → [ 로그인 중... ] 문구와 disabled=true를 화면에 반영
+→ onLogin Promise가 성공 또는 실패
+→ handleSubmit 재개: 성공이면 onClose() 후 finally, 실패면 catch 후 finally 실행
 ```
 
 JavaScript가 이 작업들을 한순간에 여러 개 병렬 실행한다는 뜻은 아니다. JavaScript는 한 번에 한 작업씩 실행한다. 다만 `await`로 현재 함수의 나머지 실행을 미뤄 두었기 때문에, 그 사이에 브라우저와 React가 다른 작업을 처리할 수 있다.

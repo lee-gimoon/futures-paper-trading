@@ -152,7 +152,9 @@ export default function App() {
   // useAuth() 반환 예시: { user: { id: 1, email: "user@example.com" }, loading: false, error: null, login, signup, logout, expireSession }
   // useAuth()가 반환한 객체의 속성 이름은 error인데, 이 값을 꺼내서 이 파일에서는 authError라는 변수명으로 사용한다는 뜻이다.
 
-  // 어떤 인증 폼을 열지 저장한다. setForm으로 값을 바꾸면 해당 폼이 화면에 표시된다.
+  // 로그인·회원가입 폼의 표시 상태를 관리한다.
+  // form은 null(두 폼 모두 닫힘), 'login'(로그인 폼 열림), 'signup'(회원가입 폼 열림) 중 하나다.
+  // setForm으로 이 값을 바꾸면 App이 다시 렌더링되어 아래 조건부 JSX가 해당 폼을 표시하거나 제거한다.
   const [form, setForm] = useState<FormMode>(null);
 
   // 거래 패널의 미실현 PnL을 실시간으로 갱신하려고 SSE snapshot에서 mid를 뽑아 넘긴다.

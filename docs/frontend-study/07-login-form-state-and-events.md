@@ -917,11 +917,13 @@ async function handleSubmit(e: FormEvent) {
 
 1. `e.preventDefault()`로 브라우저가 form을 기본 방식으로 제출하면서 페이지를 이동하거나 새로고침하는 것을 막는다.
 2. `setError('')`로 이전 로그인 실패 메시지를 지운다.
-3. `setSubmitting(true)`로 로그인 결과를 기다리는 중임을 기록한다. React는 이 state를 읽어 버튼을 `로그인 중...`으로 바꾸고 비활성화한다.
-4. `onLogin(email, password)`로 로그인 API를 호출하고, `await`로 그 성공 또는 실패 결과를 기다린다.
-5. 성공하면 `onClose()`로 로그인 폼을 닫는다. 이 경우 버튼은 다시 `로그인`으로 바뀌는 것이 아니라 폼 자체가 화면에서 사라진다.
+3. `setSubmitting(true)`로 로그인 결과를 기다리는 중임을 state에 기록한다.
+4. 부모가 props로 전달한 `onLogin(email, password)`을 호출해 로그인 작업을 시작하고, `await`로 그 성공 또는 실패 결과를 기다린다.
+5. 성공하면 `onClose()`를 호출해 로그인 폼을 닫는다.
 6. 실패하면 `catch`에서 `error` state에 오류 메시지를 저장한다.
-7. 마지막으로 `finally`에서 `setSubmitting(false)`를 호출한다. 이는 성공·실패 모두에서 실행된다. 성공하면 그 전에 `onClose()`가 폼을 닫으므로 화면에 보일 변화는 없고, 실패하면 폼이 계속 보이므로 버튼이 다시 `로그인`으로 바뀌어 클릭할 수 있게 된다.
+7. 마지막으로 `finally`에서 `setSubmitting(false)`를 호출한다. 이는 성공·실패 모두에서 실행되어 로그인 처리가 끝났음을 state에 기록한다.
+
+이 state 변화가 화면에 보이는 결과는 다음과 같다.
 
 ```text
 제출 전

@@ -946,7 +946,7 @@ async function handleSubmit(e: FormEvent) {
 
 `async` 함수는 항상 Promise를 반환한다. 여기서 `onLogin(email, password)`도 로그인 작업의 완료를 나타내는 Promise를 반환한다. `await onLogin(...)`은 그 Promise가 성공하거나 실패할 때까지 `handleSubmit`의 **`await` 아래 코드만** 잠시 멈춘다.
 
-`setSubmitting(true)`는 React에 “`LoginForm`의 `submitting` state를 `true`로 바꾸고, 그 변경을 반영하도록 다시 렌더링해 줘”라고 요청한다. 이 호출만으로 버튼 DOM이 즉시 바뀌는 것은 아니다. `await`에서 `handleSubmit`의 동기 실행이 멈추고 브라우저에 제어권이 돌아가면 React가 state 변경을 처리해 화면에 반영할 수 있다. 즉 서버 응답을 받아 `handleSubmit` 전체가 끝날 때까지 기다릴 필요는 없다.
+`setSubmitting(true)`는 `await`보다 먼저 실행되어 React에 “`LoginForm`의 `submitting` state를 `true`로 바꾸고, 그 변경을 반영하도록 다시 렌더링해 줘”라고 요청한다. 이 호출만으로 버튼 DOM이 즉시 바뀌는 것은 아니다. 그다음 `await`에서 `handleSubmit`의 동기 실행이 멈추고 브라우저에 제어권이 돌아가면, React는 앞에서 등록된 state 변경을 처리해 화면에 반영할 수 있다. 즉 서버 응답을 받아 `handleSubmit` 전체가 끝날 때까지 기다릴 필요는 없다.
 
 submit 이벤트에서 시작된 `handleSubmit`의 실행 순서는 다음과 같다.
 

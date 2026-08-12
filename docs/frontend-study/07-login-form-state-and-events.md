@@ -959,6 +959,18 @@ handleSubmit 시작
 
 `await`가 브라우저의 JavaScript 스레드 전체를 막는 것은 아니다. 따라서 앞에서 호출한 `setSubmitting(true)`의 state 변경을 React가 렌더링하고 화면에 반영할 수 있다.
 
+여기서 잠시 멈추는 것은 **현재 `handleSubmit` 함수에서 `await` 아래에 있는 코드**다. `onClose()`, `catch`, `finally`는 아직 실행되지 않는다. 반면 브라우저는 React의 화면 갱신, 다른 사용자 입력, 타이머, 네트워크 응답 같은 다른 작업을 처리할 수 있다.
+
+```text
+handleSubmit이 await에서 대기
+→ [ 로그인 중... ] 화면을 React가 반영할 수 있음
+→ 브라우저가 다른 이벤트와 네트워크 응답을 처리할 수 있음
+→ onLogin Promise가 성공 또는 실패
+→ handleSubmit이 이어서 onClose() 또는 catch, finally를 실행
+```
+
+JavaScript가 이 작업들을 한순간에 여러 개 병렬 실행한다는 뜻은 아니다. JavaScript는 한 번에 한 작업씩 실행하지만, `await`를 만난 `handleSubmit`이 브라우저에 제어권을 돌려주므로 그 사이에 다른 작업을 처리할 수 있다.
+
 React가 async 이벤트 핸들러의 Promise를 대신 관리해 주는 것도 아니다. 성공·실패·마무리 UI는 이 코드의 `try`, `catch`, `finally`와 state setter가 직접 관리한다.
 
 4장에서 본 state 스냅샷 때문에 `onLogin(email, password)`에는 제출 시점의 문자열이 전달된다. 요청을 시작한 뒤 사용자가 input을 바꾸더라도 이미 함수 인자로 넘긴 문자열은 바뀌지 않는다.

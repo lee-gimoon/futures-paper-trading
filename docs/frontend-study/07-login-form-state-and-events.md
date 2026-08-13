@@ -1016,14 +1016,45 @@ error='이메일 또는 비밀번호가 올바르지 않습니다.'
 
 ---
 
-## 7. props로 전달된 `onLogin`이 실제 인증 로직을 실행한다
+## 7. `onLogin` prop에 전달된 `login` 함수가 실제 인증 절차를 실행한다
 
-LoginForm 입장에서 `onLogin`은 props로 받은 함수다. 실제 함수는 App이 `useAuth`에서 받은 `login`이다.
+`onLogin`은 React가 미리 정해 둔 기능이나 인증 함수 이름이 아니다. **`LoginForm`이 받기로 약속한 prop의 이름**이다. App은 `useAuth`가 반환한 `login` 함수를 그 prop의 값으로 전달한다.
+
+```tsx
+function App() {
+  const { login } = useAuth();
+
+  return <LoginForm onLogin={login} onClose={() => setForm(null)} />;
+}
+```
+
+`onLogin={login}`은 `login()`을 지금 실행하는 코드가 아니다. `login`이라는 **함수 값 자체(함수 참조)**를 `onLogin`이라는 prop에 넣어 LoginForm으로 전달하는 코드다. React가 LoginForm을 호출할 때 전달하는 props 객체를 단순화하면 다음과 같다.
+
+```ts
+{
+  onLogin: login, // prop 이름: onLogin, prop 값: useAuth가 반환한 login 함수
+  onClose: () => setForm(null),
+}
+```
+
+LoginForm의 매개변수 구조 분해는 이 props 객체에서 `onLogin` 속성값을 꺼내 지역 변수 `onLogin`에 저장한다. 따라서 이 렌더링에서 `onLogin`과 App의 `login`은 **같은 함수 값을 가리킨다.**
+
+```tsx
+function LoginForm({ onLogin }: Props) {
+  async function handleSubmit() {
+    // onLogin에는 App이 전달한 login 함수가 들어 있다.
+    await onLogin(email, password);
+  }
+}
+```
+
+그래서 LoginForm이 `onLogin(email, password)`을 호출하면, 이름만 `onLogin`일 뿐 실제로 실행되는 함수 본문은 `useAuth`가 반환한 `login` 함수의 본문이다. `on...`은 “로그인 요청이 발생했을 때 부모에게 알려 줄 콜백”이라는 관례일 뿐이며, React가 자동으로 실행해 주는 이벤트 prop은 아니다.
 
 ```text
 LoginForm.handleSubmit
-→ props의 onLogin(email, password)
-→ useAuth.login(email, password)
+→ LoginForm의 지역 변수 onLogin(email, password) 호출
+→ 같은 함수 값인 App의 login(email, password) 실행
+→ useAuth가 만든 login 함수 본문 실행
 → authApi.login(...)
 → authApi.fetchMe()
 ```

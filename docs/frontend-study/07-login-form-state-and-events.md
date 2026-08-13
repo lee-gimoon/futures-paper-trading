@@ -1032,16 +1032,21 @@ function App() {
 
 ```tsx
 function LoginForm({ onLogin }: Props) {
-  async function handleSubmit() {
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
     await onLogin(email, password);
   }
+
+  return <form onSubmit={handleSubmit}>...</form>;
 }
 ```
 
-`on...`은 “그 일이 일어났을 때 호출할 콜백”이라는 관례적인 이름일 뿐이다. React가 자동으로 실행하지 않으며, LoginForm이 제출 시 직접 호출한다.
+`on...`은 “그 일이 일어났을 때 호출할 콜백”이라는 관례적인 이름일 뿐이다. React가 `onLogin`을 자동으로 실행하지는 않는다. 사용자가 `<button type="submit">로그인</button>`을 클릭하거나 input에서 Enter를 누르면 form의 `submit` 이벤트가 발생하고, React가 `onSubmit`에 연결된 `handleSubmit`을 호출한다. 그 함수 안에서 `onLogin`이 호출된다.
 
 ```text
-LoginForm.handleSubmit
+로그인 버튼 클릭 또는 Enter 입력
+→ 브라우저가 form의 submit 이벤트 발생
+→ React가 onSubmit의 handleSubmit 호출
 → onLogin(email, password) 호출
 → App이 전달한 useAuth의 login(email, password) 실행
 → authApi.login(...)

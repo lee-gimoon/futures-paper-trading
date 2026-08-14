@@ -1189,12 +1189,16 @@ GET /api/auth/me
 
 ### 7-5. state를 어디에 둘지는 사용하는 범위로 결정한다
 
+이 표는 로그인 흐름과 관련된 state만 정리한 것이다.
+
 | state | 실제 소유 위치 | 사용하는 범위 |
 |---|---|---|
-| `form` | App | 어떤 인증 폼을 보여 줄지 결정 |
-| `email`, `password` | LoginForm | LoginForm 입력 UI |
-| `error`, `submitting` | LoginForm | LoginForm 제출 UI |
-| `user`, `loading`, 인증 `error` | App이 호출한 `useAuth` Hook state | 앱 전체 인증 UI |
+| `form` | `App` | 로그인·회원가입 폼을 열지와 어떤 폼을 열지 결정 |
+| `email`, `password` | `LoginForm` | LoginForm 입력 UI |
+| `error`, `submitting` | `LoginForm` | LoginForm 제출 UI |
+| `user` | `App`이 호출한 `useAuth` 내부 Hook state | 로그인 여부에 따라 공개 화면·거래 화면을 결정 |
+| `loading` | `App`이 호출한 `useAuth` 내부 Hook state | 초기 세션 확인 중 상단 인증 영역을 제어 |
+| `authError` (`useAuth`의 `error`) | `App`이 호출한 `useAuth` 내부 Hook state | 인증 오류 메시지 표시 |
 
 여러 화면이 알아야 하는 `user`를 LoginForm 지역 state로 두면 App은 로그인 결과를 알 수 없다. 반대로 이메일 입력값을 App까지 올리면 필요 이상으로 범위가 커진다. state는 그 값을 함께 사용해야 하는 컴포넌트들의 가장 가까운 공통 부모가 소유하는 것이 기본 원칙이다.
 

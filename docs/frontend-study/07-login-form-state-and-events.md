@@ -1127,7 +1127,7 @@ useCallback(함수, 의존성)
 
 `useCallback`은 이 로그인 절차의 정확성 자체를 만드는 Hook은 아니다. 함수 참조 안정성이 필요한 자식 최적화나 다른 Hook의 의존성에 유용하다.
 
-### 7-3. `authApi`와 `fetch`는 React가 아니라 브라우저 기능이다
+### 7-4. `authApi`와 `fetch`는 React가 아니라 브라우저 기능이다
 
 첫 요청은 로그인 자격 증명을 서버로 보낸다.
 
@@ -1173,7 +1173,7 @@ GET /api/auth/me
 → setUser(authenticatedUser)
 ```
 
-### 7-4. state를 어디에 둘지는 사용하는 범위로 결정한다
+### 7-5. state를 어디에 둘지는 사용하는 범위로 결정한다
 
 | state | 실제 소유 위치 | 사용하는 범위 |
 |---|---|---|

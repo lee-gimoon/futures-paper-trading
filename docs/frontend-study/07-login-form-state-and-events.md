@@ -1270,7 +1270,7 @@ try {
 
 `err instanceof Error`가 true면 그 Error의 `message`를, 아니면 기본 문구를 `error` state에 저장한다.
 
-`onClose()`가 실행되지 않으므로 App의 `form`은 계속 `'login'`이고 LoginForm은 React 트리에서 제거되지 않는다. `setError`와 `setSubmitting(false)`로 LoginForm은 재렌더링되지만, React는 같은 트리 위치의 같은 LoginForm을 새 mount가 아닌 update로 판단하므로 기존 state를 보존한다.
+`onClose()`가 실행되지 않으므로 App의 `form`은 계속 `'login'`이고 LoginForm은 React 트리에서 제거되지 않는다. `setError`와 `setSubmitting(false)`로 LoginForm은 재렌더링되지만, React는 같은 트리 위치의 같은 LoginForm을 update로 판단하므로 state를 초기화하지 않는다. 따라서 setter를 호출하지 않은 `email`, `password`는 이전 값을 유지하고, `error`, `submitting`만 새 값으로 갱신된다.
 
 ```text
 state 변경

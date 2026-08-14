@@ -1057,7 +1057,7 @@ function LoginForm({ onLogin }: Props) {
 
 ### 7-1. 함수 컴포넌트는 props 객체 하나를 입력으로 받는다
 
-JSX로 렌더링하는 함수 컴포넌트라면 React는 항상 props 객체를 전달합니다.
+JSX로 렌더링하는 함수 컴포넌트라면 React는 항상 props 객체를 전달합니다. 하지만 props를 사용하지 않는 컴포넌트라면 그 객체를 받을 매개변수는 생략할 수 있습니다.
 
 ```tsx
 function LoadingSpinner() {

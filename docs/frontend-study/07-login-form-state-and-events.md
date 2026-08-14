@@ -1099,7 +1099,7 @@ const login = useCallback(async (email: string, password: string) => {
 
 | 층 | 이런 느낌 | 관리하는 상태 | 맡는 동작 |
 |---|---|---|---|
-| `LoginForm` | 사용자와 직접 만나는 로그인 UI 컴포넌트 | input에 표시하고 로그인 요청에도 쓰는 폼 입력값 state `email`, `password`, 버튼 UI를 제어하는 `submitting`, 오류 메시지를 위한 폼 내부 `error` | 로그인 화면을 보여 주고 입력을 받는다. 제출하면 `onLogin(email, password)`으로 부모에게 로그인을 요청하고, 성공하면 `onClose()`를 호출한다. |
+| `LoginForm` | 사용자와 직접 만나는 로그인 UI 컴포넌트 | input에 표시하고 로그인 요청에도 쓰는 폼 입력값 state `email`, `password`, 버튼 UI를 제어하는 `submitting`, 오류 메시지를 위한 폼 내부 `error` | 로그인 화면을 보여 주고 입력을 받는다. 제출하면 `onLogin(email, password)`으로 부모가 전달한 로그인 처리 함수를 호출하고, 성공하면 `onClose()`를 호출한다. |
 | `useAuth` | 인증 상태와 기능을 꺼내 쓰게 해 주는 React용 인증 기능 묶음 | 앱이 기억하는 인증 상태: 로그인 여부와 현재 사용자 정보 `user`, 로그인 상태를 확인 중인지 나타내는 `loading`, 인증 과정에서 발생한 오류 `error` | `login()`, `signup()`, `logout()`, `expireSession()`을 제공한다. `authApi`를 호출한 뒤 결과에 맞게 인증 state를 갱신한다. |
 | `authApi` | 서버 HTTP API를 호출하는 통신 도구 | React state를 직접 관리하지 않음 | `/api/auth/login` 같은 서버 API 주소, HTTP method, 요청 body, `credentials: 'include'`를 정하고 실제 HTTP 요청을 보낸다. |
 

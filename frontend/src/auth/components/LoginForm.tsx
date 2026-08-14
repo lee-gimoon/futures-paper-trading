@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 
+// LoginForm이 받아야 할 props의 이름과 함수 형태를 TypeScript가 검사하도록 정의한다.
 type Props = {
   // 부모가 실제 로그인 처리와 폼 닫기 동작을 전달한다.
   onLogin: (email: string, password: string) => Promise<void>;

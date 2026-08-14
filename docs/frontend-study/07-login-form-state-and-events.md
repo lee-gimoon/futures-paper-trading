@@ -1078,10 +1078,10 @@ const login = useCallback(async (email: string, password: string) => {
 | 층 | 책임 |
 |---|---|
 | `LoginForm` | 입력값, 제출 중 상태, 폼 내부 오류 UI |
-| `useAuth` | 로그인 절차와 앱의 사용자 state |
-| `authApi` | URL, HTTP method, body, cookie 옵션 |
+| `useAuth` | 로그인 절차를 조합하고, App이 사용하는 인증 state(`user`, `loading`, `error`)를 갱신 |
+| `authApi` | URL, HTTP method, 요청 body, `credentials: 'include'` 등 HTTP 요청 세부 사항 |
 
-이 분리 덕분에 LoginForm은 SESSION 쿠키나 `/api/auth/me` 주소를 알 필요가 없다. 반대로 `authApi`는 React state와 화면을 알지 못한다.
+이 분리 덕분에 `LoginForm`은 SESSION 쿠키나 `/api/auth/me` 주소를 알 필요가 없다. 반대로 `authApi`는 React state와 화면을 알지 못한다. `credentials: 'include'`는 브라우저가 요청에 쿠키를 포함하도록 지정하는 fetch 옵션이며, 쿠키 자체를 직접 관리하는 코드는 아니다.
 
 ### 7-2. `useCallback`은 함수를 실행하지 않고 참조를 기억한다
 

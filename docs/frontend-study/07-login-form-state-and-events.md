@@ -1057,7 +1057,7 @@ function LoginForm({ onLogin }: Props) {
 
 ### 7-1. 함수 컴포넌트는 props 객체 하나를 입력으로 받는다
 
-JSX로 렌더링하는 **함수 컴포넌트라면 React는 props 객체 하나를 전달**한다. 다만 컴포넌트가 props를 전혀 사용하지 않으면, 그 객체를 받을 매개변수는 생략한다.
+JSX로 렌더링하는 함수 컴포넌트라면 React는 항상 props 객체를 전달합니다.
 
 ```tsx
 function LoadingSpinner() {
@@ -1067,7 +1067,7 @@ function LoadingSpinner() {
 <LoadingSpinner />
 ```
 
-위 `LoadingSpinner`도 JSX로 렌더링될 때는 빈 props 객체를 전달받는다. 하지만 함수 안에서 사용할 값이 없으므로 매개변수를 선언하지 않은 것이다. 아래는 React가 전달하는 입력이 있다는 점을 개념적으로 드러낸 같은 형태다.
+위 `LoadingSpinner`도 빈 props 객체를 전달받는다. 하지만 함수 안에서 사용할 값이 없으므로 매개변수를 선언하지 않은 것이다. 아래는 props 객체를 매개변수로 받는 형태를 개념적으로 보인 코드다.
 
 ```tsx
 function LoadingSpinner(props: {}) {
@@ -1076,22 +1076,6 @@ function LoadingSpinner(props: {}) {
 ```
 
 실제 코드에서는 `props`를 사용하지 않으므로 첫 번째처럼 매개변수를 생략하는 편이 낫다.
-
-`LoginForm`처럼 값을 전달할 때는 그 값을 props 객체의 어느 속성에 넣을지 JSX에 이름으로 써야 한다.
-
-```tsx
-<LoginForm onLogin={login} />
-```
-
-이는 개념적으로 다음 props 객체를 `LoginForm`에 전달하는 것과 같다.
-
-```tsx
-{
-  onLogin: login,
-}
-```
-
-따라서 `onLogin={login}`은 `login` 함수 자체를 `onLogin`이라는 prop에 담아 전달하는 코드다. `login()`처럼 괄호를 쓰지 않았으므로 이 시점에는 함수를 실행하지 않는다. 이후 `LoginForm({ onLogin }: Props)`의 구조 분해가 props 객체에서 그 함수를 꺼내고, `handleSubmit`이 필요한 시점에 `onLogin(email, password)`을 호출한다.
 
 ### 7-2. custom Hook이 UI와 인증 절차를 분리한다
 

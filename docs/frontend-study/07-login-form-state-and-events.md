@@ -1137,7 +1137,7 @@ useMemo(calculateValue, deps)
 
 `useCallback`은 `LoginForm`에 전달하는 `login` 함수의 참조를 유지한다. 현재는 없어도 로그인 기능은 같지만, `React.memo`로 감싼 자식이나 다른 Hook의 의존성에 함수를 전달할 때 유용하다.
 
-### 7-4. `authApi`와 `fetch`는 React가 아니라 브라우저 기능이다
+### 7-4. `authApi`는 React에 의존하지 않는 API 모듈이고, `fetch`는 브라우저 기능이다
 
 첫 요청은 로그인 자격 증명을 서버로 보낸다.
 
@@ -1173,7 +1173,7 @@ export async function fetchMe(): Promise<User | null> {
 }
 ```
 
-전체 서버 흐름은 다음과 같다.
+로그인 성공 시 요청·응답과 React state 갱신 흐름은 다음과 같다.
 
 ```text
 POST /api/auth/login
@@ -1184,7 +1184,7 @@ POST /api/auth/login
 GET /api/auth/me
 → 브라우저가 SESSION 쿠키 포함
 → 서버가 현재 User JSON 응답
-→ setUser(authenticatedUser)
+→ useAuth의 login이 setUser(authenticatedUser) 호출
 ```
 
 ### 7-5. state를 어디에 둘지는 사용하는 범위로 결정한다

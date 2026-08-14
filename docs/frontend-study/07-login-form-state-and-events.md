@@ -1055,7 +1055,20 @@ function LoginForm({ onLogin }: Props) {
 
 `on...`은 “그 일이 일어났을 때 호출할 콜백”이라는 관례적인 이름일 뿐이다. React가 `onLogin`을 자동으로 실행하지는 않는다. 로그인 버튼 클릭 또는 Enter로 `submit` 이벤트가 발생하면 `handleSubmit`이 실행되고, 그 안에서 `onLogin(email, password)`을 호출한다. 이 `onLogin`은 App이 전달한 `useAuth`의 `login` 함수다.
 
-### 7-1. custom Hook이 UI와 인증 절차를 분리한다
+### 7-1. 컴포넌트에는 props 객체 하나가 전달된다
+
+JSX로 렌더링되는 함수 컴포넌트는 전달받은 값을 각각의 인자가 아니라 **props 객체 하나**로 받는다. 따라서 `login` 함수 자체를 전달할 때도 JSX에서는 그 함수를 담을 prop 이름이 필요하다.
+
+```tsx
+<LoginForm onLogin={login} />
+
+// React가 개념적으로 전달하는 값
+LoginForm({ onLogin: login });
+```
+
+`onLogin={login}`은 `login` 함수 자체를 전달하는 코드다. `login()`처럼 괄호를 쓰지 않았으므로 이 시점에는 실행되지 않는다. `function LoginForm({ onLogin }: Props)`의 구조 분해는 전달된 props 객체에서 `onLogin` 속성, 즉 같은 `login` 함수를 꺼내는 문법이다. props가 필요 없는 컴포넌트라면 매개변수를 아예 쓰지 않아도 된다.
+
+### 7-2. custom Hook이 UI와 인증 절차를 분리한다
 
 `useAuth`의 `login` 코드는 다음과 같다.
 
@@ -1083,7 +1096,7 @@ const login = useCallback(async (email: string, password: string) => {
 
 즉 `LoginForm`은 화면에서 요청하고, `useAuth`는 `authApi`를 사용해 인증 흐름과 앱의 인증 state를 처리하며, `authApi`는 서버와 통신한다.
 
-### 7-2. `useCallback`은 함수를 실행하지 않고 참조를 기억한다
+### 7-3. `useCallback`은 함수를 실행하지 않고 참조를 기억한다
 
 ```tsx
 const login = useCallback(async (...) => {

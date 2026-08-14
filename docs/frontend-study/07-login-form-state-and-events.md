@@ -1103,7 +1103,7 @@ const login = useCallback(async (email: string, password: string) => {
 | `useAuth` | 인증 상태와 기능을 꺼내 쓰게 해 주는 React용 인증 기능 묶음 | 앱이 기억하는 인증 상태: 현재 사용자 정보 `user` (`user`가 있으면 로그인 상태, `null`이면 로그아웃 상태), 초기 세션 확인 중인지 나타내는 `loading`, 인증 과정에서 발생한 오류 `error` | `login()`, `signup()`, `logout()`, `expireSession()`을 제공한다. `authApi`를 호출한 뒤 결과에 맞게 인증 state를 갱신한다. |
 | `authApi` | 서버 HTTP API를 호출하는 통신 도구 | React state를 직접 관리하지 않음 | `/api/auth/login` 같은 서버 API 주소, HTTP method, 요청 body, `credentials: 'include'`를 정하고 실제 HTTP 요청을 보낸다. |
 
-즉 `LoginForm`은 화면에서 요청하고, `useAuth`는 `authApi`를 사용해 인증 흐름과 앱의 인증 state를 처리하며, `authApi`는 서버와 통신한다.
+세 층으로 나눈 이유는 화면, 폼 state, 앱의 인증 state, 서버 통신의 책임을 분리하기 위해서다. `LoginForm`은 UI와 폼의 지역 state를, `useAuth`는 인증 흐름과 앱의 인증 state를, React에 의존하지 않는 TypeScript 모듈인 `authApi`는 서버 통신을 맡는다. 따라서 UI나 API가 바뀌어도 관련된 층만 수정하면 된다.
 
 ### 7-3. `useCallback`은 함수를 실행하지 않고 참조를 기억한다
 

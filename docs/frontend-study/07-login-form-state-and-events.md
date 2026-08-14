@@ -1131,11 +1131,11 @@ useMemo(calculateValue, deps)
    새로 계산한 결과값을 반환한다.
 ```
 
-여기서는 의존성 배열이 `[]`이므로 App이 같은 mount에 있는 동안 `login`은 같은 함수 참조를 반환한다. 그렇다고 로그인 결과나 서버 응답을 저장하는 것은 아니다. 사용자가 `login(email, password)`을 호출할 때마다 함수 본문과 서버 요청은 새로 실행된다.
+여기서는 의존성 배열이 `[]`이므로 App이 처음 mount된 뒤 unmount되지 않는 동안 `login`은 같은 함수 참조를 반환한다. 그렇다고 로그인 결과나 서버 응답을 저장하는 것은 아니다. 사용자가 `login(email, password)`을 호출할 때마다 함수 본문과 서버 요청은 새로 실행된다.
 
-React의 state setter와 import한 모듈 함수는 안정적인 값이므로 현재 콜백에는 변하는 의존성이 없다. 나중에 콜백 안에서 props나 state를 읽도록 코드를 바꾸면 그 값을 의존성 배열에 포함해야 한다. 그렇지 않으면 콜백이 오래된 렌더링 값을 기억하는 문제가 생길 수 있다.
+> **주의:** `[]`은 콜백 안에서 렌더링마다 바뀔 수 있는 props나 state를 읽지 않을 때만 쓸 수 있다. 현재 `login`은 React state setter와 import한 `authApi`만 쓰므로 `[]`이지만, props나 state 값을 읽게 되면 의존성 배열에 넣어야 오래된 값을 사용하지 않는다.
 
-`useCallback`은 이 로그인 절차의 정확성 자체를 만드는 Hook은 아니다. 함수 참조 안정성이 필요한 자식 최적화나 다른 Hook의 의존성에 유용하다.
+`useCallback`은 `LoginForm`에 전달하는 `login` 함수의 참조를 유지한다. 현재는 없어도 로그인 기능은 같지만, `React.memo`로 감싼 자식이나 다른 Hook의 의존성에 함수를 전달할 때 유용하다.
 
 ### 7-4. `authApi`와 `fetch`는 React가 아니라 브라우저 기능이다
 

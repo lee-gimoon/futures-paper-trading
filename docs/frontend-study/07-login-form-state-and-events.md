@@ -1255,10 +1255,10 @@ unmount되면:
 
 ### 8-2. 실패하면 같은 LoginForm이 state를 유지한 채 재렌더링된다
 
-`authApi.login`이나 `fetchMe`가 Error를 던지면 Promise 실패가 호출 경로를 거슬러 LoginForm의 `catch`까지 전달된다.
+`authApi.login()` 또는 `authApi.fetchMe()` 요청이 실패하거나, `fetchMe()`가 `null`을 반환하면 `useAuth.login`의 Promise가 실패한다. 이 실패는 호출 경로를 거슬러 LoginForm의 `catch`까지 전달된다.
 
 ```text
-authApi에서 Error 발생
+authApi 요청 실패 또는 fetchMe()가 null 반환
 → useAuth.login Promise 실패
 → await onLogin(...)에서 throw
 → handleSubmit의 catch 실행
@@ -1272,7 +1272,7 @@ catch (err) {
 }
 ```
 
-`err instanceof Error`는 잡힌 값이 JavaScript Error 객체인지 확인한다. Error라면 서버에서 변환된 `message`를 쓰고, 아니라면 기본 문구를 사용한다.
+`err instanceof Error`는 잡힌 값이 JavaScript Error 객체인지 확인한다. Error라면 서버 응답에서 변환된 오류, 네트워크 오류, 또는 `useAuth`가 직접 만든 오류 등의 `message`를 쓰고, 아니라면 기본 문구를 사용한다.
 
 실패할 때는 `onClose()`가 실행되지 않으므로 `form`은 계속 `'login'`이다. 같은 위치에 같은 LoginForm이 남아 있어 mount가 유지된다.
 
@@ -1299,7 +1299,7 @@ re-render가 발생해도 컴포넌트 타입과 트리 위치가 같으면 Reac
 | 결과 | App의 `user` | App의 `form` | LoginForm | 지역 state |
 |---|---|---|---|---|
 | 성공 | 사용자 객체 | `null` | unmount | 폐기 |
-| 실패 | 변경 없음 | `'login'` | re-render | 입력 유지, 오류 갱신 |
+| 실패 | 변경 없음 (로그인 전 `null` 유지) | `'login'` | re-render | 입력 유지, 오류 갱신 |
 
 ---
 

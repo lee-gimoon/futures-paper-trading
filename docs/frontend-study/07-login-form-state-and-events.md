@@ -1158,7 +1158,11 @@ export async function login(email: string, password: string): Promise<void> {
 
 로그인 성공 응답의 `Set-Cookie`를 받으면 브라우저가 SESSION 쿠키를 저장한다. `credentials: 'include'`는 이후 요청에도 조건에 맞는 쿠키를 포함하도록 한다. JavaScript가 HttpOnly SESSION 쿠키 값을 직접 읽어 사용자 state로 저장하는 구조가 아니다.
 
-로그인 응답에는 현재 사용자 전체 정보가 없으므로 두 번째 요청으로 사용자를 조회한다.
+로그인 응답에는 현재 사용자 전체 정보가 없으므로, `useAuth`의 `login` 함수가 다음 코드로 두 번째 요청을 시작해 사용자를 조회한다.
+
+```tsx
+const authenticatedUser = await authApi.fetchMe();
+```
 
 ```tsx
 export async function fetchMe(): Promise<User | null> {

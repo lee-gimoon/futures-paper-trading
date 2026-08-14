@@ -1028,15 +1028,19 @@ function App() {
 }
 ```
 
-`<LoginForm onLogin={login} />`에서 하나의 prop은 이름과 값을 합친 `onLogin={login}` 전체다. 이를 객체 형태로 나타내면 `onLogin: login`이다.
+이 JSX는 개념적으로 다음과 같은 React 요소 설명을 만든다.
 
-| 구분 | 해당 코드 | 의미 |
-| --- | --- | --- |
-| prop 이름 | `onLogin` | LoginForm이 받는 prop의 키 |
-| prop 값 | `login` | App의 `useAuth`가 반환한 함수 값 |
-| prop 전체 | `onLogin={login}` | `onLogin`이라는 이름으로 `login` 함수를 전달하는 한 prop |
+```tsx
+{
+  type: LoginForm,
+  props: {
+    onLogin: login,
+    onClose: () => setForm(null),
+  },
+}
+```
 
-`onLogin={login}`은 `login()`을 즉시 실행하는 것이 아니라, `login`이라는 **함수 값(함수 참조)**을 `onLogin` prop으로 전달한다. 따라서 LoginForm에서 구조 분해로 받은 `onLogin`은 App의 `login`과 같은 함수를 가리킨다.
+이 객체에서 `onLogin`은 prop의 이름(key)이고, `login`은 그 prop의 값인 함수다. 따라서 `onLogin: login` 하나가 prop 하나이며, JSX에서는 이를 `onLogin={login}`으로 쓴다. `login()`처럼 괄호를 붙이지 않았으므로 이 시점에 함수가 실행되지는 않는다. React가 나중에 `props` 객체를 LoginForm에 전달하면, 구조 분해로 받은 `onLogin`은 App의 `login`과 같은 함수를 가리킨다.
 
 ```tsx
 function LoginForm({ onLogin }: Props) {

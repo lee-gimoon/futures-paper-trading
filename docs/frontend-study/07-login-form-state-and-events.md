@@ -1073,15 +1073,15 @@ const login = useCallback(async (email: string, password: string) => {
 }, []);
 ```
 
-역할은 세 층으로 나뉜다.
+역할은 세 층으로 나뉜다. `useAuth()`는 “이 컴포넌트에서 인증 상태와 인증 기능을 사용하겠다”라고 읽을 수 있는 custom Hook이다.
 
-| 층 | 책임 |
-|---|---|
-| `LoginForm` | 로그인 화면을 보여 주고 이메일·비밀번호 입력과 제출 상태를 관리한다. |
-| `useAuth` | 로그인·로그아웃 같은 인증 작업을 처리하고, 현재 사용자 state를 갱신한다. |
-| `authApi` | 서버 API 주소와 HTTP 요청 세부 사항을 관리하고 실제 요청을 보낸다. |
+| 층 | 관리하는 상태 | 맡는 동작 |
+|---|---|---|
+| `LoginForm` | `email`, `password`, `submitting`, 폼 내부 `error`처럼 로그인 화면에만 필요한 UI state | 로그인 화면을 보여 주고 입력을 받는다. 제출하면 `onLogin(email, password)`으로 부모에게 로그인을 요청하고, 성공하면 `onClose()`를 호출한다. |
+| `useAuth` | 현재 로그인한 사용자 `user`, 기존 세션 확인 중인지 나타내는 `loading`, 인증 관련 `error` | `login()`, `signup()`, `logout()`, `expireSession()`을 제공한다. `authApi`를 호출한 뒤 결과에 맞게 인증 state를 갱신한다. |
+| `authApi` | React state를 직접 관리하지 않음 | `/api/auth/login` 같은 서버 API 주소, HTTP method, 요청 body, `credentials: 'include'`를 정하고 실제 HTTP 요청을 보낸다. |
 
-즉 `LoginForm`은 요청하고, `useAuth`는 인증 흐름을 처리하며, `authApi`는 서버와 통신한다.
+즉 `LoginForm`은 화면에서 요청하고, `useAuth`는 `authApi`를 사용해 인증 흐름과 앱의 인증 state를 처리하며, `authApi`는 서버와 통신한다.
 
 ### 7-2. `useCallback`은 함수를 실행하지 않고 참조를 기억한다
 

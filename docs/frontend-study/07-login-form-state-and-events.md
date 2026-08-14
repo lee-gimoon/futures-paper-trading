@@ -1285,7 +1285,7 @@ state 변경
 | 결과 | App의 `user` | App의 `form` | LoginForm | 지역 state |
 |---|---|---|---|---|
 | 성공 | 사용자 객체 | `null` | unmount | 폐기 |
-| 실패 | 변경 없음 (로그인 전 `null` 유지) | `'login'` | re-render | 입력 유지, 오류 갱신 |
+| 실패 | 변경 없음 (`null` 유지) | `'login'` | mount 유지 | 입력 유지, 오류 갱신 |
 
 ---
 

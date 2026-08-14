@@ -1081,6 +1081,18 @@ const login = useCallback(async (email: string, password: string) => {
 | `useAuth` | 로그인 절차를 조합하고, App이 사용하는 인증 state(`user`, `loading`, `error`)를 갱신 |
 | `authApi` | URL, HTTP method, 요청 body, `credentials: 'include'` 등 HTTP 요청 세부 사항 |
 
+`useAuth`는 UI와 API 사이에서 인증 흐름을 조율하는 custom Hook이다. `LoginForm`은 “로그인해 달라”는 요청만 `onLogin(email, password)`으로 보내고, `useAuth`가 실제 절차를 완성한다.
+
+```text
+LoginForm이 onLogin(email, password) 호출
+→ useAuth.login이 authApi.login(email, password) 호출: 로그인 요청
+→ useAuth.login이 authApi.fetchMe() 호출: 로그인한 사용자 조회
+→ useAuth.login이 setUser(authenticatedUser) 호출: App의 인증 state 갱신
+→ App이 다시 렌더링되어 로그인된 화면을 표시
+```
+
+`authApi.login()`은 HTTP 로그인 요청만 보낸다. 이 프로젝트의 로그인 응답에는 사용자 정보가 없으므로, `useAuth.login()`이 이어서 `fetchMe()`를 호출해 사용자를 얻고 `setUser()`로 React state를 바꾼다. 즉 `authApi`가 한 번의 서버 요청을 담당한다면, `useAuth`는 여러 요청과 state 변경을 조합해 “로그인”이라는 앱 기능을 만든다.
+
 이 분리 덕분에 `LoginForm`은 SESSION 쿠키나 `/api/auth/me` 주소를 알 필요가 없다. 반대로 `authApi`는 React state와 화면을 알지 못한다. `credentials: 'include'`는 브라우저가 요청에 쿠키를 포함하도록 지정하는 fetch 옵션이며, 쿠키 자체를 직접 관리하는 코드는 아니다.
 
 ### 7-2. `useCallback`은 함수를 실행하지 않고 참조를 기억한다

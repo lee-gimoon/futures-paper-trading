@@ -1105,7 +1105,7 @@ const login = useCallback(async (email: string, password: string) => {
 
 세 층으로 나눈 이유는 화면, 폼 state, 앱의 인증 state, 서버 통신의 책임을 분리하기 위해서다. `LoginForm`은 UI와 폼의 지역 state를, `useAuth`는 인증 흐름과 앱의 인증 state를, React에 의존하지 않는 TypeScript 모듈인 `authApi`는 서버 통신을 맡는다. 따라서 UI나 API가 바뀌어도 관련된 층만 수정하면 된다.
 
-### 7-3. `useCallback`은 함수를 실행하지 않고 참조를 기억한다
+### 7-3. `useCallback`은 의존성이 같을 때 함수 참조를 재사용한다
 
 ```tsx
 const login = useCallback(async (...) => {
@@ -1113,17 +1113,27 @@ const login = useCallback(async (...) => {
 }, []);
 ```
 
-`useCallback`은 전달한 함수를 즉시 실행하는 Hook이 아니다. 다음 렌더링에서도 의존성이 같으면 이전과 같은 함수 객체를 반환한다.
+`useCallback`은 전달한 callback을 즉시 실행하지 않는다. `useMemo`와 비교하면 무엇을 재사용하는지 구분하기 쉽다.
 
 ```text
-useCallback(함수, 의존성)
-→ 함수의 반환 결과를 캐시하지 않음
-→ 함수 자체의 참조를 유지
+useCallback(callback, deps)
+→ callback을 지금 호출하지 않는다.
+→ deps가 이전 렌더링과 같으면,
+   이전 렌더링에서 반환했던 같은 함수 참조를 다시 반환한다.
+→ deps가 바뀌면,
+   이번 렌더링의 새 함수 참조를 반환한다.
+
+useMemo(calculateValue, deps)
+→ calculateValue를 렌더링 중 호출해 값을 계산한다.
+→ deps가 이전 렌더링과 같으면,
+   이전 렌더링에서 계산해 둔 같은 결과값을 다시 반환한다.
+→ deps가 바뀌면,
+   새로 계산한 결과값을 반환한다.
 ```
 
-여기서는 의존성 배열이 `[]`이므로 App이 같은 mount에 있는 동안 `login` 함수 참조가 유지된다. React의 state setter와 import한 모듈 함수는 안정적인 값이므로 현재 콜백에는 변하는 의존성이 없다.
+여기서는 의존성 배열이 `[]`이므로 App이 같은 mount에 있는 동안 `login`은 같은 함수 참조를 반환한다. 그렇다고 로그인 결과나 서버 응답을 저장하는 것은 아니다. 사용자가 `login(email, password)`을 호출할 때마다 함수 본문과 서버 요청은 새로 실행된다.
 
-나중에 콜백 안에서 props나 state를 읽도록 코드를 바꾸면 그 값을 의존성 배열에 포함해야 한다. 그렇지 않으면 콜백이 오래된 렌더링 값을 기억하는 문제가 생길 수 있다.
+React의 state setter와 import한 모듈 함수는 안정적인 값이므로 현재 콜백에는 변하는 의존성이 없다. 나중에 콜백 안에서 props나 state를 읽도록 코드를 바꾸면 그 값을 의존성 배열에 포함해야 한다. 그렇지 않으면 콜백이 오래된 렌더링 값을 기억하는 문제가 생길 수 있다.
 
 `useCallback`은 이 로그인 절차의 정확성 자체를 만드는 Hook은 아니다. 함수 참조 안정성이 필요한 자식 최적화나 다른 Hook의 의존성에 유용하다.
 

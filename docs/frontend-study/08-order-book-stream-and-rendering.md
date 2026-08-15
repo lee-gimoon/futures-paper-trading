@@ -111,6 +111,8 @@ Binance WebSocket 메시지
 
 `EventSource`는 React 기능이 아니라 브라우저에 내장된 SSE 클라이언트다. 이 프로젝트에서는 Hook의 Effect가 다음 객체를 한 번 만든다.
 
+`EventSource`는 브라우저가 제공하는 SSE 연결용 생성자이며, `new EventSource(url)`은 서버에 연결해 SSE 이벤트를 계속 받아 줄 JavaScript 객체를 만든다.
+
 ```tsx
 const eventSource = new EventSource(
   '/api/binance-futures/btcusdt/depth/stream'

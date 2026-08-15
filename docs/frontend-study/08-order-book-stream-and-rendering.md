@@ -53,6 +53,8 @@ Content-Type: text/event-stream
 
 `text/event-stream`은 브라우저에 “이 응답 body는 SSE 형식”이라고 알리는 HTTP 헤더다. 이 헤더 자체가 연결을 유지하는 것은 아니며, 응답을 계속 열어 두는 이유는 뒤에서 볼 서버 `Flux`가 완료되지 않기 때문이다.
 
+`EventSource`는 이 헤더가 있어야 뒤의 `data: ...`와 빈 줄을 SSE 이벤트로 해석해 `onmessage`를 호출한다.
+
 이 프로젝트의 Spring 컨트롤러도 이 형식으로 응답한다.
 
 ```java

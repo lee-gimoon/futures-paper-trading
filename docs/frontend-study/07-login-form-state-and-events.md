@@ -1303,6 +1303,11 @@ state 변경
 
 `type="button"`은 form 안에서도 submit을 시작하지 않는 일반 버튼이다. `<button>`의 기본 type은 form 문맥에서 submit이 될 수 있으므로 취소 버튼에는 명시하는 것이 안전하다.
 
+버튼의 type은 보통 다음처럼 구분한다.
+
+- `type="submit"`: form을 제출한다.
+- `type="button"`: form을 제출하지 않는 일반 버튼이다.
+
 ```text
 사용자가 취소 클릭
 → onClick의 onClose 호출

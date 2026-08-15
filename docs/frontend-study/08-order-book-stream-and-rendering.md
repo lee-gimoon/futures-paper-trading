@@ -21,18 +21,18 @@
 
 ---
 
-## 1. SSE와 `EventSource`부터 이해한다
+## 1. 이 프로젝트에서 snapshot이 `EventSource.onmessage`까지 도착하는 흐름
 
-### 1-1. SSE는 서버가 계속 보내는 HTTP 응답이다
+### 일반 HTTP 응답과 SSE 응답의 차이
 
 SSE(Server-Sent Events)는 서버가 브라우저에 이벤트를 계속 보내는 통신 방식이다.
 
-일반적인 HTTP 요청은 응답 하나를 받고 끝난다.
+일반적인 HTTP 요청은 응답 body 하나를 완료한다.
 
 ```text
 브라우저 ── GET 요청 ──→ 서버
 브라우저 ←─ 응답 하나 ── 서버
-                         연결 종료
+                         응답 완료
 ```
 
 SSE도 HTTP `GET`으로 시작하지만 서버가 응답을 끝내지 않는다. 연결을 열어 둔 채 데이터가 생길 때마다 이벤트를 추가로 보낸다.
@@ -70,61 +70,46 @@ public Flux<ServerSentEvent<OrderBookSnapshot>> stream() {
 
 `stream()` 메서드가 snapshot마다 다시 호출되는 것은 아니다. 브라우저가 연결할 때 반환한 `Flux`를 Spring WebFlux가 구독하고, 이후 새 snapshot이 발행될 때마다 같은 HTTP 응답에 SSE 이벤트를 쓴다.
 
-### 1-2. SSE 이벤트는 어떤 모습인가?
+### Binance 호가가 Store의 `Flux`로 들어온다
 
-서버가 보내는 실제 텍스트는 개념적으로 다음과 같다.
+이 프로젝트에서 SSE로 보낼 값은 컨트롤러가 새로 만드는 것이 아니다. Binance WebSocket 메시지를 파싱해 만든 `OrderBookSnapshot`을 `LatestOrderBookSnapshotStore`에 넣는 것에서 시작한다.
+
+```java
+// BinanceFuturesRawDepthStreamer
+OrderBookSnapshot snapshot = snapshotParser.parse(message);
+latestStore.update(snapshot);
+```
+
+`update(snapshot)`은 같은 snapshot을 두 곳에 전달한다.
+
+```java
+// LatestOrderBookSnapshotStore
+private final Sinks.Many<OrderBookSnapshot> sink =
+        Sinks.many().replay().limit(1);
+
+public void update(OrderBookSnapshot snapshot) {
+    latest.set(snapshot);         // /depth/latest 같은 단발 조회용 최신 값
+    sink.tryEmitNext(snapshot);   // 현재 SSE 구독자에게 새 값 발행
+}
+
+public Flux<OrderBookSnapshot> stream() {
+    return sink.asFlux();
+}
+```
+
+`sink.tryEmitNext(snapshot)`이 실행되면 `sink.asFlux()`를 구독 중인 모든 SSE 연결에 snapshot 하나가 흘러간다. `replay().limit(1)`으로 만든 Sink라서 이미 발행된 snapshot이 있으면 새 SSE 구독자는 최신 한 건도 바로 받는다.
 
 ```text
-data: {"symbol":"BTCUSDT","eventTime":1720000000000,"bids":[...],"asks":[...]}
-
-data: {"symbol":"BTCUSDT","eventTime":1720000000100,"bids":[...],"asks":[...]}
-
+Binance WebSocket 메시지
+→ snapshotParser.parse(message)
+→ latestStore.update(snapshot)
+→ sink.tryEmitNext(snapshot)
+→ latestStore.stream()의 Flux에서 snapshot 하나 emit
 ```
 
-핵심 규칙은 간단하다.
+### 브라우저가 `EventSource`로 이 `Flux`를 구독한다
 
-- `data:` 뒤가 이벤트의 데이터다.
-- 빈 줄 하나가 이벤트 한 개의 끝을 나타낸다.
-- 연결은 닫히지 않으므로 다음 이벤트가 같은 응답을 통해 계속 온다.
-
-SSE 자체는 JSON 전용 형식이 아니다. `data:`에는 문자열이 들어가며, 이 프로젝트가 호가 객체를 전달하기 위해 그 문자열을 JSON으로 정한 것이다. 그래서 브라우저에서 `JSON.parse(event.data)`가 필요하다.
-
-SSE에는 `data` 외에도 다음 필드가 있다.
-
-```text
-event: orderbook
-id: 152
-retry: 3000
-data: {"symbol":"BTCUSDT", ...}
-
-```
-
-| 필드 | 의미 |
-|---|---|
-| `data` | 브라우저가 받을 실제 문자열 데이터 |
-| `event` | 이벤트 이름. 생략하면 기본 `message` 이벤트가 된다. |
-| `id` | 마지막 이벤트 식별자. 재연결할 때 이어받는 데 사용할 수 있다. |
-| `retry` | 연결이 끊긴 뒤 재연결하기까지 기다릴 시간을 밀리초로 지정한다. |
-
-현재 백엔드는 `data`만 보내므로 프런트엔드는 `onmessage`로 받는다.
-
-```tsx
-eventSource.onmessage = (event) => {
-  // event.data에 data: 뒤의 문자열이 들어온다.
-};
-```
-
-서버가 `event: orderbook`처럼 이름을 붙인다면 `onmessage` 대신 이름으로 구독해야 한다.
-
-```tsx
-eventSource.addEventListener('orderbook', (event) => {
-  console.log(event.data);
-});
-```
-
-### 1-3. `EventSource`는 무엇인가?
-
-`EventSource`는 React 기능이나 설치한 라이브러리가 아니다. 브라우저에 내장된 SSE 클라이언트 Web API다.
+`EventSource`는 React 기능이 아니라 브라우저에 내장된 SSE 클라이언트다. 이 프로젝트에서는 Hook의 Effect가 다음 객체를 한 번 만든다.
 
 ```tsx
 const eventSource = new EventSource(
@@ -132,106 +117,63 @@ const eventSource = new EventSource(
 );
 ```
 
-이 한 줄을 실행하면 브라우저가 다음 작업을 맡는다.
+생성 즉시 브라우저가 이 URL로 HTTP `GET` 요청을 보낸다. 개발 환경에서는 상대 경로 `/api/...` 요청이 Vite proxy를 거쳐 Spring Boot로 전달된다.
 
 ```text
-EventSource 객체 생성
-→ URL로 HTTP GET 요청
-→ text/event-stream 응답 확인
-→ 연결 유지
-→ SSE 형식의 이벤트 구분
-→ 이벤트가 올 때 등록된 콜백 호출
-→ 연결이 일시적으로 끊기면 재연결 시도
+브라우저 EventSource
+→ GET /api/binance-futures/btcusdt/depth/stream
+→ Vite proxy
+→ Spring WebFlux의 BinanceFuturesDepthController.stream()
+→ latestStore.stream() 구독
 ```
 
-즉, 개발자가 응답 스트림의 줄을 직접 읽어 `data:`와 빈 줄을 파싱하지 않아도 된다. `EventSource`가 SSE 형식을 해석하고 `MessageEvent`로 바꿔 준다.
+`stream()` 메서드는 브라우저가 연결할 때 한 번 실행되어 `Flux` 파이프라인을 반환한다. 이후 snapshot마다 이 메서드를 다시 호출하는 것이 아니라, 이미 구독한 `Flux`에서 값이 나올 때 아래 `map`만 한 번씩 실행된다.
 
-### 1-4. `EventSource`에서 주로 쓰는 API
-
-```tsx
-const eventSource = new EventSource(url);
-
-eventSource.onopen = () => {
-  console.log('연결됨');
-};
-
-eventSource.onmessage = (event) => {
-  console.log(event.data);
-};
-
-eventSource.onerror = (error) => {
-  console.error('SSE 오류', error);
-};
-
-eventSource.close();
+```java
+return latestStore.stream()
+        .map(snap -> ServerSentEvent.builder(snap).build());
 ```
 
-| API | 실행 시점 또는 역할 |
-|---|---|
-| `new EventSource(url)` | 객체 생성과 동시에 SSE 연결을 시작한다. |
-| `onopen` | 연결이 열렸을 때 실행된다. |
-| `onmessage` | 이름 없는 기본 메시지를 받을 때마다 실행된다. |
-| `onerror` | 연결 문제 등이 발생했을 때 실행된다. 보통 이후 자동 재연결을 시도한다. |
-| `close()` | 연결을 직접 닫고 자동 재연결도 중지한다. |
+`EventSource` 하나와 서버의 SSE 구독 하나가 대응한다. snapshot이 여러 번 와도 같은 `EventSource`와 같은 HTTP 응답을 계속 사용한다.
 
-현재 상태는 `readyState`로 확인할 수 있다.
+### `ServerSentEvent`가 실제 SSE 텍스트가 되고 `onmessage`가 실행된다
 
-| 값 | 상수 | 의미 |
-|---:|---|---|
-| `0` | `EventSource.CONNECTING` | 최초 연결 중이거나 재연결 중 |
-| `1` | `EventSource.OPEN` | 연결이 열려 이벤트를 받을 수 있음 |
-| `2` | `EventSource.CLOSED` | 연결이 닫혀 더 이상 재연결하지 않음 |
+`map`이 만드는 `ServerSentEvent<OrderBookSnapshot>`은 서버 JVM 안의 Java 객체다. Spring WebFlux의 SSE writer가 이 객체 안의 snapshot을 Jackson으로 JSON 문자열로 바꾸고, 다음 SSE 텍스트를 같은 HTTP 응답에 쓴다.
 
-예를 들면 다음처럼 볼 수 있다.
+```text
+data: {"symbol":"BTCUSDT","eventTime":1720000000000,"bids":[...],"asks":[...]}
 
-```tsx
-console.log(eventSource.readyState === EventSource.OPEN);
 ```
 
-### 1-5. 콜백 등록과 실행 시점은 다르다
+`data: JSON\n\n`에서 첫 줄바꿈은 `data:` 줄의 끝이고, 두 번째 줄바꿈은 빈 줄이다. 이 빈 줄이 SSE 이벤트 한 건의 끝을 나타낸다. 네트워크 바이트가 꼭 한 줄씩 도착하는 것은 아니며, `EventSource`가 받은 내용을 내부 버퍼에 모아 빈 줄을 발견했을 때 이벤트 한 건으로 완성한다.
+
+현재 백엔드는 별도의 `event:`, `id:`, `retry:`를 설정하지 않고 snapshot만 보낸다. 그래서 브라우저는 기본 메시지 이벤트로 처리하고, Hook은 `onmessage`에 콜백을 등록한다.
 
 ```tsx
 eventSource.onmessage = (event) => {
-  const data = JSON.parse(event.data);
+  const data: OrderBookSnapshot = JSON.parse(event.data);
   setSnapshot(data);
 };
 ```
 
-위 코드는 함수를 지금 실행하는 코드가 아니라 `onmessage` 자리에 함수를 등록하는 코드다.
+위 코드는 Effect가 실행될 때 콜백을 **등록**한다. 나중에 Spring이 보낸 SSE 텍스트에서 빈 줄을 발견하면 브라우저가 이 함수를 호출한다.
 
 ```text
-Effect 실행 시점
-→ onmessage에 함수 등록
-
-나중에 서버 메시지가 도착
-→ 브라우저가 등록된 함수 호출
-→ event 인자 전달
-→ JSON.parse와 setSnapshot 실행
+ServerSentEvent Java 객체
+→ Spring WebFlux: data: {JSON}\n\n
+→ EventSource: 빈 줄을 이벤트 끝으로 해석
+→ event.data: '{JSON}' 문자열
+→ JSON.parse(event.data)
+→ setSnapshot(data)
 ```
 
-`event`는 브라우저가 만든 `MessageEvent` 객체이고, `event.data`는 서버의 `data:` 필드에서 꺼낸 문자열이다.
+`event.data`는 아직 JSON 문자열이고, `JSON.parse` 뒤의 `data`가 `OrderBookSnapshot` JavaScript 객체다.
 
-```tsx
-event.data
-// '{"symbol":"BTCUSDT","eventTime":1720000000000,...}'
+### 현재 Hook의 오류·재연결·종료 처리
 
-const data = JSON.parse(event.data);
-// { symbol: 'BTCUSDT', eventTime: 1720000000000, ... }
-```
+현재 Hook은 오류를 콘솔에 남기기만 한다.
 
-### 1-6. 자동 재연결은 어떻게 동작하는가?
-
-SSE 연결이 일시적으로 끊기면 `EventSource`는 보통 다음 순서로 동작한다.
-
-```text
-연결 끊김
-→ error 이벤트
-→ readyState가 CONNECTING
-→ 일정 시간 뒤 같은 URL로 다시 연결
-→ 성공하면 open 이벤트
-```
-
-그래서 현재 코드는 `onerror` 안에서 새 `EventSource`를 직접 만들지 않는다.
+`EventSource` 연결이 일시적으로 끊기면 브라우저가 같은 URL로 자동 재연결을 시도한다. 그래서 현재 코드가 `onerror` 안에서 새 `EventSource`를 직접 만들지는 않는다.
 
 ```tsx
 eventSource.onerror = (err) => {
@@ -241,50 +183,25 @@ eventSource.onerror = (err) => {
 
 여기서 다시 `new EventSource(...)`를 실행하면 브라우저의 자동 재연결과 겹쳐 연결이 중복될 수 있다.
 
-서버가 `id:`를 보냈다면 브라우저는 재연결 요청에 마지막 이벤트 ID를 전달할 수 있고, 서버는 그다음 이벤트부터 재전송할 수 있다. 현재 프로젝트는 별도의 이벤트 `id`와 재전송 이력을 관리하지 않는다. 대신 백엔드의 `replay(1)` 스트림은 **이미 발행된 snapshot이 하나 이상 있으면** 새 구독자에게 최신 한 건을 보낸다. 따라서 그 상태에서 재연결하면 호가창은 최신 상태를 다시 받을 수 있다.
+재연결하면 컨트롤러의 `stream()`이 새 SSE 구독을 만든다. 이 프로젝트의 `replay(1)` Sink는 **이미 발행된 snapshot이 하나 이상 있으면** 새 구독자에게 최신 한 건을 바로 전달한다. 따라서 재연결한 호가창도 최신 상태부터 다시 렌더링할 수 있다.
 
-`close()`를 직접 호출하면 자동 재연결도 끝난다.
+`useEffect` cleanup의 `close()`는 사용자가 이 화면을 떠날 때 연결을 의도적으로 닫고 자동 재연결도 끝낸다.
 
 ```tsx
 eventSource.close();
 // readyState === EventSource.CLOSED
 ```
 
-### 1-7. `fetch`, polling, WebSocket과 무엇이 다른가?
-
-| 방식 | 연결과 데이터 방향 | 이 호가창에서의 의미 |
-|---|---|---|
-| 단발 `fetch` | 요청 1회 → 응답 1회 | 최신 호가 한 번만 조회할 때 적합 |
-| polling | 일정 시간마다 `fetch` 반복 | 새 데이터가 없어도 계속 요청해야 함 |
-| SSE + `EventSource` | HTTP 연결 1개, 서버 → 브라우저 | 서버가 새 snapshot이 생길 때 계속 전송 |
-| WebSocket | 연결 1개, 양방향 메시지 | 양쪽이 자주 메시지를 주고받을 때 적합 |
-
-이 프로젝트에는 두 종류의 실시간 연결이 있다.
+### 이 프로젝트에는 WebSocket과 SSE가 하나씩 있다
 
 ```text
 Binance ── WebSocket ──→ Spring 백엔드
 Spring  ── SSE ─────────→ 브라우저 EventSource
 ```
 
-브라우저 호가창은 서버에 메시지를 계속 보낼 필요 없이 받기만 하므로 SSE가 단순하다. 주문처럼 브라우저가 서버로 보내는 요청은 별도의 HTTP API를 사용한다.
+Binance 쪽은 외부 거래소로부터 호가를 받는 연결이고, 브라우저 쪽은 이미 정리된 snapshot을 화면에 전달받는 연결이다. 브라우저는 호가를 받기만 하면 되므로 `EventSource` 기반 SSE를 사용하고, 주문처럼 브라우저에서 서버로 보내야 하는 작업은 별도 HTTP API를 사용한다.
 
-### 1-8. 네이티브 `EventSource`의 제약
-
-`EventSource`는 단순한 SSE 수신에 편리한 대신 요청을 세밀하게 구성하는 API는 아니다.
-
-- 요청 방식은 `GET`이다.
-- 요청 body를 넣을 수 없다.
-- 생성자에서 임의의 HTTP header를 지정할 수 없다.
-- 다른 출처에 연결하면 서버의 CORS 허용이 필요하다.
-- 쿠키가 필요한 교차 출처 연결은 `{ withCredentials: true }` 옵션을 사용한다.
-
-```tsx
-const eventSource = new EventSource('https://api.example.com/stream', {
-  withCredentials: true,
-});
-```
-
-현재 URL은 상대 경로다.
+현재 Hook의 URL은 상대 경로다.
 
 ```tsx
 '/api/binance-futures/btcusdt/depth/stream'
@@ -296,7 +213,7 @@ const eventSource = new EventSource('https://api.example.com/stream', {
 브라우저 → Vite /api/... → Spring Boot localhost:8080
 ```
 
-운영에서는 Spring Boot가 프런트 정적 파일과 `/api`를 같은 출처에서 제공한다. 따라서 현재 코드는 별도의 CORS나 인증 header 설정 없이 연결할 수 있다.
+운영에서는 Spring Boot가 프런트 정적 파일과 `/api`를 같은 출처에서 제공하므로, 현재 `EventSource` 생성 코드에 별도 서버 주소나 header 설정이 없다.
 
 ---
 

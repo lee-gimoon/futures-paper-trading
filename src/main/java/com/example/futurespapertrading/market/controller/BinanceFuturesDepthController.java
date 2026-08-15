@@ -75,8 +75,9 @@ public class BinanceFuturesDepthController {
 
 	// SSE(Server-Sent Events)로 latestStore가 발행하는 최신 snapshot을 브라우저에 전달한다.
 	//
-	// produces = TEXT_EVENT_STREAM_VALUE 가 있어야 응답 Content-Type이 "text/event-stream"이 되고,
-	// 브라우저의 EventSource가 한 줄(`data: ...\n\n`)씩 받아서 onmessage로 풀어 쓴다.
+	// produces = TEXT_EVENT_STREAM_VALUE는 응답 Content-Type을 "text/event-stream"으로 설정한다.
+	// Spring은 ServerSentEvent를 `data: ...\n\n` 형식으로 인코딩하고,
+	// EventSource는 빈 줄로 끝나는 SSE 이벤트마다 onmessage를 호출한다.
 	//
 	// 반환 타입 Flux<ServerSentEvent<OrderBookSnapshot>>:
 	//   - Flux = "0개 이상의 값을 시간에 걸쳐 흘려보낼 약속". 한 번 return 후 Spring이 알아서 끝까지 흘려보낸다.
@@ -99,6 +100,9 @@ public class BinanceFuturesDepthController {
 		log.info("[sse-stream.enter] thread={}", Thread.currentThread().getName());
 		return latestStore.stream()
 				.map(snap -> ServerSentEvent.builder(snap).build());
+		// map은 builder(snap)과 build()로 snap(호가 객체)을 ServerSentEvent Java 객체 한 건으로 포장한다.
+		// Spring WebFlux의 SSE writer가 이를 `data: JSON\n\n` 텍스트로 바꾸고,
+		// EventSource는 빈 줄을 발견하면 onmessage를 호출한다.
 	}
 	// stream() 메서드 메커니즘 정리:
 	// - 브라우저가 EventSource로 SSE 연결을 열면 이 stream() 메서드는 연결 1개당 보통 1번 호출된다.

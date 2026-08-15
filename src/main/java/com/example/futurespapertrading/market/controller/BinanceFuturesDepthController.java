@@ -11,9 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
-// HTTP로 Binance Futures BTCUSDT 호가 스트림을 시작하거나, 메모리에 보관된 최신 snapshot을 조회한다.
-// 2단계까지: POST로 raw 스트림 시작 (메시지는 로그로 흘려보내고 사라짐).
-// 3단계 추가: GET으로 현재 메모리에 박혀있는 최신 OrderBookSnapshot 조회.
+// HTTP로 메모리에 보관된 최신 BTCUSDT 호가 snapshot을 조회하거나, 실시간 snapshot을 SSE로 구독한다.
 @RestController
 public class BinanceFuturesDepthController {
 
@@ -23,7 +21,7 @@ public class BinanceFuturesDepthController {
 	// 옛 start() 엔드포인트(아래 주석)와 함께만 쓰이던 필드. 주석을 풀면 같이 복구한다.
 	// private final BinanceFuturesRawDepthStreamer rawDepthStreamer;
 
-	// 3단계: 파서가 만든 최신 snapshot이 담겨있는 메모리 양동이.
+	// 파서가 만든 최신 snapshot과 구독 스트림을 제공한다.
 	private final LatestOrderBookSnapshotStore latestStore;
 
 	public BinanceFuturesDepthController(
@@ -61,7 +59,7 @@ public class BinanceFuturesDepthController {
 	//   트리거는 위 @RestController 한 줄: "이 클래스의 모든 메서드 반환값을 HTTP 응답 본문으로 직렬화하라"는 약속.
 	//   그 약속 덕분에 함수가 ResponseEntity<OrderBookSnapshot>을 반환만 하면, Spring이 받아서
 	//   MappingJackson2HttpMessageConverter를 골라 호출 → 그 컨버터가 내부적으로 ObjectMapper 빈
-	//   (2단계 Parser가 readTree에 쓰는 그 객체와 동일한 싱글톤)의 writeValue...을 호출해 JSON 바이트로 변환한다.
+	//   (Binance 메시지 Parser도 사용하는 동일한 싱글톤)의 writeValue...을 호출해 JSON 바이트로 변환한다.
 	//   record의 자동 생성된 접근자(symbol(), eventTime(), bids(), asks())를 Jackson이 리플렉션으로 찾아내
 	//   메서드 이름을 그대로 JSON 키로 쓴다 → {"symbol":"BTCUSDT","eventTime":...,"bids":[...],"asks":[...]}.
 	//   우리가 JSON 변환 코드를 한 줄도 안 적은 이유 = @RestController + 객체 반환 = Spring의 컨벤션.
@@ -75,9 +73,7 @@ public class BinanceFuturesDepthController {
 				.orElseGet(() -> ResponseEntity.notFound().build()); // build(): 지금까지 체이닝으로 설정한 값들을 바탕으로 실제 객체를 완성한다.
 	}
 
-	// 4단계 — SSE(Server-Sent Events)로 latest snapshot을 브라우저에 push.
-	// 구현 방식: 폴링(A). 100ms마다 store를 들여다보고, eventTime이 바뀌었으면 보낸다.
-	// 6/7단계에서 Store에 Sinks.Many를 박고 store.stream()으로 갈아끼울 예정 (docs/roadmap.md 참고).
+	// SSE(Server-Sent Events)로 latestStore가 발행하는 최신 snapshot을 브라우저에 전달한다.
 	//
 	// produces = TEXT_EVENT_STREAM_VALUE 가 있어야 응답 Content-Type이 "text/event-stream"이 되고,
 	// 브라우저의 EventSource가 한 줄(`data: ...\n\n`)씩 받아서 onmessage로 풀어 쓴다.
@@ -100,7 +96,7 @@ public class BinanceFuturesDepthController {
 	// 변경 후 ─ Hot Flux + multicast + replay(1)
 	@GetMapping(path = "/api/binance-futures/btcusdt/depth/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<OrderBookSnapshot>> stream() {
-		log.info("[STEP10-stream.enter] thread={}", Thread.currentThread().getName());
+		log.info("[sse-stream.enter] thread={}", Thread.currentThread().getName());
 		return latestStore.stream()
 				.map(snap -> ServerSentEvent.builder(snap).build());
 	}
@@ -110,7 +106,7 @@ public class BinanceFuturesDepthController {
 	// - 하지만 WebFlux가 반환된 Flux를 구독하므로 Flux subscription과 HTTP SSE connection은 열린 채로 살아 있다.
 	// - 여기서 subscription은 WebFlux가 이 Flux를 subscribe해서 만든 "구독 관계"다.
 	// - 이후 Binance snapshot이 들어올 때마다 다시 호출되는 것은 stream() 메서드가 아니라 위의 map 람다다.
-	// - 즉 [STEP10-stream.enter]는 브라우저 연결 1개당 1번만 찍히고, snapshot emit 때마다 SSE 이벤트가 만들어진다.
+	// - 즉 [sse-stream.enter]는 브라우저 연결 1개당 1번만 찍히고, snapshot emit 때마다 SSE 이벤트가 만들어진다.
 	// - 브라우저 탭을 닫거나 EventSource가 끊기면 해당 Flux subscription이 cancel되고 SSE connection도 정리된다.
 
 	// 이 SSE 응답도 Netty/Reactor Netty의 event loop + non-blocking I/O 모델 위에서 처리된다.

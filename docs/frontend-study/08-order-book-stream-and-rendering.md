@@ -129,6 +129,8 @@ const eventSource = new EventSource(
 → latestStore.stream() 구독
 ```
 
+`proxy`는 영어로 “대리인, 대신 처리하는 중개자”라는 뜻이다. 여기서 Vite proxy는 브라우저가 Vite 개발 서버로 보낸 `/api/...` 요청을 Spring Boot의 `localhost:8080`으로 대신 전달하고, Spring Boot의 응답도 다시 브라우저에 전달한다.
+
 `stream()` 메서드는 브라우저가 연결할 때 한 번 실행되어 `Flux` 파이프라인을 반환한다. 이후 snapshot마다 이 메서드를 다시 호출하는 것이 아니라, 이미 구독한 `Flux`에서 값이 나올 때 아래 `map`만 한 번씩 실행된다.
 
 ```java

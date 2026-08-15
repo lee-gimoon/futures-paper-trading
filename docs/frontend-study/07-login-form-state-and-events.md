@@ -1342,11 +1342,28 @@ CSS로 폼을 숨기는 것과 컴포넌트를 트리에서 제거하는 것은 
 | Hook | 처음 등장한 이유 | 이 로그인 흐름에서 하는 일 |
 |---|---|---|
 | `useState` | 렌더링 사이에 값을 기억해야 함 | `form`, `user`, 입력값, 오류, 요청 상태 관리 |
-| `useEffect` | mount 뒤 서버와 동기화해야 함 | 기존 SESSION으로 현재 사용자 확인 |
+| `useEffect` | mount 뒤 서버의 현재 인증 상태를 React state에 반영해야 함 | 기존 SESSION 쿠키로 `/api/auth/me`를 요청해 `user`, `loading` 갱신 |
 | `useCallback` | 의존성이 바뀌지 않는 동안 같은 함수 참조를 재사용해야 함 | `login`, `logout` 등 인증 함수 참조 재사용 |
 | `useAuth` | 인증 state와 동작을 묶어야 함 | React Hook들을 조합한 프로젝트의 커스텀 Hook |
 
 Hook은 “특별한 문법”이 아니라 React 또는 프로젝트가 제공하는 JavaScript 함수다. 다만 React는 Hook 호출 순서에 따라 각 Hook의 내부 정보를 연결하므로, Hook은 React 함수 컴포넌트나 커스텀 Hook의 최상위에서만 호출해야 한다.
+
+이 로그인 흐름에서 세션 쿠키와 사용자 정보는 다음처럼 나뉘어 관리된다.
+
+| 구분 | 보관 위치 | 이 프로젝트에서 담는 값 | 사용자 정보를 다루는 방식 |
+|---|---|---|---|
+| `SESSION` 쿠키 | 브라우저의 쿠키 저장소 | 서버의 WebSession을 식별하는 세션 ID | 사용자 프로필을 담지 않는다. `credentials: 'include'` 요청 때 브라우저가 서버에 자동으로 전송한다. |
+| 서버 세션(WebSession) | 서버 측 WebSession 저장소 | 로그인에 성공한 사용자를 나타내는 `SecurityContext`와 인증 정보(email 등) | `SESSION` 쿠키의 세션 ID로 세션을 찾아 인증 정보를 복원한다. |
+| 사용자 데이터 | 서버 데이터베이스 | `id`, `email`, `displayName`, 비밀번호 해시 등 | `/api/auth/me`에서 세션의 인증 정보로 사용자를 조회한다. 비밀번호는 응답에 포함하지 않는다. |
+| React의 `user` state | 브라우저의 JavaScript 메모리 | `/api/auth/me` 응답의 `id`, `email`, `displayName` | 화면을 로그인 상태로 그리는 데 사용한다. 새로고침하면 초기화되므로 `fetchMe()`로 다시 채운다. |
+
+```text
+fetchMe()
+→ 브라우저가 SESSION 쿠키를 포함해 GET /api/auth/me 요청
+→ 서버가 WebSession에서 인증 정보를 복원
+→ 서버가 DB에서 사용자 정보를 조회
+→ 사용자 정보를 React의 user state에 저장
+```
 
 ### 10-2. 컴포넌트 생명 흐름
 

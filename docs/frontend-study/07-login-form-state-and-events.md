@@ -1343,10 +1343,10 @@ CSS로 폼을 숨기는 것과 컴포넌트를 트리에서 제거하는 것은 
 |---|---|---|
 | `useState` | 렌더링 사이에 값을 기억해야 함 | `form`, `user`, 입력값, 오류, 요청 상태 관리 |
 | `useEffect` | mount 뒤 서버와 동기화해야 함 | 기존 SESSION으로 현재 사용자 확인 |
-| `useCallback` | 렌더링 사이에 함수 참조를 유지 | `login`, `logout` 등 인증 함수 참조 유지 |
+| `useCallback` | 의존성이 바뀌지 않는 동안 같은 함수 참조를 재사용해야 함 | `login`, `logout` 등 인증 함수 참조 재사용 |
 | `useAuth` | 인증 state와 동작을 묶어야 함 | React Hook들을 조합한 프로젝트의 커스텀 Hook |
 
-Hook은 “특별한 문법”이 아니라 React 패키지 또는 프로젝트가 제공하는 JavaScript 함수다. 다만 React가 호출 순서로 Hook state를 연결하므로 컴포넌트와 커스텀 Hook의 최상위에서만 호출한다.
+Hook은 “특별한 문법”이 아니라 React 또는 프로젝트가 제공하는 JavaScript 함수다. 다만 React는 Hook 호출 순서에 따라 각 Hook의 내부 정보를 연결하므로, Hook은 React 함수 컴포넌트나 커스텀 Hook의 최상위에서만 호출해야 한다.
 
 ### 10-2. 컴포넌트 생명 흐름
 

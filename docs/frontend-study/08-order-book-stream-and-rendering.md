@@ -109,9 +109,9 @@ Binance WebSocket 메시지
 
 ### 브라우저가 `EventSource`로 이 `Flux`를 구독한다
 
-`EventSource`는 React 기능이 아니라 브라우저에 내장된 SSE 클라이언트다. 이 프로젝트에서는 Hook의 Effect가 다음 객체를 한 번 만든다.
+`EventSource`는 영어 그대로 **“이벤트가 나오는 출처”**라는 뜻이다. 이 프로젝트에서 실제 이벤트 출처는 snapshot을 계속 보내는 Spring Boot SSE endpoint이고, `EventSource`는 React 기능이 아니라 그 출처에 연결하는 브라우저 내장 SSE 클라이언트다. Hook의 Effect가 다음 객체를 한 번 만든다.
 
-`EventSource`는 브라우저가 제공하는 SSE 연결용 생성자이며, `new EventSource(url)`은 서버에 연결해 SSE 이벤트를 계속 받아 줄 JavaScript 객체를 만든다.
+`EventSource`는 브라우저가 제공하는 SSE 연결용 생성자다. `new EventSource(url)`은 “이 URL은 이벤트가 계속 나오는 출처다. 여기에 연결해서 이벤트를 받아 줘.”라는 뜻으로, 서버에 연결해 SSE 이벤트를 계속 받아 줄 JavaScript 객체를 만든다.
 
 ```tsx
 const eventSource = new EventSource(

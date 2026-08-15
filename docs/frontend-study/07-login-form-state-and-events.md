@@ -1403,23 +1403,25 @@ unmount
 ### 10-4. 데이터와 이벤트의 방향
 
 ```text
-데이터
-App state
-→ props
-→ LoginForm
-→ JSX
+렌더링: 현재 state와 props로 UI 만들기
+App state (form, user)
+→ App JSX
+→ LoginForm props (onLogin, onClose)
++ LoginForm 지역 state (email, password, error, submitting)
+→ LoginForm JSX
 → DOM
 
-사용자 행동
+사용자 행동: state 변경을 시작하는 흐름
 DOM 이벤트
 → React 이벤트 핸들러
-→ state setter
+→ LoginForm의 state setter 또는 부모에게 전달받은 callback prop 호출
+→ LoginForm 또는 App state 변경
 → 재렌더링
 → 새 JSX
 → DOM 갱신
 ```
 
-props와 state는 화면을 아래 방향으로 만들고, 사용자의 이벤트는 callback과 setter를 통해 state 변경을 요청한다. 이 순환이 React UI의 기본 동작이다.
+여기서 데이터란 서버 응답만이 아니라 화면을 결정하는 `state`와 `props` 값을 말한다. `email` 입력처럼 LoginForm 자신의 state가 바뀌는 경우도 있고, 취소 버튼의 `onClose()`처럼 callback prop을 통해 App의 state를 바꾸는 경우도 있다. 어느 쪽이든 state가 바뀌면 React는 영향을 받은 컴포넌트를 다시 렌더링하고 DOM에 필요한 변경만 반영한다.
 
 ### 10-5. 스스로 확인할 질문
 

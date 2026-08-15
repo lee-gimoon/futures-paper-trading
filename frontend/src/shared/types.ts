@@ -6,11 +6,14 @@ export type OrderBookLevel = {
   quantity: number;
 };
 
+// 이것은 실제 객체를 만드는 코드가 아니라 객체의 "모양"을 선언하는 타입이다.
+// 따라서 실제 객체의 `키: 값` 대신, "이 키에는 어떤 타입의 값이 들어와야 하는가"를 `키: 타입`으로 쓴다.
+// 실제 값 예시: { symbol: 'BTCUSDT', eventTime: 1720000000000, bids: [...], asks: [...] }
 export type OrderBookSnapshot = {
-  symbol: string;
-  eventTime: number;
-  bids: OrderBookLevel[];
-  asks: OrderBookLevel[];
+  symbol: string; // `symbol` 키에는 문자열 값이 들어온다. 예: 'BTCUSDT'
+  eventTime: number; // `eventTime` 키에는 숫자 값이 들어온다. 예: 1720000000000
+  bids: OrderBookLevel[]; // `[]`는 배열 타입. 배열 안에는 { price: number, quantity: number } 모양의 객체가 여러 개 들어온다.
+  asks: OrderBookLevel[]; // 매도 호가도 같은 OrderBookLevel 객체들의 배열이다.
 };
 
 // 백엔드 UserResponse(id, email, displayName)와 1:1 대응. 로그인 상태 표시에 쓴다.

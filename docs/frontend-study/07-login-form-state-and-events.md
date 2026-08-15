@@ -1270,6 +1270,8 @@ try {
 
 `err instanceof Error`가 true면 그 Error의 `message`를, 아니면 기본 문구를 `error` state에 저장한다.
 
+여기서 “실패하면 재렌더링된다”는 말은 `onLogin`의 실패 자체가 화면을 다시 그린다는 뜻이 아니다. 실패를 처리하면서 호출한 `setError(...)`와 `setSubmitting(false)`가 state를 변경하고, React가 그 변경을 반영하기 위해 `LoginForm`을 다시 렌더링한다는 뜻이다.
+
 `onClose()`가 실행되지 않으므로 App의 `form`은 계속 `'login'`이고 LoginForm은 React 트리에서 제거되지 않는다. `setError`와 `setSubmitting(false)`로 LoginForm은 재렌더링되지만, React는 같은 트리 위치의 같은 LoginForm을 update로 판단하므로 state를 초기화하지 않는다. 따라서 setter를 호출하지 않은 `email`, `password`는 이전 값을 유지하고, `error`, `submitting`만 새 값으로 갱신된다.
 
 ```text

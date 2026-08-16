@@ -100,9 +100,12 @@ public class BinanceFuturesDepthController {
 		log.info("[sse-stream.enter] thread={}", Thread.currentThread().getName());
 		return latestStore.stream()
 				.map(snap -> ServerSentEvent.builder(snap).build());
-		// map은 builder(snap)과 build()로 snap(호가 객체)을 ServerSentEvent Java 객체 한 건으로 포장한다.
-		// Spring WebFlux의 SSE writer가 이를 `data: JSON\n\n` 텍스트로 바꾸고,
-		// EventSource는 빈 줄을 발견하면 onmessage를 호출한다.
+		// map은 snap을 ServerSentEvent의 data로 담아 Java 수준의 SSE 이벤트 모델을 만든다.
+		// 이후 Spring WebFlux의 SSE writer가 ServerSentEvent 안의 snap을 JSON 텍스트로 직렬화하고,
+		// `data: <JSON>\n\n` 형식의 SSE 텍스트 프레임을 구성한 뒤,
+		// 이 텍스트를 보통 UTF-8 바이트로 인코딩해 HTTP 응답 본문 스트림에 기록한다.
+		// EventSource는 스트림에서 `data:` 뒤의 JSON을 읽고, 빈 줄(`\n\n`)을 이벤트의 끝으로 판단한다.
+		// event 이름이 없으므로 기본 `message` 이벤트를 발생시켜 onmessage를 호출한다.
 	}
 	// stream() 메서드 메커니즘 정리:
 	// - 브라우저가 EventSource로 SSE 연결을 열면 이 stream() 메서드는 연결 1개당 보통 1번 호출된다.

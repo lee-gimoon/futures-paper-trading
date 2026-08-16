@@ -6,19 +6,26 @@ import type { OrderBookSnapshot } from '../../shared/types';
 export function useOrderBookStream(): OrderBookSnapshot | null {
   const [snapshot, setSnapshot] = useState<OrderBookSnapshot | null>(null);
 
+  // Effect = 렌더링 결과 밖에 영향을 주는 부수 효과. 여기서는 SSE 연결을 열고 수신하는 작업이다.
   useEffect(() => {
     // Vite proxy 덕분에 '/api/...'가 그대로 localhost:8080으로 전달된다.
     // x-accel-buffering: no 헤더는 Nginx 같은 중간 프록시가 SSE를 모으지 말고 바로 전달하라는 뜻이다.
     // EventSource = 브라우저 내장 SSE 클라이언트. new EventSource(url)은 JavaScript 객체를 만들면서
     // 동시에 URL로 SSE HTTP GET 요청을 시작하고, 끝나지 않은 text/event-stream 응답을 계속 읽는다.
-    // 연결이 일시적으로 끊기면 자동 재연결도 시도한다.
+    // HTTP 스트림으로는 연결이 유지된 채 긴 바이트/문자열 흐름이 계속 들어옵니다.
+    // 그리고 브라우저의 EventSource가 내부적으로 이 스트림을 읽다가 빈 줄을 만나면 “SSE 이벤트 한 건이 끝났다”고 구분합니다.
+    // new EventSource(...)로 한 번 만든 객체는 SSE 연결을 계속 유지하며 데이터를 수신하고, useEffect 함수가 끝나도 연결은 끊기지 않는다. 연결이 일시적으로 끊기면 자동 재연결도 시도한다.
     const eventSource = new EventSource('/api/binance-futures/btcusdt/depth/stream');
 
-    // EventSource가 "data: {...}\n\n"을 SSE 이벤트 하나로 해석할 때마다 'message' 이벤트를 발생시킨다.
+    // HTTP 응답 스트림은 임의 크기의 바이트 조각으로 나뉘어 도착할 수 있다.
+    // EventSource는 받은 바이트를 UTF-8 문자열로 디코딩하고, 줄바꿈(`\n`)을 찾으며 SSE 형식을 파싱한다.
+    // 완성된 줄은 `:` 앞부분으로 data, event, id 등의 필드를 구분하고,
+    // 아직 줄바꿈이 없는 미완성 문자열은 다음 바이트 조각이 올 때까지 내부 버퍼에 보관한다.
+    // 빈 줄(`\n\n`)을 만나 SSE 이벤트 한 건이 완성되면, event 이름이 없으므로 기본 'message' 이벤트를 발생시킨다.
     // 브라우저는 MessageEvent 객체를 event 매개변수로 전달하면서,
     // onmessage 프로퍼티에 등록된 콜백 함수를 호출한다.
     eventSource.onmessage = (event) => {
-      const data: OrderBookSnapshot = JSON.parse(event.data);
+      const data: OrderBookSnapshot = JSON.parse(event.data); // JSON.parse(...)는 JSON 문자열을 JavaScript 객체로 변환하는 함수입니다.
       setSnapshot(data);
     };
 
@@ -27,11 +34,16 @@ export function useOrderBookStream(): OrderBookSnapshot | null {
       console.error('SSE error', err);
     };
 
-    // cleanup: 컴포넌트가 unmount되거나 effect가 다시 돌 때 호출된다.
+    // cleanup: useEffect의 return은 React에 "이 Effect를 나중에 되돌릴 방법"을 알려 주는 약속이다.
+    // 반환된 함수는 위에서 만든 eventSource를 기억하고, React가 unmount 시 또는 effect 재실행 직전에 호출한다.
     return () => {
+      // EventSource는 new EventSource(url) 자체가 장기 HTTP 연결을 시작하고 유지하도록 설계된 브라우저 API다.
+      // 따라서 더 이상 필요 없을 때 close()로 SSE HTTP 연결을 직접 종료해 연결 누수를 막는다.
       eventSource.close();
     };
-  }, []); // 빈 배열 = 마운트 시 1회만 실행
+  }, []); // 빈 배열 = 의존 값이 없으므로 최초 마운트 뒤 Effect를 한 번만 실행한다.
+  // snapshot 수신으로 컴포넌트가 재렌더링되어도 EventSource를 새로 연결하지 않고,
+  // 컴포넌트가 언마운트될 때만 위에서 반환한 cleanup 함수가 연결을 닫는다.
 
   return snapshot;
 }

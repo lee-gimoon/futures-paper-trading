@@ -6,7 +6,8 @@ import type { OrderBookSnapshot } from '../../shared/types';
 export function useOrderBookStream(): OrderBookSnapshot | null {
   const [snapshot, setSnapshot] = useState<OrderBookSnapshot | null>(null);
 
-  // Effect = 렌더링 결과 밖에 영향을 주는 부수 효과. 여기서는 SSE 연결을 열고 수신하는 작업이다.
+  // Effect = 렌더링 결과 밖에 영향을 주는 부수 효과.
+  // EventSource는 장기 HTTP 연결이므로, 렌더링마다 새 연결을 만들지 않고 컴포넌트 생명주기에 맞춰 생성·종료하려고 useEffect 안에서 만든다.
   useEffect(() => {
     // Vite proxy 덕분에 '/api/...'가 그대로 localhost:8080으로 전달된다.
     // x-accel-buffering: no 헤더는 Nginx 같은 중간 프록시가 SSE를 모으지 말고 바로 전달하라는 뜻이다.
@@ -14,7 +15,8 @@ export function useOrderBookStream(): OrderBookSnapshot | null {
     // 동시에 URL로 SSE HTTP GET 요청을 시작하고, 끝나지 않은 text/event-stream 응답을 계속 읽는다.
     // HTTP 스트림으로는 연결이 유지된 채 긴 바이트/문자열 흐름이 계속 들어옵니다.
     // 그리고 브라우저의 EventSource가 내부적으로 이 스트림을 읽다가 빈 줄을 만나면 “SSE 이벤트 한 건이 끝났다”고 구분합니다.
-    // new EventSource(...)로 한 번 만든 객체는 SSE 연결을 계속 유지하며 데이터를 수신하고, useEffect 함수가 끝나도 연결은 끊기지 않는다. 연결이 일시적으로 끊기면 자동 재연결도 시도한다.
+    // new EventSource(...)로 한 번 만든 객체는 SSE 연결을 계속 유지하며 데이터를 수신하고, useEffect 함수가 끝나도 연결은 끊기지 않는다.
+    // 연결이 일시적으로 끊기면 자동 재연결도 시도한다.
     const eventSource = new EventSource('/api/binance-futures/btcusdt/depth/stream');
 
     // HTTP 응답 스트림은 임의 크기의 바이트 조각으로 나뉘어 도착할 수 있다.
@@ -29,6 +31,7 @@ export function useOrderBookStream(): OrderBookSnapshot | null {
       setSnapshot(data);
     };
 
+    // EventSource가 관리하는 SSE 연결에 문제가 생기면 브라우저가 error 이벤트를 발생시켜 이 콜백을 호출한다.
     eventSource.onerror = (err) => {
       // 브라우저가 자동 재연결을 시도하므로 여기는 로깅만.
       console.error('SSE error', err);

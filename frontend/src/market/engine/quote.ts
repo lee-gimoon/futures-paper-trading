@@ -1,11 +1,9 @@
 import type { OrderBookSnapshot } from '../../shared/types';
 
-// 호가 snapshot에서 파생되는 네 값. 호가창(OrderBook)과 차트(PriceChart)가
-// 똑같은 snapshot에서 똑같은 값을 쓰도록 계산을 여기 한 곳에 모은다.
-//   bestBid  = bids 중 가장 높은 price
-//   bestAsk  = asks 중 가장 낮은 price
-//   midPrice = (bestBid + bestAsk) / 2
-//   spread   = bestAsk - bestBid
+// deriveQuote()가 만들어 반환하는 호가 요약값의 형태다.
+//   - OrderBook은 spread를 표시한다.
+//   - CandleChart는 bestAsk로 진행 중인 캔들을 갱신한다.
+//   - TradingPanel은 midPrice를 현재가 표시, 미실현 PnL, 시장가 주문 금액 환산에 쓴다.
 export type Quote = {
   bestBid: number;
   bestAsk: number;
@@ -13,7 +11,12 @@ export type Quote = {
   spread: number;
 };
 
-// 한쪽이라도 비어 있으면 계산할 수 없으므로 null. (수신 직후 잠깐 발생 가능)
+// snapshot의 매수·매도 호가에서 화면 공통 기준값을 계산한다.
+//   bestBid  = bids 중 가장 높은 price
+//   bestAsk  = asks 중 가장 낮은 price
+//   midPrice = (bestBid + bestAsk) / 2
+//   spread   = bestAsk - bestBid
+// 한쪽 호가가 비어 있으면 최우선 호가를 정할 수 없으므로 null을 반환한다.
 export function deriveQuote(snapshot: OrderBookSnapshot): Quote | null {
   if (snapshot.bids.length === 0 || snapshot.asks.length === 0) return null;
 

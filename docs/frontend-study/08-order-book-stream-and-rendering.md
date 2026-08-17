@@ -194,31 +194,6 @@ eventSource.close();
 // readyState === EventSource.CLOSED
 ```
 
-### 이 프로젝트에는 WebSocket과 SSE가 하나씩 있다
-
-```text
-Binance ── WebSocket ──→ Spring 백엔드
-Spring  ── SSE ─────────→ 브라우저 EventSource
-```
-
-Binance 쪽은 외부 거래소로부터 호가를 받는 연결이고, 브라우저 쪽은 이미 정리된 snapshot을 화면에 전달받는 연결이다. 브라우저는 호가를 받기만 하면 되므로 `EventSource` 기반 SSE를 사용하고, 주문처럼 브라우저에서 서버로 보내야 하는 작업은 별도 HTTP API를 사용한다.
-
-현재 Hook의 URL은 상대 경로다.
-
-```tsx
-'/api/binance-futures/btcusdt/depth/stream'
-```
-
-로컬 개발에서는 브라우저가 같은 출처의 Vite 서버로 요청하고, Vite proxy가 Spring Boot로 전달한다.
-
-```text
-브라우저 → Vite /api/... → Spring Boot localhost:8080
-```
-
-운영에서는 Spring Boot가 프런트 정적 파일과 `/api`를 같은 출처에서 제공하므로, 현재 `EventSource` 생성 코드에 별도 서버 주소나 header 설정이 없다.
-
----
-
 ## 2. Hook이 `EventSource`와 React state를 연결한다
 
 실제 코드는 다음과 같다.

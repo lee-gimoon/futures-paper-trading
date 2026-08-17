@@ -10,9 +10,8 @@ export class HttpError extends Error { // Error를 확장하므로 try/catch에�
 }
 
 // toHttpError의 to는 "~로 변환한다"는 뜻으로, 실패한 HTTP 응답(Response)을 HttpError로 바꾼다.
-// 응답 JSON이 { message: string }이면 그 메시지를 사용하고,
-// fallback은 원래 사용할 서버 메시지를 얻지 못했을 때 대신 쓰는 "대체값"이다.
-// 따라서 JSON 메시지가 없거나 읽을 수 없으면 호출부에서 받은 fallback을 사용한다.
+// 실패한 HTTP 응답(Response)을 HttpError로 바꾸는 이유: API 함수는 이 오류를 throw하고, 화면 훅은 catch한다.
+// status가 401이면 세션 만료로 처리하고, 그 외에는 message를 화면에 표시한다.
 export async function toHttpError(res: Response, fallback: string): Promise<HttpError> {
   try {
     const body: unknown = await res.json();
@@ -28,5 +27,7 @@ export async function toHttpError(res: Response, fallback: string): Promise<Http
     // 본문이 JSON이 아니거나 비어 있으면, 아래 fallback 메시지를 사용한다.
   }
 
+  // 응답 JSON에 { message: string }이 없으면 fallback을 사용한다.
+  // fallback은 원래 사용할 서버 메시지를 얻지 못했을 때 대신 쓰는 "대체값"이다.
   return new HttpError(res.status, fallback);
 }

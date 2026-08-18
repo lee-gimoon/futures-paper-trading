@@ -1,25 +1,32 @@
 import type { OrderBookLevel, OrderBookSnapshot } from '../../shared/types';
 import { deriveQuote } from '../engine/quote';
 
-// 표 한 행에 그릴 값들. quantity와 cumulative는 화면에서 계산해 만든다.
+// 표 한 행에 그릴 값들. price와 quantity는 서버 호가에서 받고,
+// cumulative는 화면에서 누적 계산해 추가한다.
 type Row = {
   price: number;
   quantity: number;
   cumulative: number;
 };
 
-// asks: 가격 오름차순으로 정렬 → best ask부터 누적 → 그릴 때는 역순(높은 가격이 맨 위)
+// 매도 호가를 화면용 행으로 변환한다.
+// 누적 수량은 최저 매도가(best ask)부터 계산해야 한다.
+// 다만 화면에서는 높은 매도가가 위에 오므로, 누적 계산 후 행 순서를 뒤집는다.
 function buildAskRows(asks: OrderBookLevel[]): Row[] {
+  // `[...asks]`: asks의 원소를 펼쳐 만든 새 배열(얕은 복사). sort()가 원본 배열 순서를 바꾸므로 복사본을 정렬한다.
+  // `sort((a, b) => ...)`: sort에 넘기는 화살표 비교 함수. sort가 배열 원소 두 개를 a, b에 넣어 필요할 때마다 호출한다.
+  // `a.price - b.price`가 음수면 a를 앞에 두므로 가격이 낮은 순서(오름차순)가 된다.
   const sorted = [...asks].sort((a, b) => a.price - b.price);
   let cum = 0;
   const rows = sorted.map((lvl) => {
     cum += lvl.quantity;
-    return { price: lvl.price, quantity: lvl.quantity, cumulative: cum };
+    return { price: lvl.price, quantity: lvl.quantity, cumulative: cum }; // 객체 안의 속성 이름: 실제 값 (타입 표기 아님)
   });
   return rows.reverse();
 }
 
-// bids: 가격 내림차순으로 정렬 → best bid부터 누적 → 그대로 그리면 됨
+// 매수 호가를 화면용 행으로 변환한다.
+// 최고 매수가(best bid)부터 누적하고, 이 순서가 화면 표시 순서와도 같으므로 그대로 반환한다.
 function buildBidRows(bids: OrderBookLevel[]): Row[] {
   const sorted = [...bids].sort((a, b) => b.price - a.price);
   let cum = 0;
@@ -31,7 +38,8 @@ function buildBidRows(bids: OrderBookLevel[]): Row[] {
 
 type Props = {
   snapshot: OrderBookSnapshot;
-  onPriceClick?: (price: number) => void; // 가격 행 클릭 → 주문폼 지정가로 (바이낸스식)
+  // `?`는 선택 props 속성: 부모가 onPriceClick 속성을 전달하지 않아도 된다.
+  onPriceClick?: (price: number) => void; // 전달되면 가격 행 클릭 → 주문폼 지정가로 입력(바이낸스식)
 };
 
 export function OrderBook({ snapshot, onPriceClick }: Props) {
@@ -55,7 +63,10 @@ export function OrderBook({ snapshot, onPriceClick }: Props) {
           <div
             key={`ask-${row.price}`}
             className="row ask"
-            onClick={() => onPriceClick?.(row.price)}
+            onClick={() => {
+              // `?.()` = onPriceClick 속성이 있을 때만 호출한다. 선택 props라 undefined일 수 있다.
+              onPriceClick?.(row.price);
+            }}
             title="클릭 → 지정가로 입력"
           >
             <span>{row.price.toFixed(2)}</span>
@@ -74,7 +85,10 @@ export function OrderBook({ snapshot, onPriceClick }: Props) {
           <div
             key={`bid-${row.price}`}
             className="row bid"
-            onClick={() => onPriceClick?.(row.price)}
+            onClick={() => {
+              // `?.()` = onPriceClick 속성이 있을 때만 호출한다. 선택 props라 undefined일 수 있다.
+              onPriceClick?.(row.price);
+            }}
             title="클릭 → 지정가로 입력"
           >
             <span>{row.price.toFixed(2)}</span>

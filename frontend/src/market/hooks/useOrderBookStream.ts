@@ -4,6 +4,10 @@ import type { OrderBookSnapshot } from '../../shared/types';
 // React Hook 한 줄 요약: 컴포넌트가 마운트되면 백엔드 SSE에 연결하고,
 // 받은 snapshot을 state로 들고 있는다. 컴포넌트가 사라지면 연결을 닫는다.
 export function useOrderBookStream(): OrderBookSnapshot | null {
+  // 이 state는 Hook 자체가 아니라, 이 Hook을 호출한 컴포넌트(App)의 상태로 React에 연결된다.
+  // 따라서 setSnapshot(...)을 호출하면 React가 App을 다시 렌더링한다.
+  // React는 최초 마운트 때만 null을 초기값으로 저장하고, 이후 재렌더링에서는 이전 상태를 반환한다.
+  // 즉, React는 컴포넌트가 useState를 사용하면 그 상태를 컴포넌트에 연결해 기억해 두었다가, 재렌더링할 때 다시 꺼내 준다.
   const [snapshot, setSnapshot] = useState<OrderBookSnapshot | null>(null);
 
   // Effect = 렌더링 결과 밖에 영향을 주는 부수 효과.
@@ -44,9 +48,10 @@ export function useOrderBookStream(): OrderBookSnapshot | null {
       // 따라서 더 이상 필요 없을 때 close()로 SSE HTTP 연결을 직접 종료해 연결 누수를 막는다.
       eventSource.close();
     };
-  }, []); // 빈 배열 = 의존 값이 없으므로 최초 마운트 뒤 Effect를 한 번만 실행한다.
-  // snapshot 수신으로 컴포넌트가 재렌더링되어도 EventSource를 새로 연결하지 않고,
-  // 컴포넌트가 언마운트될 때만 위에서 반환한 cleanup 함수가 연결을 닫는다.
+  }, []); // App이 재렌더링되면 useEffect(...) 호출은 다시 평가되어 React가 의존성을 확인한다.
+  // 하지만 []에는 비교할 값이 없어 이전과 동일하므로, Effect 콜백(위의 SSE 연결 생성)은 최초 마운트 뒤에만 실행된다.
+  // 따라서 snapshot 수신으로 App이 재렌더링되어도 EventSource를 새로 연결하지 않으며,
+  // App이 언마운트될 때만 위에서 반환한 cleanup 함수가 연결을 닫는다.
 
   return snapshot;
 }

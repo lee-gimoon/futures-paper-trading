@@ -29,7 +29,9 @@ import './styles.css';
 // setter 함수(예: setPrice)가 호출되면 React가 새 화면 구조를 계산하고,
 // ReactDOM이 변경된 부분을 실제 DOM에 반영한다.
 
-// React 진입점. index.html의 <div id="root">를 찾아 그 안에 App을 그린다.
+// React 앱의 진입점. index.html의 <div id="root">를 ReactDOM의 렌더링 대상으로 만들고, 그 안에 App 컴포넌트 트리를 렌더링한다.
+// ReactDOM은 <App /> 같은 함수 컴포넌트를 렌더링할 때,
+// 컴포넌트 안의 useState로 만든 상태를 해당 컴포넌트의 내부 기록에 연결해 관리한다.
 ReactDOM.createRoot(document.getElementById('root')!).render(
   // JSX는 JavaScript/TypeScript 안에 HTML과 비슷한 표기법으로 React UI 구조를 작성하는 문법이다.
   // Vite가 JSX를 브라우저에서 실행할 JavaScript 표현으로 변환한다.

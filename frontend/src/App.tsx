@@ -144,7 +144,9 @@ function AuthenticatedTradingLayout({
 //   ↓
 // 실제 DOM 요소 생성·수정
 export default function App() {
-  // SSE로 수신되는 최신 호가/시세 snapshot. 이 값이 바뀌면 App과 하위 컴포넌트가 다시 렌더링된다.
+  // 이 Hook은 App에 연결된 snapshot 상태의 현재 값을 반환한다.
+  // Hook 내부의 setSnapshot(...)이 상태 갱신을 예약하면 React는 App을 다시 렌더링하고,
+  // 이 변수에는 그때의 최신 snapshot이 담긴다.
   const snapshot = useOrderBookStream();
 
   // 현재 로그인 사용자, 인증 처리 상태, 인증 동작을 useAuth 훅에서 가져온다.

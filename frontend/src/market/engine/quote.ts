@@ -11,6 +11,8 @@ export type Quote = {
   spread: number;
 };
 
+// `derive`는 원본 데이터를 바탕으로 값을 계산해 도출한다는 뜻이고, `quote`는 핵심 호가 정보다.
+// deriveQuote는 호가창 전체 snapshot을 바탕으로 값을 계산하고, 그 결과로 핵심 호가 정보인 Quote를 반환한다.
 // snapshot의 매수·매도 호가에서 화면 공통 기준값을 계산한다.
 //   bestBid  = bids 중 가장 높은 price
 //   bestAsk  = asks 중 가장 낮은 price

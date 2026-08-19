@@ -25,6 +25,7 @@ import reactor.core.publisher.Mono;       // 0~1개의 결과를 비동기로 �
 //   · HTTP 입출력만 담당: 요청 받기 → 현재 유저 확인(currentUserId) → PaperOrderService에 위임 → 응답.
 //     실제 체결 판정·저장 로직은 PaperOrderService(서비스 계층)가 맡는다. (주문 취소와 matcher가 서비스 로직을 재사용할 수 있게 분리)
 //   · 비로그인 차단(401)은 SecurityConfig의 .anyExchange().authenticated()가 자동 처리 → 여기선 신경 안 써도 됨.
+//     ※ 401 Unauthorized는 권한 부족이 아니라 로그인·JWT 등 인증 정보가 없거나 유효하지 않은 상태를 뜻한다.
 @RestController
 @RequestMapping("/api/paper/orders")
 public class PaperOrderController {
@@ -95,12 +96,15 @@ public class PaperOrderController {
     //   → 그래서 이 컨트롤러 코드(create()/currentUserId())가 실행된다는 것 자체가 로그인 통과를 뜻한다.
     //     ('여기 닿으면' = 요청이 필터를 통과해 이 컨트롤러 메서드까지 도달했다면. 그래서 아래 인증정보 추출에 null 걱정이 없다.)
     private Mono<Long> currentUserId() {
-        // 보안 정보는 3겹으로 포개져 있고, 이 한 줄이 그 겹을 차례로 깐다 (Holder → Context → Authentication):
-        //   ReactiveSecurityContextHolder = 현재 요청 흐름(Reactor Context)에서 SecurityContext를 꺼내는 통로.
-        //       (Servlet은 ThreadLocal에 두지만, 리액티브는 요청이 스레드를 넘나들어 Reactor Context에서 꺼낸다)
-        //   SecurityContext               = '표준 그릇' — 보안 상태를 담는 규격. 저장 방식이 바뀌어도 이 규격은 고정.
-        //   Authentication                = '신원증' — 인증된 사용자 정보(이름=email, 권한 등). getName()으로 email을 읽는다.
-        //   ※ .getContext()는 값이 아니라 Mono<SecurityContext>를 준다 → 그래서 아래 .map/.flatMap으로 Mono 안에서 꺼내 이어붙인다.
+        // 보안 정보를 꺼내는 순서: Holder(접근 창구) → SecurityContext(보안 상태 상자) → Authentication(사용자 신원).
+        //   ① ReactiveSecurityContextHolder = 현재 리액티브 작업 체인의 SecurityContext에 접근하는
+        //       Spring Security의 정적 유틸리티. 보안 정보를 직접 보관하지 않고 Reactor Context에서 찾아온다.
+        //       WebFlux는 처리 도중 다른 스레드에서 이어질 수 있으므로, 스레드마다 따로인 ThreadLocal 대신
+        //       작업 체인과 함께 전달되는 Reactor Context를 쓴다. (Servlet MVC는 보통 ThreadLocal 사용)
+        //   ② SecurityContext = Spring Security의 표준 보안 상태 상자. 현재 Authentication을 담는다.
+        //       인증 정보를 세션·JWT 등 어떤 방식으로 저장·복원하더라도, 이후 코드는 이 규격으로 접근한다.
+        //   ③ Authentication = 실제 인증 결과(사용자 신원·권한 등). 이 프로젝트에서는 getName()으로 email을 읽는다.
+        //   ※ getContext()는 즉시 값을 꺼내는 대신, 구독 시 Reactor Context에서 꺼내 줄 Mono<SecurityContext>를 만든다.
         return ReactiveSecurityContextHolder.getContext()      // → Mono<SecurityContext>
                 .map(ctx -> ctx.getAuthentication().getName()) // 식별자(email) — 결과가 String(값)이라 map
                 .flatMap(userRepository::findByEmail)          // email → Mono<User> — 결과가 Mono라 flatMap

@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Positive; // 0과 음수 금지 (양수만
 
 // 주문 생성 요청 본문(JSON) DTO. POST /api/paper/orders 의 @RequestBody로 받는다.
 //  - 왜 record인가: 컨트롤러가 req.symbol()·req.quantity()를 '꺼내 읽기만' 하고 값을 바꾸지 않아서,
-//    요청 본문은 "한 번 만들어지면 안 바뀌는 데이터 묶음"이다 → 불변(immutable)인 record가 딱 맞다.
+//    요청 본문은 서버에 도착한 뒤 읽기 전용 입력값으로 다루므로, 불변(immutable) record가 잘 맞다.
 //  - record·DTO·@Valid 검증 흐름의 자세한 설명은 auth/dto/SignupRequest.java 참고. (여기선 주문 고유 규칙만)
 //  - 검증 규칙을 어기면 컨트롤러 로직에 닿기 전에 스프링이 자동으로 HTTP 400(요청 형식이나 값이 잘못돼서 서버가 처리할 수 없음)으로 막는다.
 public record CreateOrderRequest(

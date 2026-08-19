@@ -59,6 +59,16 @@ export function OrderBook({ snapshot, onPriceClick }: Props) {
       </div>
 
       <div className="asks">
+        {/*
+          Array.prototype.map:
+          배열의 각 원소에 콜백 함수를 한 번씩 호출하고, 각 호출의 반환값을 같은 순서로 모아 새 배열을 반환한다.
+          원본 배열은 변경하지 않는다.
+        */}
+        {/*
+          <div>...</div>는 JSX 표현식이고, 실행되면 React 요소 값이 됩니다.
+          map은 그 React 요소 값들을 모아 새 배열로 만들고, React는 이 배열을 asks div 안에 들어갈 자식 목록으로 인식하며,
+          ReactDOM이 실제 DOM div들로 렌더링합니다.
+        */}
         {askRows.map((row) => (
           <div
             key={`ask-${row.price}`}

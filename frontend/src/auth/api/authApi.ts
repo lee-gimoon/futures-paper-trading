@@ -6,6 +6,13 @@ import { toHttpError } from '../../shared/http';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+// API(Application Programming Interface)란 서로 다른 프로그램이
+// 정해진 규칙으로 요청과 응답을 주고받는 창구이다.
+//
+// fetch()는 브라우저에서 서버 API에 HTTP 요청을 보내는 내장 함수이다.
+// 예: fetch('/api/auth/login', ...)은 로그인 API 서버에 요청을 보내고,
+// 서버가 처리한 응답을 받아온다.
+
 // 회원가입: 성공 시 201 + 유저 정보. 단, 이것만으로는 로그인이 아니다(쿠키 미발급).
 export async function signup(email: string, password: string, displayName: string): Promise<User> {
   const res = await fetch('/api/auth/signup', {

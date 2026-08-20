@@ -69,20 +69,40 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     }
 
     // ── ② 로그인 ──  POST /api/auth/login
-    // ServerWebExchange exchange = 이번 요청/응답/세션 묶음. 인증정보를 세션에 저장할 때 필요.
+    // ServerWebExchange exchange = Spring이 이번 HTTP 요청을 받을 때 자동으로 넣어주는 요청/응답/세션 묶음.
+    //   - request: 브라우저가 보낸 요청 전체
+    //   - response: 브라우저에 보낼 응답을 준비하는 공간
+    //   - session: 이 요청과 연결된 로그인 세션
+    // session = 서버가 로그인 상태(SecurityContext)를 기억해 두는 저장 공간.
+    // cookie = 브라우저가 다음 요청 때 "내 세션 번호"를 서버에 알려 주는 작은 정보.
+    // 세션 로그인 방식: 서버는 로그인한 사용자 정보를 서버 session에 저장하고,
+    // 응답의 Set-Cookie 헤더로 브라우저에게 SESSION이라는 이름의 쿠키를 만들고, 그 값으로 X7K9... 같은 session 번호를 저장하라고 지시한다.
+    // 브라우저가 SESSION 쿠키를 저장하는 이유:
+    // 로그인에 성공해도 이후 요청은 모두 새 HTTP 요청이므로, 다음 요청에 SESSION 쿠키가 없으면 서버는 로그인하지 않은 요청으로 처리한다.
+    //
+    // login() 함수의 핵심 역할: email/password를 검증하고, 성공하면 서버 세션에 로그인 사용자 정보를 저장한 뒤
+    // 브라우저의 SESSION 쿠키와 그 세션을 연결해 이후 요청도 로그인 상태로 처리하게 한다.
     @PostMapping("/login")
     public Mono<ResponseEntity<Map<String, String>>> login(
             @Valid @RequestBody LoginRequest req, ServerWebExchange exchange) {
-        // 1) 입력한 이메일/비번을 "인증 시도 토큰"으로 포장
+        // 1) 인증 매니저(로그인 정보를 검증해 성공/실패를 결정하는 Spring Security 객체)는
+        //    email과 password를 각각 받지 않고, 모든 인증 요청을 Authentication 토큰 하나로 받는다.
+        //    그래서 로그인 입력(email/password)을 Spring Security 표준 "인증 요청 토큰"(UsernamePasswordAuthenticationToken)으로 포장해 전달한다.
+        //    이 토큰은 아직 인증 전이며, 다음 authenticate(token)에서 DB 조회·비밀번호 검증이 수행된다.
+        // var = 오른쪽 값으로 지역 변수의 타입을 컴파일 시 자동 추론하는 Java 문법(JavaScript var와 다름).
         var token = new UsernamePasswordAuthenticationToken(req.email(), req.password());
-        // 2) 인증 매니저에 검증 위임(내부적으로 유저 조회 + BCrypt 비번 비교)
+        // 2) authenticationManager = 로그인 검증 담당 객체.
+        //    아래 authenticate(token) 호출이 token의 email로 DB에서 사용자를 찾고, 입력한 원문 password와 DB의 BCrypt 해시를 비교해 인증 성공/실패를 결정한다.
+        //    인증 성공 시에는 인증 완료된 Authentication(현재 사용자의 식별자·권한·인증 완료 여부를 담는 Spring Security 신원증)을 흘려보내는 Mono를 반환하고,
+        //    실패하면 AuthenticationException 오류를 발생시킨다.
         return authenticationManager.authenticate(token)
-                .flatMap(auth -> {            // 3) auth = 검증 끝난 "신원증"(성공 시에만 들어옴)
-                    SecurityContext context = new SecurityContextImpl(auth);  // 신원증을 세션이 알아듣는 표준 그릇에 담기
-                    return securityContextRepository.save(exchange, context)  // 세션에 저장 + 응답에 SESSION 쿠키 써넣기
-                            .thenReturn(ResponseEntity.ok(Map.of("message", "로그인 성공"))); // 저장 끝나면 → 200 응답 내보내기
+                .flatMap(auth -> { // 3) 인증 성공 시에만 인증 완료된 Authentication 객체가 auth 변수로 들어온다.
+                    SecurityContext context = new SecurityContextImpl(auth); // Authentication을 담는 Spring Security 표준 보안 정보 상자 생성
+                    return securityContextRepository.save(exchange, context) // SecurityContext를 서버 세션에 저장하고, 새 세션이면 Spring이 응답에 세션 ID 쿠키를 설정한다.
+                            .thenReturn(ResponseEntity.ok(Map.of("message", "로그인 성공"))); // 세션 저장이 끝난 뒤 200 응답 반환
                 })
-                // 4) 인증 실패 → 401 Unauthorized + 안내 메시지 (어느 쪽이 틀렸는지는 일부러 안 알려줌)
+                // 4) 인증 실패 시 발생한 AuthenticationException을 잡아 401 응답으로 바꾼다.
+                //    email과 password 중 무엇이 틀렸는지는 보안을 위해 알려 주지 않는다.
                 .onErrorResume(AuthenticationException.class, e ->
                         Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                 .body(Map.of("message", "이메일 또는 비밀번호가 올바르지 않습니다."))));

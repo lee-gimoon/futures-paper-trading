@@ -90,11 +90,21 @@ public class PaperOrderController {
     }
 
     // 현재 로그인 유저의 user_id 꺼내기.
-    //   SecurityContext에서 현재 로그인한 사용자의 email을 꺼내고,
-    //   그 email로 DB에서 User를 찾은 뒤, User의 id만 Long으로 꺼낸다.
-    //   /api/paper/orders는 인증 필수 경로라, 비로그인 요청은 Security 필터가 '컨트롤러에 닿기 전에' 401로 끊는다.
-    //   → 그래서 이 컨트롤러 코드(create()/currentUserId())가 실행된다는 것 자체가 로그인 통과를 뜻한다.
-    //     ('여기 닿으면' = 요청이 필터를 통과해 이 컨트롤러 메서드까지 도달했다면. 그래서 아래 인증정보 추출에 null 걱정이 없다.)
+    //
+    // 로그인 성공 시 login()이 인증 완료 Authentication을 SecurityContext에 담아
+    // securityContextRepository.save(exchange, context)로 SecurityContext를 서버 세션에 저장한다.
+    // 세션이 새로 만들어지거나 세션 ID가 변경되면, 응답을 보낼 때 WebFlux가
+    // Set-Cookie: SESSION=세션식별값 헤더를 자동으로 추가하고, 브라우저는 이를 쿠키로 저장한다.
+    //
+    // 이후 브라우저가 보호된 API를 호출하면:
+    //   1) 브라우저가 요청 헤더에 SESSION 쿠키를 함께 보낸다.
+    //      예: Cookie: SESSION=세션식별값
+    //   2) WebFlux의 세션 관리기가 SESSION 쿠키의 세션 식별값으로 서버 세션(WebSession)을 찾는다.
+    //   3) Spring Security의 ReactorContextWebFilter가 서버 세션에 저장된 SecurityContext를 복원한다.
+    //   4) 이 필터는 복원한 SecurityContext를 현재 WebFlux 요청의 Reactor Context에 넣는다.
+    //      Reactor Context는 이 요청의 리액티브 작업 체인을 따라 전달되는 보안 정보 보관 위치다.
+    //   5) 아래 ReactiveSecurityContextHolder.getContext()는 세션을 직접 조회하는 것이 아니라,
+    //      필터가 Reactor Context에 넣어 둔 SecurityContext를 Mono로 읽는다.
     private Mono<Long> currentUserId() {
         // 보안 정보를 꺼내는 순서: Holder(접근 창구) → SecurityContext(보안 상태 상자) → Authentication(사용자 신원).
         //   ① ReactiveSecurityContextHolder = 현재 리액티브 작업 체인의 SecurityContext에 접근하는

@@ -71,12 +71,16 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
         //     .build();                           // 최종 SecurityWebFilterChain 생성
     }
 
-    // 로그인 컨트롤러가 직접 호출하는 인증 매니저 (UserDetailsService로 사용자 조회 + BCrypt로 비밀번호 비교)
+    // 로그인 컨트롤러가 직접 호출하는 인증 매니저
+    // (ReactiveUserDetailsService를 통해 email로 DB 사용자를 찾고, 입력 비밀번호를 DB의 BCrypt 해시와 비교해 인증한다)
     // @Bean → ReactiveAuthenticationManager 타입 빈으로 등록. 파라미터는 스프링이 주입한다.
-    //  - userDetailsService = 사용자 정보 조회, passwordEncoder = PasswordEncoderConfig가 만든 그 BCrypt 빈
+    //
+    // 반환 타입을 ReactiveAuthenticationManager 인터페이스로 선언하는 이유는,
+    // 구현체를 교체해도 외부가 authenticate(Authentication)라는 공통 인증 기능에만 의존하도록 하기 위함이다.
     @Bean
     public ReactiveAuthenticationManager authenticationManager(
-            ReactiveUserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+            ReactiveUserDetailsService userDetailsService, // 사용자 정보 조회
+            PasswordEncoder passwordEncoder) {             // PasswordEncoderConfig가 만든 BCrypt 빈
         // "사용자 조회 → 입력 비밀번호와 저장된 해시 비교"를 대신 해주는 표준 구현체
         UserDetailsRepositoryReactiveAuthenticationManager manager =
                 new UserDetailsRepositoryReactiveAuthenticationManager(userDetailsService);

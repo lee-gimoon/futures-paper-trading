@@ -91,14 +91,14 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
         //    이 토큰은 아직 인증 전이며, 다음 authenticate(token)에서 DB 조회·비밀번호 검증이 수행된다.
         // var = 오른쪽 값으로 지역 변수의 타입을 컴파일 시 자동 추론하는 Java 문법(JavaScript var와 다름).
         var token = new UsernamePasswordAuthenticationToken(req.email(), req.password());
-        // 2) authenticationManager = 로그인 검증 담당 객체.
+        // 2) authenticationManager = 로그인 인증(사용자 검증)을 담당하는 객체.
         //    아래 authenticate(token) 호출이 token의 email로 DB에서 사용자를 찾고, 입력한 원문 password와 DB의 BCrypt 해시를 비교해 인증 성공/실패를 결정한다.
         //    인증 성공 시에는 인증 완료된 Authentication(현재 사용자의 식별자·권한·인증 완료 여부를 담는 Spring Security 신원증)을 흘려보내는 Mono를 반환하고,
         //    실패하면 AuthenticationException 오류를 발생시킨다.
         return authenticationManager.authenticate(token)
                 .flatMap(auth -> { // 3) 인증 성공 시에만 인증 완료된 Authentication 객체가 auth 변수로 들어온다.
                     SecurityContext context = new SecurityContextImpl(auth); // Authentication을 담는 Spring Security 표준 보안 정보 상자 생성
-                    return securityContextRepository.save(exchange, context) // SecurityContext를 서버 세션에 저장하고, 새 세션이면 Spring이 응답에 세션 ID 쿠키를 설정한다.
+                    return securityContextRepository.save(exchange, context) // SecurityContext(Authentication이 담긴 그릇)를 서버 세션에 저장한다.
                             .thenReturn(ResponseEntity.ok(Map.of("message", "로그인 성공"))); // 세션 저장이 끝난 뒤 200 응답 반환
                 })
                 // 4) 인증 실패 시 발생한 AuthenticationException을 잡아 401 응답으로 바꾼다.

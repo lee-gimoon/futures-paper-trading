@@ -1,12 +1,17 @@
+// 화면을 만드는 기본 React Native 컴포넌트와 스타일 도구를 가져온다.
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+// 카메라 구멍이나 상태 표시줄에 화면 내용이 가려지지 않도록 한다.
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// app/index.tsx는 앱을 처음 열었을 때 표시되는 첫 화면이다.
 export default function HomeScreen() {
+  // 버튼을 눌렀을 때 실행할 함수다.
   const showReadyMessage = () => {
     Alert.alert('준비 완료', '모바일 앱의 첫 화면이 정상적으로 실행되었습니다.');
   };
 
   return (
+    // JSX는 화면에 어떤 컴포넌트를 어떤 순서로 보여 줄지 작성하는 부분이다.
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.badge}>
@@ -18,6 +23,7 @@ export default function HomeScreen() {
           실제 자산을 사용하지 않고 선물 거래를 연습하는 모바일 앱입니다.
         </Text>
 
+        {/* Pressable은 사용자가 누를 수 있는 React Native 컴포넌트다. */}
         <Pressable
           accessibilityRole="button"
           onPress={showReadyMessage}
@@ -26,12 +32,13 @@ export default function HomeScreen() {
           <Text style={styles.buttonText}>첫 화면 확인하기</Text>
         </Pressable>
 
-        <Text style={styles.step}>1단계 · Expo 프로젝트 실행</Text>
+        <Text style={styles.step}>Expo 프로젝트 실행 완료</Text>
       </View>
     </SafeAreaView>
   );
 }
 
+// StyleSheet는 위 JSX에서 사용하는 색상, 크기, 간격과 배치를 한곳에 모은다.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

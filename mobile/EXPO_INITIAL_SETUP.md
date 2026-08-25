@@ -6,95 +6,187 @@
 
 ---
 
-## 먼저: React Native와 Expo는 무엇이고 왜 함께 쓰나?
+## 먼저: 웹 React와 모바일 React는 무엇이 다른가?
 
-### “React Native 앱”이라는 말의 뜻
+가장 먼저 기억할 핵심은 다음 문장이다.
 
-네. **React Native를 사용해 Android 또는 iOS 화면을 만드는 앱**을 React Native 앱이라고 부른다.
+> 모바일에서 React를 안 쓰는 것이 아니라, **React를 쓰되 브라우저용 `react-dom` 대신 React Native를 사용한다.**
 
-웹 React에서는 `div`, `button` 같은 HTML 요소를 화면에 그린다. React Native에서는 `View`, `Text`, `Pressable` 같은 컴포넌트를 사용한다.
-
-큰 실행 흐름은 다음과 같다.
+React는 웹 전용 기술이 아니다. React의 중심 역할은 컴포넌트, 상태와 속성을 사용해 **현재 어떤 UI가 필요한지 계산하는 것**이다. 계산한 UI를 실제로 어느 화면에 표시할지는 플랫폼별 도구가 담당한다.
 
 ```text
-React 웹
-내 JavaScript 코드 → Chrome의 V8 엔진이 실행 → react-dom이 브라우저 화면 반영 → HTML 화면 표시
-
-React Native 앱
-내 JavaScript 코드 → Hermes 엔진이 실행 → React Native가 네이티브 UI 반영 → 운영체제가 화면 표시
+웹     = React + react-dom
+모바일 = React + React Native
 ```
 
-현재 프로젝트의 개발 환경에서는 TypeScript와 TSX를 바로 실행하지 않는다. Metro가 이를 JavaScript로 변환하고 묶은 다음, 휴대폰 안의 Hermes JavaScript 엔진이 실행한다.
+### 웹과 모바일에서 공통으로 사용하는 React
+
+두 환경 모두 React의 컴포넌트와 `useState` 같은 Hook을 사용한다.
+
+웹 React 예시:
+
+```tsx
+import { useState } from 'react';
+
+const [count, setCount] = useState(0);
+
+<button onClick={() => setCount(count + 1)}>
+  {count}
+</button>
+```
+
+모바일 React 예시:
+
+```tsx
+import { useState } from 'react';
+import { Pressable, Text } from 'react-native';
+
+const [count, setCount] = useState(0);
+
+<Pressable onPress={() => setCount(count + 1)}>
+  <Text>{count}</Text>
+</Pressable>
+```
+
+상태를 관리하는 React 코드는 거의 같다. 실제 화면 요소와 사용자 입력을 연결하는 플랫폼 도구가 다르다.
+
+### React 웹과 React Native 모바일 비교
+
+| 구분 | React 웹 | React Native 모바일 |
+|---|---|---|
+| 공통 UI 로직 | React | React |
+| 화면에 반영하는 도구 | `react-dom` | `react-native` |
+| 기본 화면 요소 | `div`, `button`, `input` | `View`, `Pressable`, `TextInput` |
+| 글자 | `p`, `span` | `Text` |
+| 스타일 | CSS | 스타일 객체, `StyleSheet` |
+| 화면 구조 | 브라우저 DOM | Android/iOS 네이티브 UI |
+| 대표 JavaScript 엔진 | Chrome의 V8 | Hermes |
+| 현재 프로젝트의 변환·묶음 도구 | Vite | Metro |
+| 실행 장소 | 웹 브라우저 | Expo Go, 개발 빌드 또는 출시 앱 |
+
+### 웹 React 코드가 실행되어 화면에 나타나는 과정
+
+이 프로젝트의 웹 개발 환경에서는 Vite가 TypeScript/TSX를 JavaScript로 변환한다. 브라우저의 JavaScript 엔진이 코드를 실행하고, React가 계산한 UI를 `react-dom`이 DOM에 반영하면 브라우저가 화면을 그린다.
 
 ```text
-작성한 TypeScript/TSX 코드 (`<View>`, `<Text>` 등)
+작성한 TypeScript/TSX
     ↓
-Metro가 JavaScript로 변환하고 앱 코드 묶음 생성
+Vite가 JavaScript로 변환·묶음
     ↓
-Hermes JavaScript 엔진이 그 JavaScript 코드 실행
+Chrome의 V8 엔진이 JavaScript 실행
     ↓
-React가 현재 상태를 기준으로 어떤 UI가 필요한지 계산
+React가 현재 상태에 필요한 UI 계산
     ↓
-React Native의 네이티브 코드가 Android/iOS 화면 시스템에 UI 변경 반영
+react-dom이 브라우저 DOM에 변경 반영
     ↓
-Android: Android 화면 시스템으로 표시
-iPhone: iOS 화면 시스템으로 표시
+브라우저가 HTML/CSS 화면 표시
 ```
 
-여기서 “반영” 또는 “표시 요청”은 서버로 보내는 HTTP 요청이 아니다. 휴대폰 앱 내부에서 JavaScript 쪽의 화면 변경 결과를 Android/iOS의 실제 화면 요소에 적용하는 과정이다.
+### 모바일 React 코드가 실행되어 화면에 나타나는 과정
 
-개발 중에는 Expo Go 앱 안에 Hermes와 React Native의 네이티브 실행 환경이 들어 있다. Metro가 우리 앱의 JavaScript 코드를 Expo Go에 전달하면 그 안에서 실행된다. 나중에 APK/AAB로 빌드하면 Expo Go 대신 우리가 만든 앱 안에 같은 실행 환경이 포함된다.
+모바일에서는 `react-dom`과 브라우저 DOM을 사용하지 않는다. Metro가 TypeScript/TSX를 JavaScript로 변환하고, Hermes 엔진이 실행한다. React가 필요한 UI를 계산하면 React Native가 그 결과를 Android/iOS의 실제 화면 요소에 반영한다.
 
-따라서 이 프로젝트는 Expo를 사용하더라도 React Native 위에서 실행되므로, 정확히는 **“Expo 도구를 사용하는 React Native 앱”**이다.
+```text
+작성한 TypeScript/TSX (`<View>`, `<Text>` 등)
+    ↓
+Metro가 JavaScript로 변환·묶음
+    ↓
+Hermes 엔진이 JavaScript 실행
+    ↓
+React가 현재 상태에 필요한 UI 계산
+    ↓
+React Native가 Android/iOS 네이티브 UI에 변경 반영
+    ↓
+Android/iOS 운영체제가 실제 화면 표시
+```
+
+여기서 “반영”은 서버로 보내는 HTTP 요청이 아니다. 한 앱 안에서 React가 계산한 화면 변경을 운영체제의 실제 화면 요소에 적용하는 과정이다.
+
+따라서 **React Native 앱**은 React를 사용하면서 화면 출력 대상으로 브라우저가 아닌 Android/iOS를 선택한 앱이라고 이해하면 된다.
+
+---
+
+## React, React Native와 Expo의 역할
 
 ### 라이브러리와 프레임워크의 차이
 
-경계가 항상 딱 나뉘지는 않지만, 처음에는 아래처럼 이해하면 된다.
+경계가 항상 완벽하게 나뉘지는 않지만, 처음에는 아래처럼 이해하면 된다.
 
 | 구분 | 중심 역할 | 누가 전체 흐름을 정하는가? |
 |---|---|---|
-| 라이브러리 | 필요한 기능을 가져다 쓴다. | 개발자가 앱 구조와 사용 시점을 주로 정한다. |
-| 프레임워크 | 앱을 만들 기본 구조와 실행 흐름을 제공한다. | 프레임워크가 정한 규칙과 구조 안에서 개발한다. |
+| 라이브러리 | 필요한 기능을 가져다 쓴다. | 개발자가 구조와 사용 시점을 주로 정한다. |
+| 프레임워크 | 앱을 만들 기본 구조와 개발 흐름을 제공한다. | 프레임워크가 제공하는 규칙과 구조 안에서 개발한다. |
 
-### React Native는 라이브러리인가, 프레임워크인가?
+### 각각 무엇인가?
 
-React Native 공식 문서는 React Native를 **네이티브 사용자 인터페이스를 만들기 위한 JavaScript 라이브러리**라고 설명한다. `View`, `Text`, `Image` 같은 네이티브 UI 컴포넌트와 Android/iOS에서 React 코드를 실행하는 기반을 제공한다.
-
-다만 React Native만으로는 실제 앱에 필요한 여러 결정을 직접 해야 한다. 예를 들어 화면 이동 방식, 파일 구조, 카메라·위치 같은 기기 기능 접근, 개발 서버·빌드 설정을 어떤 도구로 할지 정해야 한다. 그래서 React Native 공식 문서도 새 앱에는 Expo 같은 프레임워크 사용을 권장한다.
-
-### Expo는 라이브러리인가, 프레임워크인가?
-
-Expo 전체는 **React Native 프레임워크**다. React Native 앱을 만드는 기본 구조와 개발 흐름을 제공한다.
-
-하지만 Expo 안에는 여러 종류가 함께 있다.
-
-| Expo 구성 | 종류 | 예시 역할 |
+| 이름 | 이 문서에서의 구분 | 담당 역할 |
 |---|---|---|
-| Expo 프레임워크 | 프레임워크 | 프로젝트 구조와 React Native 개발 흐름을 제공한다. |
-| Expo SDK | 라이브러리 모음 | 카메라, 위치, 알림 등 기기 기능을 가져다 쓴다. |
-| Expo Router | 라이브러리 | `app/` 파일을 기준으로 화면 이동을 관리한다. |
-| Expo CLI | 개발 도구 | `expo start`로 개발 서버를 실행한다. |
-| Expo Go | 테스트용 앱 | 개발 중인 코드를 휴대폰에서 연다. |
-| EAS | 선택 가능한 클라우드 서비스 | 앱 빌드·업데이트·스토어 제출을 돕는다. |
+| React | UI 라이브러리 | 컴포넌트와 상태를 사용해 어떤 UI가 필요한지 계산한다. |
+| `react-dom` | 웹 렌더링 라이브러리 | React의 계산 결과를 브라우저 DOM에 반영한다. |
+| React Native | 모바일 렌더링 기반·실행 환경 | React의 계산 결과를 Android/iOS 네이티브 UI에 반영한다. |
+| Expo | React Native 프레임워크와 도구 생태계 | 프로젝트 구성, 개발 서버, 기기 기능, 화면 이동과 빌드 과정을 돕는다. |
 
-즉 `package.json`의 `expo`는 설치하는 **npm 패키지** 이름이고, Expo는 그 패키지·SDK·CLI·Router 등을 포함한 **프레임워크와 도구 생태계 전체 이름**이기도 하다.
+React Native를 넓은 의미에서 프레임워크라고 부르는 자료도 있다. 하지만 React Native 자체는 화면 이동 방식이나 수많은 기기 API의 사용 방법까지 하나의 앱 구조로 정해 주지 않는다. React Native 공식 문서도 새 앱을 만들 때 Expo 같은 프레임워크 사용을 권장한다. 따라서 여기서는 **React Native는 모바일 화면을 담당하는 기반**, **Expo는 그 기반을 사용해 앱 전체 개발 과정을 구성하는 프레임워크**로 구분한다.
 
 ### 왜 React Native와 Expo를 둘 다 쓰나?
 
-둘 중 하나를 고르는 것이 아니다. 역할이 다르다.
+둘 중 하나를 선택하는 관계가 아니다. Expo가 React Native 위에서 앱 개발에 필요한 도구와 규칙을 더 제공하는 관계다.
 
 ```text
-TypeScript로 화면 코드 작성
-        ↓
-React Native
-→ View, Text, Pressable을 Android/iOS 화면 시스템에 표시하도록 요청
-        ↓
-Expo
-→ 프로젝트 생성, 개발 서버, Expo Go, Router, 기기 기능 라이브러리,
-  나중의 앱 빌드와 배포를 더 쉽게 처리
+Expo 프로젝트
+│
+├─ React
+│  └─ 컴포넌트와 상태로 필요한 UI 계산
+│
+├─ React Native
+│  └─ 계산된 UI를 Android/iOS 네이티브 화면에 반영
+│
+└─ Expo가 추가로 제공
+   ├─ Expo CLI와 Metro 개발 서버
+   ├─ Expo Router 화면 이동
+   ├─ Expo SDK 기기 기능 라이브러리
+   ├─ Expo Go 또는 개발 빌드
+   └─ 앱 설정과 빌드 도구
 ```
 
-이 프로젝트는 React Native만으로 모든 도구를 직접 고르기보다, Expo가 미리 잘 맞춰 둔 개발 환경을 사용한다. 그래서 처음에는 화면과 기능 코드에 더 집중할 수 있다.
+이 프로젝트를 **Expo 앱**이라고 불러도 되고 **React Native 앱**이라고 불러도 된다. 더 정확히 풀어 쓰면 **“Expo 프레임워크와 도구를 사용하는 React Native 앱”**이다.
+
+---
+
+## Expo는 개발할 때만 필요한가, 배포 후에도 필요한가?
+
+Expo 전체를 하나의 프로그램처럼 생각하면 헷갈린다. Expo 안에는 개발할 때만 사용하는 도구와 출시 앱에도 포함되는 라이브러리가 함께 있다.
+
+| Expo 관련 항목 | 개발 중 | 출시 앱 | 설명 |
+|---|---|---|---|
+| `create-expo-app` | 사용 | 포함 안 됨 | 프로젝트를 처음 생성하는 명령이다. |
+| Expo CLI | 사용 | 포함 안 됨 | 개발 서버와 각종 명령을 실행하는 컴퓨터용 도구다. |
+| Metro 개발 서버 | 사용 | 실행되지 않음 | 개발 중 코드를 변환해 전송한다. 출시 빌드에서는 미리 만든 코드 묶음이 앱에 포함된다. |
+| Expo Go | 현재 사용 | 포함 안 됨 | 학습·초기 개발용 테스트 앱이다. 사용자가 설치할 최종 앱이 아니다. |
+| `expo` 패키지 | 사용 | 필요한 코드 포함 | Expo 모듈이 동작할 기반을 프로젝트에 제공한다. |
+| Expo Router | 사용 | 포함됨 | 출시 앱에서도 화면 이동을 처리한다. |
+| 설치한 Expo SDK 모듈 | 사용 | 사용하는 모듈 포함 | 카메라·위치 등 앱이 실제 사용하는 기능은 출시 앱에도 들어간다. |
+| `app.json` 설정 | 사용 | 설정 결과 반영 | 앱 이름, Android 패키지 같은 값이 빌드 결과에 적용된다. |
+| EAS Build·Submit | 선택 | 앱에 포함 안 됨 | 외부 클라우드에서 빌드하거나 스토어 제출을 돕는 선택 서비스다. |
+
+개발과 배포의 차이를 단순화하면 다음과 같다.
+
+```text
+현재 개발 중
+PC의 Metro → Expo Go 안의 React Native + Hermes → 화면 표시
+
+Google Play 출시 후
+설치된 우리 앱
+├─ 미리 묶은 JavaScript 코드
+├─ React와 React Native 실행 환경
+├─ Hermes 엔진
+├─ Expo Router
+└─ 실제로 사용하는 Expo SDK 모듈
+```
+
+출시된 앱 사용자는 Expo Go를 설치하지 않으며, 개발자의 Metro 서버에 연결하지도 않는다. 앱에 필요한 실행 코드가 APK/AAB 빌드 결과 안에 들어간다.
+
+Expo의 EAS 서비스를 반드시 사용해야 하는 것도 아니다. Expo 앱은 일반 React Native 네이티브 앱이므로 EAS로 클라우드 빌드를 할 수도 있고, Android/iOS 도구나 다른 CI 서비스를 사용해 직접 빌드할 수도 있다.
 
 ---
 
@@ -393,3 +485,5 @@ package.json + package-lock.json
 - [React Native 공식 소개](https://reactnative.dev/)
 - [Expo와 React Native의 차이](https://docs.expo.dev/faq/)
 - [Expo 핵심 개념](https://docs.expo.dev/core-concepts/)
+- [Expo 앱의 개발·빌드·배포 흐름](https://docs.expo.dev/workflow/overview/)
+- [Expo 개발 모드와 프로덕션 모드](https://docs.expo.dev/workflow/development-mode/)

@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Futures Paper Trading",
+    "slug": "futures-paper-trading-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "futurespapertrading",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.futurespapertrading.mobile",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

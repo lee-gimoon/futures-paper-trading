@@ -1,0 +1,28 @@
+# npm dependencies
+node_modules/
+
+# Expo generated files
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Generated native projects
+/android/
+/ios/
+
+# Local environment files
+.env*.local
+
+# Tool output
+*.tsbuildinfo
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Signing files
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision

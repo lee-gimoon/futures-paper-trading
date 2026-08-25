@@ -12,14 +12,19 @@
 
 네. **React Native를 사용해 Android 또는 iOS 화면을 만드는 앱**을 React Native 앱이라고 부른다.
 
-웹 React에서는 `div`, `button` 같은 HTML 요소를 화면에 그린다. React Native에서는 `View`, `Text`, `Pressable` 같은 컴포넌트를 사용하고, React Native가 이를 Android와 iOS의 네이티브 UI로 연결한다.
+웹 React에서는 `div`, `button` 같은 HTML 요소를 화면에 그린다. React Native에서는 `View`, `Text`, `Pressable` 같은 컴포넌트를 사용한다. React Native는 이 코드를 읽고, 휴대폰 운영체제의 화면 시스템에 해당 UI를 표시하도록 요청한다.
 
 ```text
 React 웹
 React 코드 → react-dom → 브라우저의 HTML 화면
 
 React Native 앱
-React 코드 → React Native → Android/iOS의 네이티브 화면
+React Native 코드 (`<View>`, `<Text>` 등)
+    ↓
+React Native가 휴대폰 운영체제의 화면 시스템에 UI 표시 요청
+    ↓
+Android: Android 화면 시스템으로 표시
+iPhone: iOS 화면 시스템으로 표시
 ```
 
 따라서 이 프로젝트는 Expo를 사용하더라도 React Native 위에서 실행되므로, 정확히는 **“Expo 도구를 사용하는 React Native 앱”**이다.
@@ -64,7 +69,7 @@ Expo 전체는 **React Native 프레임워크**다. React Native 앱을 만드�
 TypeScript로 화면 코드 작성
         ↓
 React Native
-→ View, Text, Pressable을 Android/iOS 네이티브 UI로 그림
+→ View, Text, Pressable을 Android/iOS 화면 시스템에 표시하도록 요청
         ↓
 Expo
 → 프로젝트 생성, 개발 서버, Expo Go, Router, 기기 기능 라이브러리,

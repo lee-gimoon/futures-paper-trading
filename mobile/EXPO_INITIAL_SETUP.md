@@ -4,7 +4,78 @@
 
 로그인, 시세, 주문처럼 아직 구현하지 않은 기능은 다루지 않는다. 새로운 기능은 실제 파일을 만들 때 학습 계획에 따라 하나씩 추가한다.
 
-현재 구조:
+---
+
+## 먼저: React Native와 Expo는 무엇이고 왜 함께 쓰나?
+
+### “React Native 앱”이라는 말의 뜻
+
+네. **React Native를 사용해 Android 또는 iOS 화면을 만드는 앱**을 React Native 앱이라고 부른다.
+
+웹 React에서는 `div`, `button` 같은 HTML 요소를 화면에 그린다. React Native에서는 `View`, `Text`, `Pressable` 같은 컴포넌트를 사용하고, React Native가 이를 Android와 iOS의 네이티브 UI로 연결한다.
+
+```text
+React 웹
+React 코드 → react-dom → 브라우저의 HTML 화면
+
+React Native 앱
+React 코드 → React Native → Android/iOS의 네이티브 화면
+```
+
+따라서 이 프로젝트는 Expo를 사용하더라도 React Native 위에서 실행되므로, 정확히는 **“Expo 도구를 사용하는 React Native 앱”**이다.
+
+### 라이브러리와 프레임워크의 차이
+
+경계가 항상 딱 나뉘지는 않지만, 처음에는 아래처럼 이해하면 된다.
+
+| 구분 | 중심 역할 | 누가 전체 흐름을 정하는가? |
+|---|---|---|
+| 라이브러리 | 필요한 기능을 가져다 쓴다. | 개발자가 앱 구조와 사용 시점을 주로 정한다. |
+| 프레임워크 | 앱을 만들 기본 구조와 실행 흐름을 제공한다. | 프레임워크가 정한 규칙과 구조 안에서 개발한다. |
+
+### React Native는 라이브러리인가, 프레임워크인가?
+
+React Native 공식 문서는 React Native를 **네이티브 사용자 인터페이스를 만들기 위한 JavaScript 라이브러리**라고 설명한다. `View`, `Text`, `Image` 같은 네이티브 UI 컴포넌트와 Android/iOS에서 React 코드를 실행하는 기반을 제공한다.
+
+다만 React Native만으로는 실제 앱에 필요한 여러 결정을 직접 해야 한다. 예를 들어 화면 이동 방식, 파일 구조, 카메라·위치 같은 기기 기능 접근, 개발 서버·빌드 설정을 어떤 도구로 할지 정해야 한다. 그래서 React Native 공식 문서도 새 앱에는 Expo 같은 프레임워크 사용을 권장한다.
+
+### Expo는 라이브러리인가, 프레임워크인가?
+
+Expo 전체는 **React Native 프레임워크**다. React Native 앱을 만드는 기본 구조와 개발 흐름을 제공한다.
+
+하지만 Expo 안에는 여러 종류가 함께 있다.
+
+| Expo 구성 | 종류 | 예시 역할 |
+|---|---|---|
+| Expo 프레임워크 | 프레임워크 | 프로젝트 구조와 React Native 개발 흐름을 제공한다. |
+| Expo SDK | 라이브러리 모음 | 카메라, 위치, 알림 등 기기 기능을 가져다 쓴다. |
+| Expo Router | 라이브러리 | `app/` 파일을 기준으로 화면 이동을 관리한다. |
+| Expo CLI | 개발 도구 | `expo start`로 개발 서버를 실행한다. |
+| Expo Go | 테스트용 앱 | 개발 중인 코드를 휴대폰에서 연다. |
+| EAS | 선택 가능한 클라우드 서비스 | 앱 빌드·업데이트·스토어 제출을 돕는다. |
+
+즉 `package.json`의 `expo`는 설치하는 **npm 패키지** 이름이고, Expo는 그 패키지·SDK·CLI·Router 등을 포함한 **프레임워크와 도구 생태계 전체 이름**이기도 하다.
+
+### 왜 React Native와 Expo를 둘 다 쓰나?
+
+둘 중 하나를 고르는 것이 아니다. 역할이 다르다.
+
+```text
+TypeScript로 화면 코드 작성
+        ↓
+React Native
+→ View, Text, Pressable을 Android/iOS 네이티브 UI로 그림
+        ↓
+Expo
+→ 프로젝트 생성, 개발 서버, Expo Go, Router, 기기 기능 라이브러리,
+  나중의 앱 빌드와 배포를 더 쉽게 처리
+```
+
+이 프로젝트는 React Native만으로 모든 도구를 직접 고르기보다, Expo가 미리 잘 맞춰 둔 개발 환경을 사용한다. 그래서 처음에는 화면과 기능 코드에 더 집중할 수 있다.
+
+---
+
+## 현재 프로젝트 구조
 
 ```text
 mobile/
@@ -25,17 +96,9 @@ mobile/
 
 ---
 
-## Expo란 무엇인가?
+## Expo가 현재 프로젝트에서 하는 일
 
-Expo는 React Native 모바일 앱의 개발, 실행, 휴대폰 연결과 빌드를 도와주는 **도구와 라이브러리 묶음**이다.
-
-Expo가 프로그래밍 언어인 것은 아니다.
-
-```text
-TypeScript       → 우리가 화면과 동작을 작성하는 언어
-React Native     → TypeScript 코드로 휴대폰 UI를 만드는 기술
-Expo             → React Native 앱의 실행과 빌드를 도와주는 도구
-```
+Expo는 프로그래밍 언어가 아니다. 화면과 동작은 TypeScript로 작성하고, React Native가 휴대폰 UI를 만든다. Expo는 그 React Native 앱을 쉽게 개발하고 실행하도록 돕는다.
 
 현재 프로젝트에서 Expo가 하는 일은 다음과 같다.
 
@@ -289,3 +352,11 @@ package.json + package-lock.json
        ↓
 7. app/index.tsx 첫 화면 표시
 ```
+
+---
+
+## 공식 참고 문서
+
+- [React Native 공식 소개](https://reactnative.dev/)
+- [Expo와 React Native의 차이](https://docs.expo.dev/faq/)
+- [Expo 핵심 개념](https://docs.expo.dev/core-concepts/)

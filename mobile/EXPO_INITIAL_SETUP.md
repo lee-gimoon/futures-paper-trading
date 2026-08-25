@@ -12,20 +12,38 @@
 
 네. **React Native를 사용해 Android 또는 iOS 화면을 만드는 앱**을 React Native 앱이라고 부른다.
 
-웹 React에서는 `div`, `button` 같은 HTML 요소를 화면에 그린다. React Native에서는 `View`, `Text`, `Pressable` 같은 컴포넌트를 사용한다. React Native는 이 코드를 읽고, 휴대폰 운영체제의 화면 시스템에 해당 UI를 표시하도록 요청한다.
+웹 React에서는 `div`, `button` 같은 HTML 요소를 화면에 그린다. React Native에서는 `View`, `Text`, `Pressable` 같은 컴포넌트를 사용한다.
+
+큰 실행 흐름은 다음과 같다.
 
 ```text
 React 웹
-React 코드 → react-dom → 브라우저의 HTML 화면
+내 JavaScript 코드 → Chrome의 V8 엔진이 실행 → react-dom이 브라우저 화면 반영 → HTML 화면 표시
 
 React Native 앱
-React Native 코드 (`<View>`, `<Text>` 등)
+내 JavaScript 코드 → Hermes 엔진이 실행 → React Native가 네이티브 UI 반영 → 운영체제가 화면 표시
+```
+
+현재 프로젝트의 개발 환경에서는 TypeScript와 TSX를 바로 실행하지 않는다. Metro가 이를 JavaScript로 변환하고 묶은 다음, 휴대폰 안의 Hermes JavaScript 엔진이 실행한다.
+
+```text
+작성한 TypeScript/TSX 코드 (`<View>`, `<Text>` 등)
     ↓
-React Native가 휴대폰 운영체제의 화면 시스템에 UI 표시 요청
+Metro가 JavaScript로 변환하고 앱 코드 묶음 생성
+    ↓
+Hermes JavaScript 엔진이 그 JavaScript 코드 실행
+    ↓
+React가 현재 상태를 기준으로 어떤 UI가 필요한지 계산
+    ↓
+React Native의 네이티브 코드가 Android/iOS 화면 시스템에 UI 변경 반영
     ↓
 Android: Android 화면 시스템으로 표시
 iPhone: iOS 화면 시스템으로 표시
 ```
+
+여기서 “반영” 또는 “표시 요청”은 서버로 보내는 HTTP 요청이 아니다. 휴대폰 앱 내부에서 JavaScript 쪽의 화면 변경 결과를 Android/iOS의 실제 화면 요소에 적용하는 과정이다.
+
+개발 중에는 Expo Go 앱 안에 Hermes와 React Native의 네이티브 실행 환경이 들어 있다. Metro가 우리 앱의 JavaScript 코드를 Expo Go에 전달하면 그 안에서 실행된다. 나중에 APK/AAB로 빌드하면 Expo Go 대신 우리가 만든 앱 안에 같은 실행 환경이 포함된다.
 
 따라서 이 프로젝트는 Expo를 사용하더라도 React Native 위에서 실행되므로, 정확히는 **“Expo 도구를 사용하는 React Native 앱”**이다.
 

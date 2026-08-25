@@ -141,6 +141,16 @@ Expo는 프로그래밍 언어가 아니다. 화면과 동작은 TypeScript로 �
 | Expo Go | 개발 중인 앱을 휴대폰에서 빠르게 열어 보는 테스트용 앱이다. |
 | Metro | 여러 TypeScript 파일을 휴대폰이 실행할 수 있게 묶어 전달하는 개발 서버다. |
 
+### Metro와 Hermes는 누가 제공하나?
+
+1. **Metro**: React Native/Expo 개발 도구가 제공합니다.<br>
+   `npm install`을 할 때 Expo 관련 패키지의 하위 패키지로 `node_modules/`에 이미 설치됩니다.<br>
+   우리가 `npm run start`를 실행하면 Expo CLI가 Metro를 자동으로 실행합니다.
+
+2. **Hermes**: Meta가 만든 JavaScript 엔진이고, React Native/Expo 실행 환경에 포함됩니다.<br>
+   개발 중에는 휴대폰의 **Expo Go 앱 안에 Hermes가 들어 있습니다.**<br>
+   나중에 APK/AAB를 만들면 우리 앱 APK 안에 Hermes 실행 환경이 포함됩니다.
+
 ---
 
 ## `.expo/` 폴더를 만든 이유

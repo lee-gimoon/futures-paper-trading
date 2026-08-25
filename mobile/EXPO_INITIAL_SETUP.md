@@ -56,6 +56,8 @@ const [count, setCount] = useState(0);
 |---|---|---|
 | 공통 UI 로직 | React | React |
 | 화면에 반영하는 도구 | `react-dom` | `react-native` |
+| 대표 상위 프레임워크(선택) | Next.js | Expo |
+| 현재 프로젝트의 프레임워크 선택 | Next.js 사용 안 함 | Expo 사용 |
 | 기본 화면 요소 | `div`, `button`, `input` | `View`, `Pressable`, `TextInput` |
 | 글자 | `p`, `span` | `Text` |
 | 스타일 | CSS | 스타일 객체, `StyleSheet` |
@@ -63,6 +65,8 @@ const [count, setCount] = useState(0);
 | 대표 JavaScript 엔진 | Chrome의 V8 | Hermes |
 | 현재 프로젝트의 변환·묶음 도구 | Vite | Metro |
 | 실행 장소 | 웹 브라우저 | Expo Go, 개발 빌드 또는 출시 앱 |
+
+Next.js와 Expo는 모두 필수는 아니다. React 웹은 Next.js 없이 만들 수 있고, React Native 앱도 Expo 없이 만들 수 있다. 현재 프로젝트의 웹은 **Next.js 없이 React + Vite**를 사용하고, 모바일은 **React + React Native + Expo**를 사용한다. Vite와 Metro는 코드를 변환·묶는 도구이며 Next.js와 Expo 같은 앱 프레임워크와 역할이 다르다.
 
 ### 웹 React 코드가 실행되어 화면에 나타나는 과정
 

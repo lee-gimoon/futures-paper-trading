@@ -311,6 +311,36 @@ JSON은 설정값을 일정한 구조로 기록하는 형식이다. 일반 JSON�
 }
 ```
 
+### `scripts`와 `npm run`의 연결
+
+`package.json`의 `scripts`는 자주 쓰는 실제 명령에 이름을 붙여 둔 목록이다.
+
+예를 들어 `mobile/` 폴더에서 다음을 입력한다.
+
+```bash
+npm run start
+```
+
+npm은 현재 프로젝트의 `mobile/package.json`을 읽고 `scripts` 안의 `start`를 찾는다. 이 프로젝트의 `start` 값은 `"expo start"`이므로, npm은 실제로 Expo CLI의 `expo start` 명령을 실행한다.
+
+```text
+mobile/에서 npm run start 입력
+        ↓
+mobile/package.json 읽기
+        ↓
+scripts.start의 "expo start" 확인
+        ↓
+설치된 expo 패키지가 제공하는 Expo CLI 실행
+        ↓
+Expo 개발 서버와 Metro 시작, QR 코드 표시
+```
+
+즉 `npm run start` 자체가 Expo를 실행하는 명령은 아니다. `package.json`에 `start → expo start`라고 연결해 두었기 때문에 Expo가 실행된다.
+
+`npm run 이름`은 같은 방식으로 `scripts`에서 해당 이름을 찾는다. 예를 들어 `npm run lint`는 `scripts.lint`의 `"expo lint"`를 실행한다. 해당 이름이 없으면 npm은 `Missing script` 오류를 표시한다.
+
+실행한 폴더도 중요하다. `mobile/`에서 실행하면 `mobile/package.json`을, `frontend/`에서 실행하면 `frontend/package.json`을 기준으로 명령을 찾는다.
+
 | 입력하는 명령 | 실제 동작 |
 |---|---|
 | `npm run start` | Expo 개발 서버를 실행하고 QR 코드를 표시한다. |

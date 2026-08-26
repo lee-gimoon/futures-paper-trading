@@ -167,10 +167,10 @@ node_modules/react/에 React의 실제 코드 설치
 | React Native | 사용 | 모바일 UI 프레임워크·네이티브 플랫폼 소프트웨어 | `react-native` npm 패키지를 직접 설치하고 네이티브 코드를 앱에 포함 | 모바일 앱 안 | `View`, `Text` 같은 컴포넌트를 제공하고 React의 계산 결과를 Android/iOS 네이티브 화면에 반영한다. |
 | Expo | 사용 | React Native 앱 프레임워크·도구 체계 | `expo` npm 패키지를 직접 설치하고 필요한 네이티브 모듈을 앱에 포함 | 개발자 PC와 모바일 앱 | React Native 위에 프로젝트 설정, 개발 명령, 기기 기능용 모듈과 빌드 흐름을 제공한다. |
 | Expo Router | 사용 | 파일 기반 라우팅 라이브러리 소프트웨어 | `expo-router` npm 패키지를 직접 설치 | 모바일 앱 안 | `app/`의 파일 구조를 화면 경로로 사용하고 화면 이동과 뒤로 가기를 관리한다. 출시 앱에서도 실행된다. |
-| Metro | 사용 | React Native 번들러·개발 서버 소프트웨어 | Expo·React Native의 하위 npm 패키지로 설치 | 개발자 PC의 Node.js | Expo CLI가 실행한다. TypeScript/TSX와 의존성을 JavaScript로 묶어 개발 중 기기에 전송하고 배포 빌드에 넣는다. |
+| Metro | 사용 | React Native 번들러·로컬 개발 서버 소프트웨어 | Expo·React Native의 하위 npm 패키지로 설치 | 개발자 PC의 Node.js | `expo start`로 시작한 Expo CLI가 Metro 개발 서버를 실행한다. Metro는 앱 코드와 의존성을 JavaScript 번들로 만들고, Expo Go나 개발 빌드가 요청하면 개발 서버가 그 번들을 제공한다. 배포용으로도 JavaScript와 에셋 묶음을 만들어 네이티브 앱에 포함할 수 있다. |
 | Hermes | 사용 | JavaScript 엔진 소프트웨어 | React Native 또는 Expo Go에 네이티브 코드로 포함 | 개발 중인 앱 또는 출시 앱 안 | Metro가 준비한 JavaScript를 휴대폰에서 실행한다. npm 명령으로 실행하거나 앱 코드에서 `import`하는 도구가 아니다. |
 | Expo CLI | 사용 | 명령줄 개발 도구 소프트웨어 | 현재 설치한 `expo` npm 패키지가 명령을 제공 | 개발자 PC의 Node.js | `expo start` 같은 명령을 처리하고 Metro와 Expo 설정 작업을 관리한다. |
-| Expo Go | 개발 중 사용 | 모바일 개발·테스트 앱 소프트웨어 | App Store나 Play 스토어 등에서 휴대폰에 설치 | 개발 중 사용하는 휴대폰 | Metro가 전송한 JavaScript 묶음을 받아 실행한다. 최종 사용자에게 배포하는 앱은 아니다. |
+| Expo Go | 개발 중 사용 | 모바일 개발·테스트 앱 소프트웨어 | App Store나 Play 스토어 등에서 휴대폰에 설치 | 개발 중 사용하는 휴대폰 | 개발 서버에 JavaScript 번들을 요청해 받아 실행한다. 최종 사용자에게 배포하는 앱은 아니다. |
 | EAS Build·Submit | 현재 사용하지 않음 | 서버 소프트웨어로 제공되는 클라우드 서비스 | 사용자가 설치하지 않고 인터넷으로 이용 | Expo의 원격 서버 | 원격 컴퓨터에서 앱 빌드와 스토어 제출을 처리한다. EAS 자체는 npm 모듈이 아니며 선택형 `eas-cli` npm 도구로 명령을 보낼 수 있다. 현재 프로젝트에는 `eas-cli`가 없다. |
 | Android/iOS | 사용 | 모바일 운영체제 소프트웨어·앱 실행 환경 | 휴대폰에 기본 설치 | 사용자 휴대폰 | 설치된 앱을 시작하고 화면, 네트워크와 기기 자원을 관리한다. Spring API 서버와는 별개의 역할이다. |
 
@@ -201,7 +201,7 @@ mobile/
 
 `.expo/`는 우리가 직접 만든 앱 기능 폴더가 아니다. `expo start`, `expo export` 같은 명령을 실행했기 때문에 **Expo CLI가 자동으로 만든 폴더**다.
 
-이름 앞의 점(`.`)은 일반적으로 숨김 폴더를 의미한다. `.expo/`에는 개발 서버 캐시처럼 이 컴퓨터에서 Expo가 작업하는 데 필요한 임시 정보가 들어간다.
+이름 앞의 점(`.`)은 macOS·Linux에서 숨김 항목으로 취급하는 관례다. Windows는 점만으로 파일을 숨기지 않고 별도의 숨김 속성을 사용하므로 `.expo/`가 Windows 탐색기나 IntelliJ에 보일 수 있다. IntelliJ의 Project 창도 기본적으로 프로젝트 안의 폴더를 표시한다. `.expo/`에는 개발 서버 캐시처럼 이 컴퓨터에서 Expo가 작업하는 데 필요한 임시 정보가 들어간다.
 
 ```text
 npm run start
@@ -248,7 +248,7 @@ JSON은 설정값을 일정한 구조로 기록하는 형식이다. 일반 JSON�
 
 ## `app.json`: 모바일 앱 자체의 설정
 
-`app.json`에는 화면 코드가 아니라 앱 이름, 버전, 화면 방향과 Android 식별자처럼 **앱 자체에 적용할 설정**을 작성한다.
+`app.json`은 화면 코드가 아니라 Expo가 읽는 **앱 설정 파일**이다. 앱 이름, 버전, 화면 방향과 Android 식별자처럼 앱 자체에 적용할 설정을 작성하며, Expo CLI·Expo Go·네이티브 프로젝트 생성 과정이 이 설정을 사용한다.
 
 현재 핵심 부분:
 
@@ -273,7 +273,7 @@ JSON은 설정값을 일정한 구조로 기록하는 형식이다. 일반 JSON�
 
 | 설정 | 의미 |
 |---|---|
-| `expo` | Expo 앱 설정을 담는 가장 바깥 객체다. |
+| `expo` | 이 프로젝트에서는 Expo가 이 객체 안의 값을 앱 설정으로 사용한다. `expo` 객체가 있으면 그 밖의 최상위 설정은 사용하지 않는다. 즉 Expo라는 별도 앱의 설정이 아니라, Expo 프레임워크가 읽는 이 모바일 앱의 설정 묶음이다. |
 | `name` | 휴대폰에서 사용자에게 표시할 앱 이름이다. |
 | `slug` | Expo 서비스에서 프로젝트를 구분하는 이름이다. |
 | `version` | 사용자에게 표시되는 앱 버전이다. |
@@ -421,9 +421,9 @@ package.json + package-lock.json
        ↓
 3. Expo CLI가 app.json을 읽고 Metro 번들러·로컬 개발 서버 실행
        ↓
-4. Expo Go가 QR 코드를 통해 Metro에 연결
+4. Expo Go가 QR 코드를 통해 Expo 개발 서버에 연결
        ↓
-5. Metro가 TypeScript/TSX를 JavaScript로 변환·묶어서 Expo Go에 전송
+5. Metro가 TypeScript/TSX와 의존성을 JavaScript로 변환·묶고, Expo Go의 요청에 개발 서버가 그 번들을 제공
        ↓
 6. Expo Go 안의 Hermes가 JavaScript 실행
        ↓

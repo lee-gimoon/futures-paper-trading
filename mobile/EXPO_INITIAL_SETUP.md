@@ -118,13 +118,13 @@ Android/iOS 운영체제가 실제 화면 표시
 
 예를 들어 React는 npm 패키지로 설치하는 UI 라이브러리이고, Vite도 npm 패키지로 설치하지만 앱 화면 코드에서 가져다 쓰는 라이브러리가 아니다. Vite는 `npm run dev`, `npm run build`처럼 명령으로 실행하는 **npm으로 배포되는 개발용 소프트웨어(개발·빌드 도구)**이다.
 
-Hermes, Expo Go, EAS Build·Submit은 Vite와 같은 종류가 아니다. **Metro와 Expo CLI는 Vite처럼 npm으로 배포되어 개발자 PC에서 실행되는 도구**이지만, **Hermes는 앱 안에서 실행되는 엔진**, **Expo Go는 휴대폰에 설치하는 개발·테스트 앱**, **EAS Build·Submit은 인터넷에서 제공되는 클라우드 서비스**이다.
+Hermes와 Expo Go는 모두 소프트웨어이고, EAS Build·Submit은 서버 소프트웨어로 제공되는 클라우드 서비스이다. 다만 이들은 Vite처럼 개발자 PC에서 npm 명령으로 실행하는 소프트웨어는 아니다. **Metro와 Expo CLI는 Vite처럼 npm으로 배포되어 개발자 PC에서 실행되는 도구**이고, **Hermes는 앱 안에서 실행되는 엔진 소프트웨어**, **Expo Go는 휴대폰에 설치하는 앱 소프트웨어**, **EAS Build·Submit은 서버 소프트웨어로 제공되는 클라우드 서비스**이다.
 
-| 이름 | Vite와 같은 npm 개발 도구인가? | 배포·실행 방식 |
-|---|---|---|
-| Hermes | 아니요 | React Native 또는 Expo Go에 네이티브 코드로 포함되는 JavaScript 엔진이다. 앱이 휴대폰에서 실행될 때 JavaScript를 실행하며, 개발자 PC에서 `npm run`으로 실행하는 도구가 아니다. |
-| Expo Go | 아니요 | App Store나 Play 스토어 등으로 휴대폰에 설치하는 개발·테스트 앱이다. 개발 중 JavaScript 묶음을 받아 실행하지만, npm으로 설치하는 PC용 빌드 도구가 아니다. |
-| EAS Build·Submit | 아니요 | Expo가 운영하는 클라우드 서비스다. 별도로 설치할 수 있는 `eas-cli`는 이 서비스에 명령을 보내는 npm 개발 도구이지만, EAS Build·Submit 자체는 npm 모듈이 아니다. 현재 이 프로젝트에는 `eas-cli`도 설치하지 않았다. |
+| 이름 | 소프트웨어인가? | Vite와 같은 npm 개발 도구인가? | 배포·실행 방식 |
+|---|---|---|---|
+| Hermes | 예: 앱에 포함되어 실행되는 네이티브 엔진 소프트웨어 | 아니요 | React Native 또는 Expo Go에 네이티브 코드로 포함된다. 앱이 휴대폰에서 실행될 때 JavaScript를 실행하며, 개발자 PC에서 `npm run`으로 실행하는 도구가 아니다. |
+| Expo Go | 예: 휴대폰에 설치해 실행하는 모바일 앱 소프트웨어 | 아니요 | App Store나 Play 스토어 등으로 휴대폰에 설치한다. 개발 중 JavaScript 묶음을 받아 실행하지만, npm으로 설치하는 PC용 빌드 도구가 아니다. |
+| EAS Build·Submit | 예: Expo 서버에서 실행되는 소프트웨어가 제공하는 클라우드 서비스 | 아니요 | 사용자가 설치하는 실행 파일이 아니라 Expo가 운영하는 서버 서비스다. 별도로 설치할 수 있는 `eas-cli`는 이 서비스에 명령을 보내는 npm 개발 도구이지만, EAS Build·Submit 자체는 npm 모듈이 아니다. 현재 이 프로젝트에는 `eas-cli`도 설치하지 않았다. |
 
 ### React 웹
 
@@ -152,10 +152,10 @@ Hermes, Expo Go, EAS Build·Submit은 Vite와 같은 종류가 아니다. **Metr
 | Expo | 사용 | React Native 앱 프레임워크·도구 체계 | 예: `expo`를 직접 설치 | React Native 위에 프로젝트 설정, 개발 명령, 기기 기능용 모듈과 빌드 흐름을 제공한다. Expo가 React나 React Native를 대신하는 것은 아니다. |
 | Expo Router | 사용 | 파일 기반 라우팅 라이브러리 | 예: `expo-router`를 직접 설치 | `app/`의 파일 구조를 화면 경로로 사용하고 화면 이동과 뒤로 가기를 관리한다. 출시 앱에서도 실행된다. |
 | Metro | 사용 | npm으로 배포되는 React Native 번들러·로컬 개발 서버 | 예: Expo·React Native의 하위 npm 패키지로 설치 | Vite처럼 개발자 PC에서 실행되는 도구다. `expo start`가 이를 시작하며, 여러 TypeScript/TSX 파일과 의존성을 JavaScript 묶음으로 만들어 개발 중 기기로 전송하고 배포 빌드 때 앱에 넣는다. |
-| Hermes | 사용 | 앱에 포함되는 JavaScript 엔진 | 아니요: 앱 코드에서 설치·가져오는 npm 모듈이 아니라 React Native 또는 Expo Go에 네이티브 코드로 포함 | Metro가 준비한 JavaScript를 휴대폰에서 실제로 실행한다. 개발 중과 출시 후 모두 사용되며, 개발자 PC에서 명령으로 실행하는 도구가 아니다. |
+| Hermes | 사용 | 앱에 포함되어 실행되는 네이티브 JavaScript 엔진 소프트웨어 | 아니요: 앱 코드에서 설치·가져오는 npm 모듈이 아니라 React Native 또는 Expo Go에 네이티브 코드로 포함 | Metro가 준비한 JavaScript를 휴대폰에서 실제로 실행한다. 개발 중과 출시 후 모두 사용되며, 개발자 PC에서 명령으로 실행하는 도구가 아니다. |
 | Expo CLI | 사용 | npm으로 배포되는 명령줄 개발 도구 | 예: 현재 설치한 `expo` 패키지가 명령을 제공 | `expo start` 같은 명령을 처리하고 Metro 실행과 Expo 설정 작업을 관리한다. |
-| Expo Go | 개발 중 사용 | 휴대폰용 개발·테스트 앱 | 아니요: App Store나 Play 스토어 등으로 설치하는 앱 | React Native와 네이티브 Expo 모듈이 들어 있는 실행 환경에서 개발 중인 JavaScript를 빠르게 시험한다. 최종 사용자에게 배포하는 앱은 아니다. |
-| EAS Build·Submit | 현재 사용하지 않음 | 선택형 클라우드 빌드·제출 서비스 | 아니요: EAS 서비스 자체는 npm 모듈이 아니다. 별도 `eas-cli`는 npm 개발 도구 | Expo의 빌드 컴퓨터에서 앱을 빌드하거나 앱 스토어 제출을 돕는다. 앱 실행에 필수인 서버는 아니다. |
+| Expo Go | 개발 중 사용 | 휴대폰에 설치해 실행하는 개발·테스트 앱 소프트웨어 | 아니요: App Store나 Play 스토어 등으로 설치하는 앱 | React Native와 네이티브 Expo 모듈이 들어 있는 실행 환경에서 개발 중인 JavaScript를 빠르게 시험한다. 최종 사용자에게 배포하는 앱은 아니다. |
+| EAS Build·Submit | 현재 사용하지 않음 | 서버 소프트웨어로 제공되는 선택형 클라우드 빌드·제출 서비스 | 아니요: EAS 서비스 자체는 npm 모듈이 아니다. 별도 `eas-cli`는 npm 개발 도구 | Expo의 빌드 컴퓨터에서 앱을 빌드하거나 앱 스토어 제출을 돕는다. 앱 실행에 필수인 서버는 아니다. |
 | Android/iOS | 사용 | 모바일 운영체제·앱 실행 환경 | 아니요 | 설치된 앱을 시작하고 화면, 네트워크와 기기 자원을 관리한다. Spring API 서버와는 별개의 역할이다. |
 
 ---

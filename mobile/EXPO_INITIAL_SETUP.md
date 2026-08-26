@@ -112,9 +112,35 @@ Android/iOS 운영체제가 실제 화면 표시
 
 ## React 웹과 React 모바일에서 사용하는 구성 요소
 
-### 모두 라이브러리 또는 모듈인가?
+### npm은 무엇인가?
 
-모두 넓은 의미에서는 소프트웨어이거나 소프트웨어가 제공하는 서비스이지만 같은 종류는 아니다. **npm 패키지는 소프트웨어를 제공·설치하는 방식**이고, **라이브러리·개발 도구·엔진·앱·클라우드 서비스는 형태와 역할**이다. 따라서 npm 패키지라고 해서 모두 앱 코드에서 가져다 쓰는 라이브러리는 아니다.
+npm은 JavaScript·TypeScript 프로젝트에 필요한 코드를 내려받고, 버전을 기록하고, 개발 명령을 실행하는 **개발자 PC용 명령줄 프로그램**이다. 이름은 Node Package Manager에서 왔으며, 보통 Node.js를 설치할 때 함께 설치된다.
+
+React나 Expo처럼 다른 사람이 만든 코드를 프로젝트에서 사용하려면 npm을 이용한다. 직접 인터넷에서 파일을 찾아 복사하지 않고 다음처럼 명령을 입력한다.
+
+```bash
+npm install react
+```
+
+그러면 npm은 인터넷의 npm 패키지 저장소에서 `react`라는 코드 묶음을 내려받아 다음과 같이 정리한다.
+
+```text
+npm install react
+    ↓
+package.json에 React 필요 여부 기록
+    ↓
+package-lock.json에 실제 설치한 정확한 버전 기록
+    ↓
+node_modules/react/에 React의 실제 코드 설치
+```
+
+이미 필요한 패키지가 `package.json`에 적혀 있다면, 이름 없이 `npm install`만 입력해도 npm이 그 목록 전체를 설치한다. 이 프로젝트에서 `npm run start`나 `npm run dev`처럼 입력하는 명령도 npm이 `package.json`의 `scripts`에서 찾아 실행한다.
+
+### npm 패키지와 소프트웨어 역할은 다르다
+
+`react`, `vite`, `expo`처럼 npm에서 이름과 버전으로 내려받는 코드 묶음을 **npm 패키지**라고 한다. 이는 npm이 코드를 제공하고 설치하는 방식이다. 반면 **라이브러리·프레임워크·개발 도구·JavaScript 엔진**은 그 코드가 하는 역할이다.
+
+따라서 React와 Vite는 모두 npm 패키지로 설치하지만 다르게 사용한다. React는 앱 코드에서 `import`해 쓰는 UI 라이브러리이고, Vite는 `npm run dev`, `npm run build` 명령으로 실행하는 개발·빌드 도구다.
 
 ### React 웹
 

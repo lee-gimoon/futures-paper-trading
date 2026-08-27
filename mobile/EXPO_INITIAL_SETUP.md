@@ -512,6 +512,8 @@ Metro가 TypeScript/TSX와 의존성을 변환·묶은 JavaScript 번들로 응�
 
 Metro는 React Native용 번들러이자 개발 서버다. `package.json`의 `main`에 적힌 `expo-router/entry`를 시작점으로 앱이 사용하는 파일과 패키지를 따라가며 TypeScript/TSX를 JavaScript로 변환하고 하나의 실행 가능한 번들로 묶은 뒤 Expo Go에 전달한다.
 
+`expo-router/entry`가 Expo Router를 시작하면, Expo Router는 기본 설정으로 `mobile/app/`을 화면(라우트) 폴더로 정한다. 따라서 Metro는 현재 `app/_layout.tsx`, `app/index.tsx`처럼 `app/` 안에 있는 화면 파일과 그 파일들이 `import`한 패키지를 번들에 포함한다. `app/` 폴더 이름을 바꾸려면 `app.json`의 Expo Router 설정 `root`도 함께 바꿔야 하며, 이름만 바꾸면 Expo Router가 화면 파일을 찾지 못한다.
+
 ↓ **따라서:** 휴대폰은 개발자 PC의 원본 TypeScript/TSX 대신 실행 가능한 JavaScript 번들을 받는다.
 
 ### 6. Expo Go 안의 Hermes가 JavaScript 실행

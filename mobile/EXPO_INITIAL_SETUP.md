@@ -444,25 +444,57 @@ package.json + package-lock.json
 
 ## 현재 앱이 실행되는 순서
 
-```text
-1. npm run start 입력
-       ↓
-2. package.json의 "start": "expo start" 실행
-       ↓
-3. Expo CLI가 app.json을 읽고 Metro 번들러·로컬 개발 서버 실행
-       ↓
-4. Expo Go가 QR 코드를 통해 Expo 개발 서버에 연결
-       ↓
-5. Metro가 TypeScript/TSX와 의존성을 JavaScript로 변환·묶고, Expo Go의 요청에 개발 서버가 그 번들을 제공
-       ↓
-6. Expo Go 안의 Hermes가 JavaScript 실행
-       ↓
-7. package.json의 expo-router/entry에서 Expo Router 시작
-       ↓
-8. app/_layout.tsx와 app/index.tsx 실행
-       ↓
-9. React가 필요한 UI를 계산하고 React Native가 네이티브 화면에 반영
-```
+### 1. `npm run start` 입력
+
+npm은 `package.json`에 등록한 명령을 실행하는 개발자 PC의 명령줄 프로그램이다. `npm run start`라고 입력했으므로 npm은 현재 폴더의 `package.json`에서 `scripts.start`를 찾는다.
+
+↓ **따라서:** npm이 `start`라는 이름에 연결된 실제 명령을 확인한다.
+
+### 2. `package.json`의 `"start": "expo start"` 실행
+
+이 프로젝트의 `scripts.start` 값은 `expo start`이다. npm은 직접 Expo의 기능을 수행하는 대신 `node_modules`에 설치된 `expo` 패키지가 제공하는 Expo CLI에 이 명령을 전달한다.
+
+↓ **따라서:** 프로젝트 시작을 관리할 Expo CLI가 실행된다.
+
+### 3. Expo CLI가 `app.json`을 읽고 Metro 번들러·로컬 개발 서버 실행
+
+Expo CLI는 Expo 프로젝트의 설정과 개발 실행 과정을 관리하는 명령줄 도구다. 어떤 앱을 어떤 설정으로 실행할지 알아야 하므로 `app.json`을 읽고, 휴대폰에 코드를 전달할 Metro와 로컬 개발 서버를 시작한 뒤 접속용 QR 코드를 표시한다.
+
+↓ **따라서:** 휴대폰의 Expo Go가 개발자 PC에서 실행 중인 프로젝트를 찾고 접속할 수 있다.
+
+### 4. Expo Go가 QR 코드를 통해 Expo 개발 서버에 연결
+
+Expo Go는 개발 중인 Expo 앱을 휴대폰에서 실행해 보는 네이티브 테스트 앱이다. QR 코드에는 현재 프로젝트의 개발 서버 주소가 들어 있으므로, QR 코드를 스캔한 Expo Go는 그 주소를 열어 개발 서버에 연결하고 실행할 JavaScript 번들을 요청한다.
+
+↓ **따라서:** 개발 서버는 휴대폰이 실행할 수 있는 JavaScript 번들을 준비해야 한다.
+
+### 5. Metro가 TypeScript/TSX와 의존성을 JavaScript로 변환·묶어 제공
+
+Metro는 React Native용 번들러이자 개발 서버다. `package.json`의 `main`에 적힌 `expo-router/entry`를 시작점으로 앱이 사용하는 파일과 패키지를 따라가며 TypeScript/TSX를 JavaScript로 변환하고 하나의 실행 가능한 번들로 묶은 뒤 Expo Go에 전달한다.
+
+↓ **따라서:** 휴대폰은 개발자 PC의 원본 TypeScript/TSX 대신 실행 가능한 JavaScript 번들을 받는다.
+
+### 6. Expo Go 안의 Hermes가 JavaScript 실행
+
+Hermes는 React Native 앱 안에서 JavaScript를 실행하는 엔진이며 Expo Go에 포함되어 있다. Expo Go가 받은 번들을 Hermes에 넘기면 Hermes가 진입점 모듈부터 JavaScript 코드를 평가하고 실행한다.
+
+↓ **따라서:** 번들의 진입점인 `expo-router/entry` 코드가 실행되면서 Expo Router가 시작된다.
+
+### 7. `expo-router/entry`에서 Expo Router 시작
+
+Expo Router는 `app/` 폴더의 파일 구조를 화면 경로로 연결하는 라우팅 라이브러리다. 진입점 코드가 실행되면 Expo Router는 `app/` 안의 화면 파일을 찾아 현재 주소에 맞는 화면 구성요소를 결정한다.
+
+↓ **따라서:** 앱 전체의 공통 구조와 첫 주소(`/`)에 해당하는 화면을 불러온다.
+
+### 8. `app/_layout.tsx`와 `app/index.tsx` 실행
+
+`app/_layout.tsx`는 모든 화면을 감싸며 화면 이동 구조를 정하는 최상위 레이아웃이고, `app/index.tsx`는 첫 주소(`/`)에 표시할 화면이다. Expo Router가 두 파일의 React 컴포넌트를 불러와 렌더링하면서 화면에 필요한 `View`, `Text` 같은 요소가 만들어진다.
+
+↓ **따라서:** React가 이 컴포넌트 구조와 현재 상태를 바탕으로 실제로 필요한 UI를 계산한다.
+
+### 9. React가 필요한 UI를 계산하고 React Native가 네이티브 화면에 반영
+
+React는 어떤 UI가 필요한지 계산하고, React Native는 그 결과를 Android/iOS가 표시할 수 있는 네이티브 화면 요소에 반영한다. 마지막으로 모바일 운영체제가 반영된 요소를 실제 휴대폰 화면에 그린다.
 
 ---
 

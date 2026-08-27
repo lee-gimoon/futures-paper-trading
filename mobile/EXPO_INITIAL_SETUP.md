@@ -540,6 +540,33 @@ Expo Router는 `app/` 폴더의 파일 구조를 화면 경로로 연결하는 �
 
 React는 어떤 UI가 필요한지 계산하고, React Native는 그 결과를 Android/iOS가 표시할 수 있는 네이티브 화면 요소에 반영한다. 마지막으로 모바일 운영체제가 반영된 요소를 실제 휴대폰 화면에 그린다.
 
+#### Expo Router에서 파일명과 화면이 연결되는 방식
+
+휴대폰 앱에는 웹 브라우저처럼 주소창이 보이지 않지만, 화면을 구분하는 내부 주소가 있다. Expo Router는 주소 목록을 별도 코드로 작성하는 대신 `app/` 폴더의 파일명으로 주소와 화면을 연결한다.
+
+```text
+현재 프로젝트
+mobile/app/index.tsx
+        ↓ Expo Router가 index를 기본 화면으로 인식
+내부 주소 /
+        ↓
+첫 화면 표시
+
+나중에 주문 화면을 추가하는 경우
+mobile/app/orders.tsx
+        ↓ Expo Router가 파일명 orders를 주소로 인식
+내부 주소 /orders
+        ↓
+주문 화면 표시
+
+첫 화면의 버튼에서 주문 화면으로 이동시키는 코드
+router.push('/orders')
+        ↓
+Expo Router가 /orders에 연결된 orders.tsx 화면 표시
+```
+
+현재는 `app/index.tsx`만 있으므로 내부 주소도 `/` 하나뿐이며, 다른 화면으로 이동하는 코드도 아직 없다.
+
 ---
 
 ## 공식 참고 문서

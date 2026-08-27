@@ -454,7 +454,7 @@ package.json + package-lock.json
 
 npm은 패키지를 설치·관리하고 명령을 실행하는 개발자 PC의 명령줄 프로그램이다. `npm run start`는 세 부분으로 나누어 이해한다.
 
-- `npm`은 명령을 처리하는 프로그램 이름이다.
+- `npm`은 명령을 처리하는 프로그램 이름이다. `npm`이라고 입력하면 터미널은 `PATH`에 등록된 폴더에서 npm 실행 파일을 찾아 먼저 실행한다. `PATH`에 npm이 없으면 npm 프로그램은 실행되지 않고 명령을 찾을 수 없다는 오류가 표시된다.
 - `run`은 npm에 내장된 명령이다. 프로젝트의 `package.json`에서 `scripts` 목록을 찾아, 그 안에 등록한 명령을 실행하라고 npm에 지시한다.
 - `start`는 실행할 스크립트의 이름이다. `run`이 `scripts`를 찾게 하고, `start`가 그중 `scripts.start`를 고른다. `start` 자체가 Expo를 실행하는 명령은 아니다.
 

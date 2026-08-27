@@ -464,7 +464,7 @@ npm은 패키지를 설치·관리하고 명령을 실행하는 개발자 PC의 
 
 ### 2. `package.json`의 `"start": "expo start"` 실행
 
-이 프로젝트의 `mobile/package.json`에는 `"start": "expo start"`가 등록되어 있다. 1단계에서 `start`가 선택했기 때문에 npm은 이 값인 `expo start`를 실행한다. npm은 직접 Expo의 기능을 수행하는 대신 `node_modules`에 설치된 `expo` 패키지가 제공하는 Expo CLI에 이 명령을 전달한다.
+이 프로젝트의 `mobile/package.json`에는 `"start": "expo start"`가 등록되어 있다. 1단계에서 선택된 이 문자열을 npm이 실행한다. 첫 단어인 `expo`는 `node_modules`에 설치된 `expo` 패키지가 제공하는 Expo CLI 실행 파일의 이름이므로, `expo` 때문에 Expo CLI가 실행된다. 이어지는 `start`는 Expo CLI에게 Expo 개발 서버와 Metro 번들러를 시작하라고 지시하는 명령이다.
 
 ↓ **따라서:** 프로젝트 시작을 관리할 Expo CLI가 실행된다.
 

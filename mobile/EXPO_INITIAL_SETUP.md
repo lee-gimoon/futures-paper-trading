@@ -452,13 +452,19 @@ package.json + package-lock.json
 
 ### 1. `npm run start` 입력
 
-npm은 `package.json`에 등록한 명령을 실행하는 개발자 PC의 명령줄 프로그램이다. `npm run start`라고 입력했으므로 npm은 현재 폴더의 `package.json`에서 `scripts.start`를 찾는다.
+npm은 패키지를 설치·관리하고 명령을 실행하는 개발자 PC의 명령줄 프로그램이다. `npm run start`는 세 부분으로 나누어 이해한다.
 
-↓ **따라서:** npm이 `start`라는 이름에 연결된 실제 명령을 확인한다.
+- `npm`은 명령을 처리하는 프로그램 이름이다.
+- `run`은 npm에 내장된 명령이다. 프로젝트의 `package.json`에서 `scripts` 목록을 찾아, 그 안에 등록한 명령을 실행하라고 npm에 지시한다.
+- `start`는 실행할 스크립트의 이름이다. `run`이 `scripts`를 찾게 하고, `start`가 그중 `scripts.start`를 고른다. `start` 자체가 Expo를 실행하는 명령은 아니다.
+
+따라서 `mobile/`에서 `npm run start`를 입력하면 npm은 `mobile/package.json`의 `scripts.start`를 찾는다. `package.json`을 찾지 못하면 실행할 스크립트를 알 수 없어 실패하고, 파일은 찾았지만 `scripts.start`가 없으면 `Missing script: "start"` 오류가 표시된다.
+
+↓ **따라서:** npm이 이 프로젝트의 `scripts.start`에 등록된 실제 명령을 확인한다.
 
 ### 2. `package.json`의 `"start": "expo start"` 실행
 
-이 프로젝트의 `scripts.start` 값은 `expo start`이다. npm은 직접 Expo의 기능을 수행하는 대신 `node_modules`에 설치된 `expo` 패키지가 제공하는 Expo CLI에 이 명령을 전달한다.
+이 프로젝트의 `mobile/package.json`에는 `"start": "expo start"`가 등록되어 있다. 1단계에서 `start`가 선택했기 때문에 npm은 이 값인 `expo start`를 실행한다. npm은 직접 Expo의 기능을 수행하는 대신 `node_modules`에 설치된 `expo` 패키지가 제공하는 Expo CLI에 이 명령을 전달한다.
 
 ↓ **따라서:** 프로젝트 시작을 관리할 Expo CLI가 실행된다.
 

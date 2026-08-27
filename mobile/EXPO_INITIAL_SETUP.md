@@ -490,7 +490,21 @@ Expo CLI가 `app.json`을 읽는 이유는 JavaScript 화면 코드만으로는 
 
 ### 4. Expo Go가 QR 코드를 통해 Expo 개발 서버에 연결
 
-Expo Go는 개발 중인 Expo 앱을 휴대폰에서 실행해 보는 네이티브 테스트 앱이다. QR 코드에는 현재 프로젝트의 개발 서버 주소가 들어 있으므로, QR 코드를 스캔한 Expo Go는 그 주소를 열어 개발 서버에 연결하고 실행할 JavaScript 번들을 요청한다.
+Expo Go는 개발 중인 Expo 앱을 휴대폰에서 실행해 보는 네이티브 테스트 앱이다. Expo CLI가 표시한 QR 코드에는 개발자 PC에서 실행 중인 Metro 개발 서버의 접속 주소가 들어 있다. 휴대폰에서 QR 코드를 스캔하면 Expo Go가 그 주소를 열어 Metro에 연결한다.
+
+```text
+Expo CLI가 Metro 실행
+    ↓
+Metro가 개발자 PC의 네트워크 포트에서 Expo Go의 요청을 기다림
+    ↓
+Expo Go가 QR 코드에 담긴 개발 서버 주소로 접속
+    ↓
+Expo Go가 “실행할 JavaScript 번들을 보내 주세요”라고 요청
+    ↓
+Metro가 TypeScript/TSX와 의존성을 변환·묶은 JavaScript 번들로 응답
+```
+
+여기서 개발 서버는 Spring API처럼 로그인·주문 같은 업무 요청을 처리하는 서버가 아니다. 개발자 PC에서 실행 중인 Metro가 휴대폰의 Expo Go에 **개발 중인 앱의 JavaScript 코드**를 전달하는 서버다. Metro는 같은 코드가 수정되면 새 번들을 다시 만들어 보내므로, Expo Go에서 변경된 화면을 빠르게 확인할 수 있다.
 
 ↓ **따라서:** 개발 서버는 휴대폰이 실행할 수 있는 JavaScript 번들을 준비해야 한다.
 

@@ -114,7 +114,7 @@ Android/iOS 운영체제가 실제 화면 표시
 
 ### npm은 무엇인가?
 
-npm은 JavaScript·TypeScript 프로젝트에 필요한 코드를 내려받고, 버전을 기록하고, 개발 명령을 실행하는 **개발자 PC용 명령줄 프로그램**이다. 이름은 Node Package Manager에서 왔으며, 보통 Node.js를 설치할 때 함께 설치된다.
+npm은 JavaScript·TypeScript 프로젝트에 필요한 코드를 내려받고, 버전을 기록하고, 개발 명령을 실행하는 **개발자 PC용 명령줄 프로그램**이다. 이름은 Node Package Manager에서 왔으며, 보통 Node.js를 설치할 때 함께 설치된다. 다만 모든 npm 명령이 `package.json`을 필요로 하지는 않는다. 이 문서에서 사용하는 `npm run <이름>` 형식은 프로젝트의 `package.json`에 있는 `scripts` 목록에서 `<이름>`에 해당하는 명령을 찾도록 npm에 지시하는 명령이다.
 
 React나 Expo처럼 다른 사람이 만든 코드를 프로젝트에서 사용하려면 npm을 이용한다. 직접 인터넷에서 파일을 찾아 복사하지 않고 다음처럼 명령을 입력한다.
 
@@ -321,7 +321,13 @@ JSON은 설정값을 일정한 구조로 기록하는 형식이다. 일반 JSON�
 npm run start
 ```
 
-npm은 현재 프로젝트의 `mobile/package.json`을 읽고 `scripts` 안의 `start`를 찾는다. 이 프로젝트의 `start` 값은 `"expo start"`이므로, npm은 실제로 Expo CLI의 `expo start` 명령을 실행한다.
+`npm run start`는 세 부분의 역할이 다르다.
+
+- `npm`은 명령을 처리하는 프로그램이다.
+- `run`은 프로젝트의 `package.json`에서 `scripts` 목록을 찾아 그 안의 명령을 실행하라는 지시다. npm은 실행한 폴더에서 위쪽으로 올라가며 가장 가까운 프로젝트의 `package.json`을 찾는다. 여기서는 `mobile/package.json`을 찾는다.
+- `start`는 실행할 스크립트의 이름이다. 즉 `run`이 `scripts`를 찾게 하고, `start`가 그중 `scripts.start`를 고른다. `start` 자체가 Expo나 프로그램을 실행하는 명령은 아니다.
+
+따라서 이 프로젝트에서는 npm이 `mobile/package.json`의 `scripts.start`를 읽는다. 그 값이 `"expo start"`이므로 npm은 실제로 Expo CLI의 `expo start` 명령을 실행한다.
 
 ```text
 mobile/에서 npm run start 입력
@@ -335,7 +341,7 @@ scripts.start의 "expo start" 확인
 Expo 개발 서버와 Metro 시작, QR 코드 표시
 ```
 
-즉 `npm run start` 자체가 Expo를 실행하는 명령은 아니다. `package.json`에 `start → expo start`라고 연결해 두었기 때문에 Expo가 실행된다.
+즉 `npm run`이 `package.json`의 `scripts`를 찾고, `start`가 `scripts.start`를 지정하며, 그 값 `expo start`가 Expo를 실행한다. `package.json`을 찾지 못하면 `npm run start`는 실행할 스크립트를 알 수 없어 실패한다. `package.json`은 찾았지만 `scripts.start`가 없으면 `Missing script: "start"` 오류가 표시된다.
 
 `npm run 이름`은 같은 방식으로 `scripts`에서 해당 이름을 찾는다. 예를 들어 `npm run lint`는 `scripts.lint`의 `"expo lint"`를 실행한다. 해당 이름이 없으면 npm은 `Missing script` 오류를 표시한다.
 

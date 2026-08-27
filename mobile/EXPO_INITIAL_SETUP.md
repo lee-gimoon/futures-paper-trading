@@ -490,7 +490,7 @@ Expo CLI가 `app.json`을 읽는 이유는 JavaScript 화면 코드만으로는 
 
 ### 4. Expo Go가 QR 코드를 통해 Expo 개발 서버에 연결
 
-Expo Go는 개발 중인 Expo 앱을 휴대폰에서 실행해 보는 네이티브 테스트 앱이다. Expo CLI가 표시한 QR 코드에는 개발자 PC에서 실행 중인 Metro 개발 서버의 접속 주소가 들어 있다. 휴대폰에서 QR 코드를 스캔하면 Expo Go가 그 주소를 열어 Metro에 연결한다.
+Expo Go는 개발 중인 Expo 앱을 휴대폰에서 실행해 보는 네이티브 테스트 앱이다. 이 방법으로 테스트하려면 휴대폰에 Expo Go 앱을 App Store 또는 Play 스토어에서 별도로 설치해야 한다. Expo CLI가 표시한 QR 코드에는 개발자 PC에서 실행 중인 Metro 개발 서버의 접속 주소가 들어 있다. 휴대폰에서 QR 코드를 스캔하면 Expo Go가 그 주소를 열어 Metro에 연결한다.
 
 ```text
 Expo CLI가 Metro 실행

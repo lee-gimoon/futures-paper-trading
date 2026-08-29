@@ -56,7 +56,7 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     // ── ① 회원가입 ──  POST /api/auth/signup
     // @ResponseStatus(HttpStatus.CREATED) = 성공 시 HTTP 201 Created로 응답.
     // @Valid = SignupRequest의 검증 규칙 위반 시 스프링이 자동으로 400 처리(여기 도달 전에 걸러짐).
-    // @RequestBody = 요청 JSON 본문을 SignupRequest 객체로 변환해서 받는다.
+    // @RequestBody = Spring WebFlux가 요청 JSON 본문을 읽고 Jackson을 통해 SignupRequest 객체로 자동 변환한다.
     //   직접 객체를 만드는 게 아니라 "요청 본문에서 가져와라"는 트리거(표시) 역할.
     //   @RequestBody(트리거) → Spring이 감지·중계 → Jackson 호출(실제 실행) → SignupRequest 객체 생성
     @PostMapping("/signup")
@@ -69,10 +69,14 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     }
 
     // ── ② 로그인 ──  POST /api/auth/login
-    // ServerWebExchange exchange = Spring이 이번 HTTP 요청을 받을 때 자동으로 넣어주는 요청/응답/세션 묶음.
+    // 클라이언트가 HTTP 요청을 보내면 Spring WebFlux가 이를 ServerWebExchange로 감싼다.
+    // 이후 요청 URL과 HTTP 메서드에 맞는 컨트롤러 메서드를 찾고, 해당 메서드를 호출할 때 현재 요청·응답과 세션 접근 기능을 담은 exchange를 자동 주입한다.
+    // ServerWebExchange exchange = Spring WebFlux가 현재 HTTP 요청을 처리하는 과정에서 컨트롤러 메서드에 자동으로 주입하는 요청/응답/세션 접근 기능의 묶음.
     //   - request: 브라우저가 보낸 요청 전체
     //   - response: 브라우저에 보낼 응답을 준비하는 공간
-    //   - session: 이 요청과 연결된 로그인 세션
+    //   - session: exchange.getSession()으로 가져오는, 현재 HTTP 요청이 보낸 SESSION 쿠키의 ID로 찾아낸 WebSession
+    //              SESSION 쿠키가 없거나 해당 ID의 세션이 없으면 새 WebSession을 만들고,
+    //              로그인 성공 후 SecurityContext를 저장하면 응답에 새 SESSION 쿠키를 설정한다.
     // session = 서버가 로그인 상태(SecurityContext)를 기억해 두는 저장 공간.
     // cookie = 브라우저가 다음 요청 때 "내 세션 번호"를 서버에 알려 주는 작은 정보.
     // 세션 로그인 방식: 서버는 로그인한 사용자 정보를 서버 session에 저장하고,
@@ -98,7 +102,7 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
         return authenticationManager.authenticate(token)
                 .flatMap(auth -> { // 3) 인증 성공 시에만 인증 완료된 Authentication 객체가 auth 변수로 들어온다.
                     SecurityContext context = new SecurityContextImpl(auth); // Authentication을 담는 Spring Security 표준 보안 정보 상자 생성
-                    return securityContextRepository.save(exchange, context) // SecurityContext(Authentication이 담긴 그릇)를 서버 세션에 저장한다.
+                    return securityContextRepository.save(exchange, context) // exchange와 연결된 WebSession에 SecurityContext(Authentication이 담긴 그릇)를 저장한다.
                             .thenReturn(ResponseEntity.ok(Map.of("message", "로그인 성공"))); // 세션 저장이 끝난 뒤 200 응답 반환
                 })
                 // 4) 인증 실패 시 발생한 AuthenticationException을 잡아 401 응답으로 바꾼다.

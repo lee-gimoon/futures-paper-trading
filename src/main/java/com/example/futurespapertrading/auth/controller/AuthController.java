@@ -15,7 +15,7 @@ import org.springframework.security.core.AuthenticationException;               
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;          // 현재 로그인한 사용자 정보를 꺼내오는 통로
 import org.springframework.security.core.context.SecurityContext;                        // 인증 결과(누가 로그인했나)를 보관하는 그릇(인터페이스)
 import org.springframework.security.core.context.SecurityContextImpl;                    // 위 SecurityContext의 실제 구현체
-import org.springframework.security.web.server.context.ServerSecurityContextRepository;  // 인증 결과를 세션(쿠키)에 저장/복원하는 저장소
+import org.springframework.security.web.server.context.ServerSecurityContextRepository;  // 인증 결과를 서버 WebSession에 저장/복원하는 저장소
 import org.springframework.web.bind.annotation.GetMapping;     // HTTP GET 요청을 이 메서드에 매핑
 import org.springframework.web.bind.annotation.PostMapping;    // HTTP POST 요청을 이 메서드에 매핑
 import org.springframework.web.bind.annotation.RequestBody;    // 요청의 JSON 본문을 자바 객체로 변환해 파라미터로 받음
@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping; // 이 클래스�
 import org.springframework.web.bind.annotation.ResponseStatus; // 성공 시 돌려줄 HTTP 상태코드를 지정
 import org.springframework.web.bind.annotation.RestController; // 이 클래스가 REST API 컨트롤러임을 표시(반환값→JSON)
 import org.springframework.web.server.ServerWebExchange;       // 한 번의 요청/응답/세션을 통째로 담은 WebFlux 객체
-import org.springframework.web.server.WebSession;              // 서버 세션(로그인 상태를 담아두는 곳)
+import org.springframework.web.server.WebSession;              // 로그인 전 CSRF 토큰과 로그인 후 인증정보 등을 담는 서버 저장 공간
 import reactor.core.publisher.Mono;                            // 0~1개의 결과를 "나중에" 비동기로 흘려보내는 리액티브 상자
 
 // @RestController = REST API 컨트롤러 표시.
@@ -74,18 +74,21 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     // ServerWebExchange exchange = Spring WebFlux가 현재 HTTP 요청을 처리하는 과정에서 컨트롤러 메서드에 자동으로 주입하는 요청/응답/세션 접근 기능의 묶음.
     //   - request: 브라우저가 보낸 요청 전체
     //   - response: 브라우저에 보낼 응답을 준비하는 공간
-    //   - session: exchange.getSession()으로 가져오는, 현재 HTTP 요청이 보낸 SESSION 쿠키의 ID로 찾아낸 WebSession
-    //              SESSION 쿠키가 없거나 해당 ID의 세션이 없으면 새 WebSession을 만들고,
-    //              로그인 성공 후 SecurityContext를 저장하면 응답에 새 SESSION 쿠키를 설정한다.
-    // session = 서버가 로그인 상태(SecurityContext)를 기억해 두는 저장 공간.
+    //   - session: exchange.getSession()으로 가져오는 현재 요청의 WebSession.
+    //              유효한 SESSION 쿠키가 있으면 그 ID의 기존 WebSession을 찾고, 없으면 새 WebSession을 준비한다.
+    // session = 로그인 전에는 CSRF 토큰을, 로그인 후에는 CSRF 토큰과 SecurityContext를 함께 기억하는 서버 저장 공간.
     // cookie = 브라우저가 다음 요청 때 "내 세션 번호"를 서버에 알려 주는 작은 정보.
-    // 세션 로그인 방식: 서버는 로그인한 사용자 정보를 서버 session에 저장하고,
-    // 응답의 Set-Cookie 헤더로 브라우저에게 SESSION이라는 이름의 쿠키를 만들고, 그 값으로 X7K9... 같은 session 번호를 저장하라고 지시한다.
-    // 브라우저가 SESSION 쿠키를 저장하는 이유:
-    // 로그인에 성공해도 이후 요청은 모두 새 HTTP 요청이므로, 다음 요청에 SESSION 쿠키가 없으면 서버는 로그인하지 않은 요청으로 처리한다.
     //
-    // login() 함수의 핵심 역할: email/password를 검증하고, 성공하면 서버 세션에 로그인 사용자 정보를 저장한 뒤
-    // 브라우저의 SESSION 쿠키와 그 세션을 연결해 이후 요청도 로그인 상태로 처리하게 한다.
+    // CSRF 보호를 적용한 세션 로그인 흐름:
+    // 1) 로그인 전 GET /api/auth/csrf 응답에서 익명 WebSession과 SESSION 쿠키가 먼저 생긴다.
+    // 2) 브라우저가 로그인 요청에 그 SESSION 쿠키와 CSRF 토큰을 함께 보낸다.
+    // 3) 로그인 성공 시 아래 save(exchange, context)가 현재 WebSession에 SecurityContext를 추가한다.
+    // 4) WebSessionServerSecurityContextRepository는 세션 고정 공격 방지를 위해 세션 ID를 변경하고,
+    //    응답의 Set-Cookie로 브라우저의 기존 SESSION 쿠키 값을 새 세션 ID로 갱신한다.
+    //
+    // 따라서 SESSION 쿠키는 로그인할 때 처음 생길 수도 있지만, CSRF 적용 후 정상 흐름에서는
+    // 로그인 전에 이미 존재하고 로그인 성공 응답에서 새 세션 ID로 갱신된다.
+    // login()의 핵심 역할은 email/password를 검증하고, 성공하면 현재 WebSession에 로그인 사용자 정보를 저장하는 것이다.
     @PostMapping("/login")
     public Mono<ResponseEntity<Map<String, String>>> login(
             @Valid @RequestBody LoginRequest req, ServerWebExchange exchange) {
@@ -102,7 +105,7 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
         return authenticationManager.authenticate(token)
                 .flatMap(auth -> { // 3) 인증 성공 시에만 인증 완료된 Authentication 객체가 auth 변수로 들어온다.
                     SecurityContext context = new SecurityContextImpl(auth); // Authentication을 담는 Spring Security 표준 보안 정보 상자 생성
-                    return securityContextRepository.save(exchange, context) // exchange와 연결된 WebSession에 SecurityContext(Authentication이 담긴 그릇)를 저장한다.
+                    return securityContextRepository.save(exchange, context) // 현재 WebSession에 SecurityContext를 저장하고 세션 ID를 변경한다.
                             .thenReturn(ResponseEntity.ok(Map.of("message", "로그인 성공"))); // 세션 저장이 끝난 뒤 200 응답 반환
                 })
                 // 4) 인증 실패 시 발생한 AuthenticationException을 잡아 401 응답으로 바꾼다.
@@ -138,9 +141,10 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     //
     //  ① 회원가입 성공            ② 로그인 성공                 ④ 로그인 실패(잘못된 비번)
     //   HTTP/1.1 201 Created       HTTP/1.1 200 OK             HTTP/1.1 401 Unauthorized
-    //   {                         Set-Cookie: SESSION=...      {
+    //   {                         Set-Cookie: SESSION=새ID     {
     //     "id": 1,                {                              "message": "이메일 또는
     //     "email": "a@b.com",       "message": "로그인 성공"                비밀번호가 올바르지 않습니다."
     //     "displayName": "철수"   }                            }
     //   }
+    //   ※ 로그인 성공의 Set-Cookie는 보통 /csrf에서 이미 만든 SESSION 쿠키의 값을 새 세션 ID로 갱신한다.
 }

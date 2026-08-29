@@ -115,10 +115,10 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     // ── ③ 로그아웃 ──  POST /api/auth/logout
     @PostMapping("/logout")
     public Mono<ResponseEntity<Map<String, String>>> logout(ServerWebExchange exchange) {
-        // 세션 무효화 → 저장된 SecurityContext 제거 → 이후 요청은 미인증 상태가 된다
-        return exchange.getSession()                  // 이번 요청의 세션을 꺼내서
-                .flatMap(WebSession::invalidate)      // 세션을 무효화(폐기) → 저장돼 있던 인증정보도 함께 사라짐
-                .thenReturn(ResponseEntity.ok(Map.of("message", "로그아웃 되었습니다."))); // 무효화 끝나면 → 200 응답 내보내기
+        // 현재 WebSession을 무효화 → 그 안에 저장된 SecurityContext도 제거 → 이후 요청은 미인증 상태가 된다.
+        return exchange.getSession()                  // 현재 요청의 SESSION 쿠키 ID로 연결된 WebSession을 가져와서
+                .flatMap(WebSession::invalidate)      // WebSession을 무효화(폐기) → 저장된 인증정보도 함께 사라짐
+                .thenReturn(ResponseEntity.ok(Map.of("message", "로그아웃 되었습니다."))); // 무효화가 끝나면 200 응답
     }
 
     // ── ④ 내 정보 조회 ──  GET /api/auth/me

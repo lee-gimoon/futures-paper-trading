@@ -88,11 +88,22 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
         return manager;
     }
 
-    // 인증 성공 후 SecurityContext(누가 로그인했는지 정보)를 어디에 저장/복원할지 정하는 빈
-    // @Bean → ServerSecurityContextRepository 타입으로 등록 → 위 필터체인의 .securityContextRepository(...)로 주입된다.
+    // WebSessionServerSecurityContextRepository 객체는 실제 보관함이 아니라,
+    // 로그인 정보(SecurityContext)를 WebSession 보관함에 넣고 다음 요청 때 다시 꺼내는 담당자다.
+    // 즉, Spring이 WebSession 보관함을 자동으로 만들고 관리하며,
+    // WebSessionServerSecurityContextRepository는 그 보관함의 로그인 정보를 넣고 꺼내는 담당자다.
+    //
+    // 비유:
+    // - 브라우저의 SESSION 쿠키 = "내 보관함 번호표"
+    // - 서버의 WebSession      = 실제 보관함
+    // - SecurityContext        = 보관함 안의 "누가 로그인했는지" 정보
+    //
+    // 브라우저는 SESSION 쿠키에 보관함 번호만 담아 보낸다.
+    // 실제 이메일·권한 같은 로그인 정보는 서버의 WebSession에 저장한다.
     @Bean
     public ServerSecurityContextRepository securityContextRepository() {
-        // WebSession에 저장 → 브라우저엔 SESSION 쿠키만 오가고, 실제 인증정보는 서버 세션에 보관한다
+        // WebSessionServerSecurityContextRepository 담당자를 만든다.
+        // 이 담당자는 실제 서버 측 WebSession 보관함에 SecurityContext를 저장하고, 다음 요청 때 그 보관함에서 다시 읽는다.
         return new WebSessionServerSecurityContextRepository();
     }
 }

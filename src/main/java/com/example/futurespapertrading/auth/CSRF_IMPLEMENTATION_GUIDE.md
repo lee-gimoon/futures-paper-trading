@@ -450,9 +450,9 @@ export function clearCsrfToken(): void {
 
 ### 완료 기준
 
-- [ ] 토큰 값을 쿠키나 `localStorage`가 아닌 메모리에 보관한다.
-- [ ] 동시에 호출해도 `/api/auth/csrf` 요청 하나를 공유한다.
-- [ ] 갱신 함수와 제거 함수가 있다.
+- [x] 토큰 값을 쿠키나 `localStorage`가 아닌 메모리에 보관한다.
+- [x] 동시에 호출해도 `/api/auth/csrf` 요청 하나를 공유한다.
+- [x] 갱신 함수와 제거 함수가 있다.
 
 ---
 
@@ -1181,7 +1181,7 @@ React CSRF 메모리 제거
 
 ## React 웹
 
-- [ ] 4단계 `csrf.ts`
+- [x] 4단계 `csrf.ts`
 - [ ] 5단계 `apiFetch`
 - [ ] 6단계 인증 API 연결
 - [ ] 7단계 인증 생명주기 연결

@@ -71,11 +71,16 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     // ── ② 로그인 ──  POST /api/auth/login
     // 클라이언트가 HTTP 요청을 보내면 Spring WebFlux가 이를 ServerWebExchange로 감싼다.
     // 이후 요청 URL과 HTTP 메서드에 맞는 컨트롤러 메서드를 찾고, 해당 메서드를 호출할 때 현재 요청·응답과 세션 접근 기능을 담은 exchange를 자동 주입한다.
-    // ServerWebExchange exchange = Spring WebFlux가 현재 HTTP 요청을 처리하는 과정에서 컨트롤러 메서드에 자동으로 주입하는 요청/응답/세션 접근 기능의 묶음.
+    // ServerWebExchange exchange = Spring WebFlux가 HTTP 요청 1건마다 만들고 컨트롤러에 전달하는 현재 요청 처리 객체.
+    //                              요청·응답·WebSession과 서버가 요청에 덧붙인 부가 정보(attributes)를 함께 담는다.
     //   - request: 브라우저가 보낸 요청 전체
     //   - response: 브라우저에 보낼 응답을 준비하는 공간
-    //   - session: exchange.getSession()으로 가져오는 현재 요청의 WebSession.
+    //   - session: exchange.getSession()이 구독될 때 전달하는 현재 요청의 WebSession.
     //              유효한 SESSION 쿠키가 있으면 그 ID의 기존 WebSession을 찾고, 없으면 새 WebSession을 준비한다.
+    //   - attributes: 현재 HTTP 요청을 처리하는 동안 서버 코드가 exchange에 붙이는 부가 정보(속성) 목록.
+    //                 예: CSRF 보호가 활성화되면 CsrfWebFilter가 "CSRF 토큰을 전달할 Mono<CsrfToken>"를 붙이고,
+    //                      CsrfController가 같은 요청의 exchange에서 이를 읽어 응답을 만든다.
+    //                 이 정보는 현재 요청에만 붙어 있고, 요청 처리가 끝나면 함께 사라진다.
     // session = 로그인 전에는 CSRF 토큰을, 로그인 후에는 CSRF 토큰과 SecurityContext를 함께 기억하는 서버 저장 공간.
     // cookie = 브라우저가 다음 요청 때 "내 세션 번호"를 서버에 알려 주는 작은 정보.
     //
@@ -116,6 +121,7 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     }
 
     // ── ③ 로그아웃 ──  POST /api/auth/logout
+    // 이 메서드가 반환한 Mono는 WebFlux가 클라이언트에 HTTP 응답을 보내기 위해 자동으로 구독한다.
     @PostMapping("/logout")
     public Mono<ResponseEntity<Map<String, String>>> logout(ServerWebExchange exchange) {
         // 현재 WebSession을 무효화 → 그 안에 저장된 SecurityContext도 제거 → 이후 요청은 미인증 상태가 된다.

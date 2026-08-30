@@ -15,25 +15,38 @@ import reactor.core.publisher.Mono;
 //
 // GET /api/auth/csrf 요청이 오면 현재 WebSession의 CSRF 토큰 정보를 JSON으로 응답하는 컨트롤러다.
 // 응답 예시: {"headerName":"X-CSRF-TOKEN","token":"abc123"}
+//
+// 사용자가 API 요청을 보내면 Spring WebFlux가 그 요청 1건을 처리하기 위한 객체들을 만들고, 그 묶음이 ServerWebExchange다.
+//
+// 브라우저: GET /api/auth/csrf
+//        ↓
+// Spring WebFlux: 이 요청 전용 ServerWebExchange 생성
+//        ↓
+// CsrfWebFilter: exchange.attributes에 CSRF 관련 정보를 붙임
+//        ↓
+// CsrfController: 같은 exchange를 전달받아 attributes의 정보를 읽음
+//        ↓
+// 응답 완료: 이 exchange와 attributes는 사라짐
 @RestController
 @RequestMapping("/api/auth")
 public class CsrfController {
 
     // 로그인 전에도 호출해야 하므로 SecurityConfig에서 이 경로는 permitAll로 공개한다.
-    // 이 GET 요청은 CSRF 토큰을 제출하지 않고, 현재 세션에서 사용할 토큰을 응답으로 받는다.
+    // 이 엔드포인트는 클라이언트가 이후 변경 요청의 헤더에 포함할 CSRF 토큰 정보(headerName, token)를 JSON으로 응답한다.
     @GetMapping("/csrf")
     public Mono<CsrfTokenResponse> csrf(ServerWebExchange exchange) {
-        // CsrfWebFilter가 현재 요청의 속성에 넣어 둔 CSRF 토큰 Mono를 꺼낸다.
-        // 이 Mono에는 현재 WebSession에서 조회하거나 새로 준비할 토큰이 들어온다.
+        // 이 줄은 CSRF 토큰을 만들거나 WebSession에 저장하는 코드가 아니다.
+        // CSRF가 활성화되면 CsrfWebFilter가 현재 요청에 등록한 Mono<CsrfToken>을 가져온다.
+        // 이 Mono를 구독하면 CSRF 토큰 객체(CsrfToken)를 0개 또는 1개 전달한다.
         Mono<CsrfToken> csrfToken = exchange.getAttribute(CsrfToken.class.getName());
 
         if (csrfToken == null) {
             // 요청 속성 자체가 없으면 CSRF 필터가 꺼져 있거나 이 요청에 적용되지 않은 설정 오류다.
-            return Mono.error(new IllegalStateException("CSRF 토큰을 생성하지 못했습니다."));
+            return Mono.error(new IllegalStateException("CSRF 토큰 Mono가 요청 속성에 없습니다."));
         }
 
-        // 준비된 CsrfToken에서 헤더 이름과 토큰 값을 꺼내 클라이언트용 응답 DTO로 바꾼다.
-        // 이 Mono가 구독될 때 필요한 토큰 조회·생성과 세션 저장도 실행된다.
+        // CsrfToken을 클라이언트용 응답 DTO로 변환하는 Mono를 만든다.
+        // WebFlux가 반환된 Mono를 구독하면 토큰을 조회하고, 토큰이 없을 때만 새 토큰 생성과 WebSession 저장도 수행된다.
         return csrfToken.map(token -> new CsrfTokenResponse(
                 token.getHeaderName(),
                 token.getToken()

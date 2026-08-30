@@ -6,7 +6,6 @@ import org.springframework.http.HttpMethod;  // GET/POST 같은 HTTP 메서드 �
 import org.springframework.http.HttpStatus;  // 200/401/403 같은 HTTP 상태 코드 모음(열거형)
 import org.springframework.security.authentication.ReactiveAuthenticationManager;  // 인증을 수행하는 핵심 인터페이스(리액티브)
 import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;  // 위 인터페이스 구현체: 사용자 조회 + 비밀번호 비교
-import org.springframework.security.config.Customizer;  // 보안 설정에 기본값을 적용하는 설정 함수
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;  // WebFlux(리액티브)용 스프링 시큐리티 활성화 애너테이션
 import org.springframework.security.config.web.server.ServerHttpSecurity;  // 보안 필터체인을 쌓아 만드는 빌더(WebFlux용)
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;  // 사용자 정보를 DB 등에서 불러오는 인터페이스(리액티브)
@@ -15,6 +14,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;  // 완�
 import org.springframework.security.web.server.authentication.HttpStatusServerEntryPoint;  // 미인증 시 상태코드만 내려주는 진입점 구현체
 import org.springframework.security.web.server.context.ServerSecurityContextRepository;  // 인증 정보를 저장/복원하는 "방식" 인터페이스
 import org.springframework.security.web.server.context.WebSessionServerSecurityContextRepository;  // 위 인터페이스 구현체: WebSession(쿠키)에 저장
+import org.springframework.security.web.server.csrf.WebSessionServerCsrfTokenRepository;  // CSRF 토큰을 WebSession에 저장·조회하는 저장소
 
 // @Configuration = 객체(빈) 만드는 법을 적어둔 설정 클래스. (자세한 설명은 PasswordEncoderConfig 참고)
 //
@@ -33,16 +33,18 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
             ServerHttpSecurity http,
             ServerSecurityContextRepository securityContextRepository) {
         return http
+                // 세션 인증을 사용하므로 변경 요청은 WebSession에 저장된 CSRF 토큰으로 검증한다.
                 // React SPA(Single Page Application)는 JSON API로 로그인하므로 Spring Security의 기본 폼 로그인·HTTP Basic·로그아웃 리다이렉트를 끈다.
                 //
-                // CSRF 활성화: Customizer.withDefaults()로 기본 CSRF 설정을 적용하면 Spring Security가 CsrfWebFilter를 필터 체인에 넣고,
+                // CSRF 활성화: WebSessionServerCsrfTokenRepository를 CSRF 토큰 저장소로 지정하면 Spring Security가 CsrfWebFilter를 필터 체인에 넣고,
                 // 컨트롤러보다 먼저 실행해 현재 요청의 ServerWebExchange.attributes에 Mono<CsrfToken>을 자동으로 등록한다.
                 // 등록되는 attribute의 키는 CsrfToken.class.getName()이고, 값은 Mono<CsrfToken> tokenMono다.
                 // 우리가 exchange.getAttributes().put(...)을 직접 작성할 필요는 없다. 내부 동작을 개념적으로 쓰면 다음과 같다.
                 // Mono<CsrfToken> tokenMono = ...; // 구독될 때 CSRF 토큰을 조회하거나 필요 시 생성·저장하는 객체
                 // exchange.getAttributes().put(CsrfToken.class.getName(), tokenMono);
                 // CsrfController는 이후 exchange.getAttribute(CsrfToken.class.getName())으로 같은 Mono를 꺼내 JSON으로 응답한다.
-                .csrf(Customizer.withDefaults())
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(new WebSessionServerCsrfTokenRepository())) // 실제 저장 공간은 WebSession이고, 이 객체는 그 저장 공간을 다루는 관리 객체다.
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
@@ -55,9 +57,12 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
                         new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)))
                 // 인증 컨텍스트를 WebSession(=쿠키)에 저장/복원
                 .securityContextRepository(securityContextRepository)
+                // authorizeExchange = 현재 요청의 로그인(인증) 상태를 기준으로 경로별 접근 허용(permitAll) 또는 로그인 요구(authenticated)를 정하는 인가 규칙이다.
                 .authorizeExchange(ex -> ex
                         // Docker/배포 모드에서는 React 빌드 결과물을 Spring Boot가 직접 서빙한다.
                         .pathMatchers("/", "/index.html", "/assets/**", "/*.ico", "/*.png", "/*.svg").permitAll()
+                        // 로그인 전에도 현재 익명 세션의 CSRF 토큰을 받아야 하므로 토큰 발급 API를 공개한다.
+                        .pathMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
                         // 기존 시세/호가 API는 로그인 없이도 접근 가능하게 유지
                         .pathMatchers("/api/binance-futures/**").permitAll()
@@ -74,7 +79,7 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
         //
         // 우리가 하는 일 = 기본값 중 필요한 것만 세터로 덮어씀
         // http
-        //     .csrf(CsrfSpec::disable)           // csrf 필드 → null (끔)
+        //     .csrf(csrf -> ...)                  // CSRF를 켠 채 WebSession 토큰 저장소를 명시
         //     .formLogin(FormLoginSpec::disable)  // formLogin 필드 → null (끔)
         //     .securityContextRepository(obj)     // null → 우리 @Bean 객체로 교체
         //     .build();                           // 최종 SecurityWebFilterChain 생성
@@ -192,20 +197,21 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
 //       public SecurityWebFilterChain build() { /* 필드들을 모아 필터체인 생성 */ }
 //   }
 //
-//   // CsrfSpec.disable()의 실제 동작(바이트코드로 확인):
+//   // 현재 CSRF 설정에서 호출하는 CsrfSpec.csrfTokenRepository(...)의 단순화된 구조:
 //   class CsrfSpec {
-//       public ServerHttpSecurity disable() {
-//           ServerHttpSecurity.this.csrf = null;   // csrf 필드를 null로 → CSRF 필터를 안 만든다
-//           return ServerHttpSecurity.this;
+//       private ServerCsrfTokenRepository csrfTokenRepository = new WebSessionServerCsrfTokenRepository();
+//
+//       public CsrfSpec csrfTokenRepository(ServerCsrfTokenRepository repository) {
+//           this.csrfTokenRepository = repository; // CsrfWebFilter가 사용할 토큰 저장소를 명시한 객체로 교체
+//           return this;
 //       }
 //   }
-//   ※ CsrfSpec::disable 은 메서드 참조(method reference) 문법이다. (Java 8)
-//       :: = "이 클래스의 이 메서드를 함수로 넘긴다"는 의미("CsrfSpec의 disable 메서드를 함수로 넘긴다")
-//       CsrfSpec::disable  ==  spec -> spec.disable()   (람다와 완전히 동일, 짧게 쓴 것)
-//       → 값이 아니라 "나중에 CsrfSpec 객체를 받으면 .disable()을 호출해줘" 라는 동작(함수)을 넘기는 것
+//   ※ csrf -> csrf.csrfTokenRepository(...)는 CsrfSpec 객체를 받으면 그 객체의 토큰 저장소를 설정하라는 람다다.
+//      CSRF를 끄는 것이 아니라 CsrfSpec을 유지하므로 build()가 CsrfWebFilter를 필터 체인에 추가한다.
 //
 // 위 우리 코드(springSecurityFilterChain 빌더 체인)를 정확히 해석하면:
-//   .csrf(CsrfSpec::disable)              → [A] csrf 객체에 disable() 적용 → csrf 필드를 null로 (CSRF 끔)
+//   .csrf(csrf -> csrf.csrfTokenRepository(new WebSessionServerCsrfTokenRepository()))
+//                                         → [A] csrf 객체에 WebSession 기반 토큰 저장소 설정 → CSRF 켬
 //   .formLogin(FormLoginSpec::disable)    → [A] formLogin 필드를 null로 (폼로그인 끔)
 //   .httpBasic(HttpBasicSpec::disable)    → [A] httpBasic 필드를 null로
 //   .logout(LogoutSpec::disable)          → [A] logout 필드를 null로
@@ -216,6 +222,6 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
 //   .build()                              → 쌓인 필드들을 모아 SecurityWebFilterChain 생성
 //
 // 핵심: 빌더 메서드가 전부 'field = value'는 아니다.
-//   - 대부분(csrf 등)은 Customizer<XxxSpec>를 받아 하위 객체를 '설정'한다 → CsrfSpec::disable 은 값이 아니라 함수!
+//   - 대부분(csrf 등)은 Customizer<XxxSpec>를 받아 하위 객체를 '설정'한다 → csrf -> ... 람다는 값이 아니라 설정 함수다.
 //   - securityContextRepository(...) 만 인자를 필드에 직접 대입한다.
 // ════════════════════════════════════════════════════════════════════════════

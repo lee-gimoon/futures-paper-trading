@@ -352,10 +352,10 @@ CSRF 검사
 
 ### 완료 기준
 
-- [ ] `.csrf(...disable)`을 제거했다.
-- [ ] WebSession 토큰 저장소를 설정했다.
-- [ ] `GET /api/auth/csrf`를 `permitAll`로 공개했다.
-- [ ] 아직 React 연결이 끝나지 않았으므로 애플리케이션 실행은 8단계 뒤로 미룬다.
+- [x] `.csrf(...disable)`을 제거했다.
+- [x] WebSession 토큰 저장소를 설정했다.
+- [x] `GET /api/auth/csrf`를 `permitAll`로 공개했다.
+- [x] 아직 React 연결이 끝나지 않았으므로 애플리케이션 실행은 8단계 뒤로 미룬다.
 
 ---
 
@@ -1177,7 +1177,7 @@ React CSRF 메모리 제거
 
 - [x] 1단계 `CsrfTokenResponse.java`
 - [x] 2단계 `CsrfController.java`
-- [ ] 3단계 WebSession CSRF 활성화와 토큰 API 공개
+- [x] 3단계 WebSession CSRF 활성화와 토큰 API 공개
 
 ## React 웹
 

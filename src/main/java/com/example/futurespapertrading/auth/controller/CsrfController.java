@@ -27,6 +27,11 @@ import reactor.core.publisher.Mono;
 // CsrfController: 같은 exchange를 전달받아 attributes의 정보를 읽음
 //        ↓
 // 응답 완료: 이 exchange와 attributes는 사라짐
+// 응답 본문(JSON) 예시: {"headerName":"X-CSRF-TOKEN", "token":"T-123"}
+//        ↓
+// 브라우저: 새 WebSession이 시작됐다면 응답의 Set-Cookie에 담긴 SESSION 쿠키는 브라우저가 자동 저장한다.
+// React: JSON의 headerName과 token을 JavaScript 메모리에 저장한다. (예: csrfState = { headerName: "X-CSRF-TOKEN", token: "T-123" })
+// 이후 React는 POST·PUT·PATCH·DELETE 요청 헤더에 X-CSRF-TOKEN: T-123을 넣고, 브라우저는 저장한 SESSION 쿠키를 자동으로 함께 보낸다.
 @RestController
 @RequestMapping("/api/auth")
 public class CsrfController {

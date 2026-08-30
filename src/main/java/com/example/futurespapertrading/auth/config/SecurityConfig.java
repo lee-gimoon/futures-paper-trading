@@ -6,6 +6,7 @@ import org.springframework.http.HttpMethod;  // GET/POST 같은 HTTP 메서드 �
 import org.springframework.http.HttpStatus;  // 200/401/403 같은 HTTP 상태 코드 모음(열거형)
 import org.springframework.security.authentication.ReactiveAuthenticationManager;  // 인증을 수행하는 핵심 인터페이스(리액티브)
 import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;  // 위 인터페이스 구현체: 사용자 조회 + 비밀번호 비교
+import org.springframework.security.config.Customizer;  // 보안 설정에 기본값을 적용하는 설정 함수
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;  // WebFlux(리액티브)용 스프링 시큐리티 활성화 애너테이션
 import org.springframework.security.config.web.server.ServerHttpSecurity;  // 보안 필터체인을 쌓아 만드는 빌더(WebFlux용)
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;  // 사용자 정보를 DB 등에서 불러오는 인터페이스(리액티브)
@@ -32,8 +33,16 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
             ServerHttpSecurity http,
             ServerSecurityContextRepository securityContextRepository) {
         return http
-                // SPA + 우선 단순화: CSRF off, 폼로그인/베이직 리다이렉트 off (커스텀 JSON 로그인 사용)
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                // React SPA(Single Page Application)는 JSON API로 로그인하므로 Spring Security의 기본 폼 로그인·HTTP Basic·로그아웃 리다이렉트를 끈다.
+                //
+                // CSRF 활성화: Customizer.withDefaults()로 기본 CSRF 설정을 적용하면 Spring Security가 CsrfWebFilter를 필터 체인에 넣고,
+                // 컨트롤러보다 먼저 실행해 현재 요청의 ServerWebExchange.attributes에 Mono<CsrfToken>을 자동으로 등록한다.
+                // 등록되는 attribute의 키는 CsrfToken.class.getName()이고, 값은 Mono<CsrfToken> tokenMono다.
+                // 우리가 exchange.getAttributes().put(...)을 직접 작성할 필요는 없다. 내부 동작을 개념적으로 쓰면 다음과 같다.
+                // Mono<CsrfToken> tokenMono = ...; // 구독될 때 CSRF 토큰을 조회하거나 필요 시 생성·저장하는 객체
+                // exchange.getAttributes().put(CsrfToken.class.getName(), tokenMono);
+                // CsrfController는 이후 exchange.getAttribute(CsrfToken.class.getName())으로 같은 Mono를 꺼내 JSON으로 응답한다.
+                .csrf(Customizer.withDefaults())
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)

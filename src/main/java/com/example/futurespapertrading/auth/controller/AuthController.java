@@ -79,8 +79,9 @@ public class AuthController { // 인증 관련 HTTP 요청을 받는 컨트롤�
     //              유효한 SESSION 쿠키가 있으면 그 ID의 기존 WebSession을 찾고, 없으면 새 WebSession을 준비한다.
     //   - attributes: 현재 HTTP 요청을 처리하는 동안 서버 코드가 exchange에 붙이는 부가 정보(속성) 목록.
     //                 예: CSRF 보호가 활성화되면 CsrfWebFilter가 "CSRF 토큰을 전달할 Mono<CsrfToken>"를 붙이고,
-    //                      CsrfController가 같은 요청의 exchange에서 이를 읽어 응답을 만든다.
-    //                 이 정보는 현재 요청에만 붙어 있고, 요청 처리가 끝나면 함께 사라진다.
+    //                 CsrfController가 같은 요청의 exchange에서 이를 읽어 응답을 만든다.
+    //                 이 정보는 현재 ServerWebExchange(= 현재 HTTP 요청)에만 속한다.
+    //                 요청 처리가 끝나면 exchange 자체의 수명이 끝나며, 그 안에 있던 attributes도 함께 의미를 잃고 정리 대상이 된다.
     // session = 로그인 전에는 CSRF 토큰을, 로그인 후에는 CSRF 토큰과 SecurityContext를 함께 기억하는 서버 저장 공간.
     // cookie = 브라우저가 다음 요청 때 "내 세션 번호"를 서버에 알려 주는 작은 정보.
     //

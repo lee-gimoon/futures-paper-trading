@@ -581,8 +581,8 @@ const res = await apiFetch('/api/auth/me');
 
 ### 완료 기준
 
-- [ ] `authApi.ts`의 네 요청이 모두 `apiFetch`를 사용한다.
-- [ ] 개별 `credentials: 'include'` 중복을 제거했다.
+- [x] `authApi.ts`의 네 요청이 모두 `apiFetch`를 사용한다.
+- [x] 개별 `credentials: 'include'` 중복을 제거했다.
 - [ ] 로그인 요청에도 CSRF가 필요한 이유를 설명할 수 있다.
 
 ---
@@ -1183,7 +1183,7 @@ React CSRF 메모리 제거
 
 - [x] 4단계 `csrf.ts`
 - [x] 5단계 `apiFetch`
-- [ ] 6단계 인증 API 연결
+- [x] 6단계 인증 API 연결
 - [ ] 7단계 인증 생명주기 연결
 - [ ] 8단계 거래 API 연결
 

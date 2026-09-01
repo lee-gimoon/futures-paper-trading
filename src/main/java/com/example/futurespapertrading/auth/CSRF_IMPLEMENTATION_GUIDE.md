@@ -757,9 +757,9 @@ const res = await apiFetch('/api/paper/account/leverage', {
 
 ### 완료 기준
 
-- [ ] `paperApi.ts`의 모든 Spring API 요청이 `apiFetch`를 사용한다.
-- [ ] 주문, 취소, 레버리지 변경에 CSRF 헤더가 자동으로 붙는다.
-- [ ] 1~8단계 구현이 모두 끝났으므로 백엔드와 React를 함께 실행할 준비가 됐다.
+- [x] `paperApi.ts`의 모든 Spring API 요청이 `apiFetch`를 사용한다.
+- [x] 주문, 취소, 레버리지 변경에 CSRF 헤더가 자동으로 붙는다.
+- [x] 1~8단계 구현이 모두 끝났으므로 백엔드와 React를 함께 실행할 준비가 됐다.
 
 ---
 
@@ -1189,7 +1189,7 @@ React CSRF 메모리 제거
 - [x] 5단계 `apiFetch`
 - [x] 6단계 인증 API 연결
 - [x] 7단계 인증 생명주기 연결
-- [ ] 8단계 거래 API 연결
+- [x] 8단계 거래 API 연결
 
 ## 테스트와 문서
 
@@ -1198,7 +1198,7 @@ React CSRF 메모리 제거
 - [ ] 11단계 README
 - [ ] 12단계 모바일 계획
 - [ ] `.\gradlew.bat test` 통과
-- [ ] `frontend`의 `npm run build` 통과
+- [x] `frontend`의 `npm run build` 통과
 - [ ] 브라우저 Network 탭 확인
 
 ---

@@ -95,9 +95,13 @@ export async function ensureCsrfToken(): Promise<CsrfState> {
   return csrfLoadPromise;
 }
 
-// 로그인처럼 세션 상태가 바뀐 뒤 기존 값을 버리고 현재 세션의 토큰을 다시 받는다.
+// 로그인처럼 세션 상태가 바뀐 뒤 React 탭 메모리의 CSRF 정보를 현재 SESSION 쿠키의 서버 세션과 다시 동기화한다.
+// Spring Security는 세션 ID만 바꾸고 WebSession 속성은 유지하므로, 서버가 기존 CSRF 토큰을 다시 반환할 수 있으며 이 함수는 실제 토큰 회전이 아니다.
+// TODO: 로그인 직후 CSRF 토큰까지 실제로 바꾸려면, 백엔드 로그인 성공 경로에서 기존 토큰을 제거하고 새 토큰을 발급하도록 구현한다.
 export async function refreshCsrfToken(): Promise<CsrfState> {
+  // ensureCsrfToken()이 /api/auth/csrf를 다시 호출하도록 현재 탭 메모리의 토큰을 비운다.
   csrfState = null;
+  // 브라우저가 로그인 응답에서 갱신한 SESSION 쿠키를 포함해 서버의 토큰을 다시 받아 탭 메모리에 저장한다.
   return ensureCsrfToken();
 }
 

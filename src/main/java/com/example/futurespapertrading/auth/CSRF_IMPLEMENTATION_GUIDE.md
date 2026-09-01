@@ -428,9 +428,13 @@ export async function ensureCsrfToken(): Promise<CsrfState> {
   return csrfLoadPromise;
 }
 
-// 로그인처럼 세션 상태가 바뀐 뒤 최신 토큰을 다시 받는다.
+// 로그인처럼 세션 상태가 바뀐 뒤 React 탭 메모리의 CSRF 정보를 현재 SESSION 쿠키의 서버 세션과 다시 동기화한다.
+// Spring Security는 세션 ID만 바꾸고 WebSession 속성은 유지하므로, 서버가 기존 CSRF 토큰을 다시 반환할 수 있으며 이 함수는 실제 토큰 회전이 아니다.
+// TODO: 로그인 직후 CSRF 토큰까지 실제로 바꾸려면, 백엔드 로그인 성공 경로에서 기존 토큰을 제거하고 새 토큰을 발급하도록 구현한다.
 export async function refreshCsrfToken(): Promise<CsrfState> {
+  // ensureCsrfToken()이 /api/auth/csrf를 다시 호출하도록 현재 탭 메모리의 토큰을 비운다.
   csrfState = null;
+  // 브라우저가 로그인 응답에서 갱신한 SESSION 쿠키를 포함해 서버의 토큰을 다시 받아 탭 메모리에 저장한다.
   return ensureCsrfToken();
 }
 
@@ -446,7 +450,7 @@ export function clearCsrfToken(): void {
 - 토큰을 `localStorage`에 영구 저장하지 않는다. 새 실행 환경에서는 현재 세션의 토큰을 다시 받는다.
 - `isCsrfState`는 서버 JSON이 기대한 모양인지 런타임에 검사하는 TypeScript 타입 가드다.
 - `csrfLoadPromise`는 여러 컴포넌트가 동시에 토큰을 요구할 때 같은 네트워크 요청을 공유한다.
-- `ensure`, `refresh`, `clear`는 각각 준비, 재발급, 폐기라는 생명주기를 표현한다.
+- `ensure`, `refresh`, `clear`는 각각 준비, 로그인 뒤 재조회·동기화, 폐기라는 생명주기를 표현한다. `refresh`만으로 서버 토큰 값이 반드시 바뀌지는 않는다.
 
 ### 완료 기준
 
@@ -686,9 +690,9 @@ const expireSession = useCallback(() => {
 
 ### 완료 기준
 
-- [ ] 앱 시작은 CSRF 준비 후 사용자 조회 순서다.
-- [ ] 로그인과 자동 로그인 뒤 토큰을 갱신한다.
-- [ ] 로그아웃과 세션 만료 때 토큰을 제거한다.
+- [x] 앱 시작은 CSRF 준비 후 사용자 조회 순서다.
+- [x] 로그인과 자동 로그인 뒤 토큰을 갱신한다.
+- [x] 로그아웃과 세션 만료 때 토큰을 제거한다.
 
 ---
 
@@ -1184,7 +1188,7 @@ React CSRF 메모리 제거
 - [x] 4단계 `csrf.ts`
 - [x] 5단계 `apiFetch`
 - [x] 6단계 인증 API 연결
-- [ ] 7단계 인증 생명주기 연결
+- [x] 7단계 인증 생명주기 연결
 - [ ] 8단계 거래 API 연결
 
 ## 테스트와 문서

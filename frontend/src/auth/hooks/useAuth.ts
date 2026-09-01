@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from '../../shared/types';
+import {
+  clearCsrfToken,
+  ensureCsrfToken,
+  refreshCsrfToken,
+} from '../../shared/csrf';
 import * as authApi from '../api/authApi';
 
 // 로그인 상태를 들고 있는 단 하나의 출처.
@@ -15,24 +20,62 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // useEffect는 렌더링 후 부수 효과를 실행하는 Hook으로, useAuth를 호출한 컴포넌트가 처음 렌더링된 뒤 현재 사용자 정보를 조회하는 fetchMe() 요청을 한 번 실행한다.
-  // fetchMe()는 SESSION 쿠키를 포함해 GET /api/auth/me를 요청한다.
-  // 렌더링 중에 하면 안 되는 비동기 요청이므로 useEffect에서 처리한다 (렌더링 중 state를 변경하면 다시 렌더링되어 API 요청이 반복될 수 있기 때문).
+  // useEffect는 렌더링 후 부수 효과를 실행하는 Hook으로, useAuth를 호출한 컴포넌트가 처음 렌더링된 뒤 CSRF 토큰 준비와 현재 사용자 조회를 한 번 실행한다.
+  // 쿠키가 없는 상태에서 두 요청을 동시에 보내 서로 다른 익명 세션이 생기지 않도록, ensureCsrfToken()이 끝난 뒤 fetchMe()를 호출한다.
+  // CSRF 토큰 준비와 사용자 조회처럼 화면을 그리는 일과 별개로 서버와 통신하는 작업을 부수 효과라고 한다.
+  // 부수 효과는 렌더링 중에 하면 안 되는 비동기 요청이므로 useEffect에서 처리한다 (렌더링 중 state를 변경하면 다시 렌더링되어 API 요청이 반복될 수 있기 때문).
   // 빈 의존성 배열([]) 때문에 마운트 시 한 번만 실행한다.
   useEffect(() => {
-    authApi
-      .fetchMe()
-      .then(setUser)
-      .catch((err) => {
-        setUser(null);
-        setError(err instanceof Error ? err.message : '로그인 상태를 확인하지 못했습니다.');
-      })
-      .finally(() => setLoading(false));
+    // 컴포넌트가 사라진 뒤 비동기 요청이 끝났는지 구분하는 표시값을 만든다.
+    let cancelled = false;
+
+    // CSRF 준비와 로그인 상태 조회를 순서대로 처리할 비동기 함수를 정의한다.
+    const initializeAuth = async () => {
+      // 토큰 발급이나 사용자 조회 중 발생한 오류를 한곳에서 처리하기 시작한다.
+      try {
+        // 탭 메모리에 CSRF 토큰이 없으면 서버에 토큰 발급을 요청한다.
+        // 서버는 기존 WebSession의 토큰이 있으면 반환하고, 토큰이 없으면 그 세션에 새 토큰을 저장한다.
+        // WebSession도 없으면 새 WebSession을 만들고 그 안에 새 토큰을 저장한다.
+        await ensureCsrfToken();
+        // fetchMe()는 서버 상태를 바꾸지 않는 GET 요청이므로 CSRF 헤더 없이 SESSION 쿠키로 현재 사용자를 조회한다.
+        const currentUser = await authApi.fetchMe();
+
+        // 요청을 기다리는 동안 컴포넌트가 사라지지 않았을 때만 React 상태를 바꾼다.
+        if (!cancelled) {
+          // 조회 결과(User 또는 null)를 화면의 로그인 상태에 저장한다.
+          setUser(currentUser);
+        }
+      // 위의 토큰 준비나 사용자 조회가 실패했을 때 오류를 받는다.
+      } catch (err) {
+        // 요청을 기다리는 동안 컴포넌트가 사라지지 않았을 때만 React 상태를 바꾼다.
+        if (!cancelled) {
+          // 오류가 났으므로 화면을 비로그인 상태로 되돌린다.
+          setUser(null);
+          // Error의 메시지 또는 기본 안내 문구를 화면에 표시할 오류 상태로 저장한다.
+          setError(err instanceof Error ? err.message : '로그인 상태를 확인하지 못했습니다.');
+        }
+      // 성공·실패와 상관없이 비동기 초기화가 끝날 때 실행한다.
+      } finally {
+        // 컴포넌트가 아직 화면에 있을 때만 최초 로딩 상태를 끝낸다.
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    // 정의한 비동기 초기화 함수를 실행하되, 반환 Promise는 useEffect에 전달하지 않는다.
+    void initializeAuth();
+
+    // return하는 화살표 함수가 cleanup(정리 함수)이며, React는 컴포넌트가 화면에서 사라질 때 이를 호출한다.
+    return () => {
+      // cleanup이 실행되면 늦게 도착한 비동기 응답이 상태를 바꾸지 못하도록 표시값을 true로 바꾼다.
+      cancelled = true;
+    };
+  // 빈 배열은 이 초기화 Effect를 컴포넌트가 처음 마운트될 때 한 번만 실행하게 한다.
   }, []);
 
   // 폼이 호출하면 서버 로그인 → 현재 사용자 조회 → React 로그인 상태 갱신 순으로 처리한다.
   const login = useCallback(async (email: string, password: string) => {
     await authApi.login(email, password); // 성공이면 undefined로 계속, 실패면 Error가 호출한 폼까지 전달된다.
+    await refreshCsrfToken(); // 로그인으로 세션 ID가 바뀔 수 있으므로 현재 세션의 CSRF 토큰을 다시 받는다.
     const authenticatedUser = await authApi.fetchMe(); // 로그인 응답에 사용자 정보가 없으므로, 새 SESSION 쿠키로 현재 사용자를 조회한다.
     if (!authenticatedUser) throw new Error('로그인 세션을 확인하지 못했습니다. 다시 시도해주세요.'); // 성공했는데 사용자가 없으면 이후 state 갱신을 막는다.
     setError(null); // 이전 인증 오류를 지운다.
@@ -43,6 +86,7 @@ export function useAuth() {
   const signup = useCallback(async (email: string, password: string, displayName: string) => {
     await authApi.signup(email, password, displayName);
     await authApi.login(email, password);
+    await refreshCsrfToken(); // 로그인 성공 시 Spring Security가 SESSION 쿠키를 자동으로 갱신한 뒤, React 탭 메모리의 CSRF 정보를 서버 세션과 다시 동기화한다.
     const authenticatedUser = await authApi.fetchMe();
     if (!authenticatedUser) throw new Error('로그인 세션을 확인하지 못했습니다. 다시 시도해주세요.');
     setError(null);
@@ -58,6 +102,7 @@ export function useAuth() {
     setError(null); // 이전에 표시된 인증 오류 상태를 초기화한다.
     try { // 로그아웃 요청이 성공하는 경우의 작업을 실행한다.
       await authApi.logout(); // Promise가 완료될 때까지 기다린다.
+      clearCsrfToken(); // 서버 세션이 무효화된 뒤 현재 탭이 기억한 이전 세션의 토큰을 제거한다.
       setUser(null); // 화면의 현재 사용자 상태도 로그아웃 상태로 변경한다.
     } catch (err) { // 요청 중 오류가 발생하면 err 오류 값을 받아 처리한다.
       setError(err instanceof Error ? err.message : '로그아웃에 실패했습니다.'); // Error면 메시지를, 아니면 기본 문구를 저장한다.
@@ -66,6 +111,7 @@ export function useAuth() {
 
   // 보호 API가 401을 반환하면 만료된 서버 세션을 화면 상태에도 반영한다.
   const expireSession = useCallback(() => {
+    clearCsrfToken();
     setUser(null);
     setError('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
   }, []);

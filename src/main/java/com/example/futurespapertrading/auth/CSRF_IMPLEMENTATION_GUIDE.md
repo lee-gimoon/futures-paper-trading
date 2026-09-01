@@ -791,8 +791,8 @@ testImplementation 'org.springframework.security:spring-security-test'
 
 ### 완료 기준
 
-- [ ] 의존성을 `implementation`이 아니라 `testImplementation`으로 추가했다.
-- [ ] Gradle 동기화에서 의존성 오류가 없다.
+- [x] 의존성을 `implementation`이 아니라 `testImplementation`으로 추가했다.
+- [x] Gradle 동기화에서 의존성 오류가 없다.
 
 ---
 
@@ -814,10 +814,13 @@ src/test/java/com/example/futurespapertrading/auth/CsrfSecurityTest.java
 package com.example.futurespapertrading.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockUser;
 
 import com.example.futurespapertrading.market.stream.BinanceFuturesRawDepthStreamer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -825,8 +828,11 @@ import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTest
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Mono;
 
 @SpringBootTest(properties = {
         "spring.r2dbc.url=r2dbc:h2:mem:///csrf_security_test?options=MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
@@ -842,6 +848,15 @@ class CsrfSecurityTest {
 
     @MockitoBean
     private BinanceFuturesRawDepthStreamer binanceFuturesRawDepthStreamer;
+
+    @MockitoBean
+    private ReactiveAuthenticationManager authenticationManager;
+
+    @BeforeEach
+    void rejectLoginCredentials() {
+        given(authenticationManager.authenticate(any()))
+                .willReturn(Mono.error(new BadCredentialsException("잘못된 테스트 로그인 정보")));
+    }
 
     @Test
     void csrfTokenEndpointReturnsHeaderNameAndToken() {
@@ -930,15 +945,16 @@ class CsrfSecurityTest {
 - `403` 테스트는 토큰이 없거나 틀렸을 때 필터가 요청을 거부하는지 확인한다.
 - 잘못된 계정 + CSRF 요청이 `401`이면 CSRF 필터는 통과했고 실제 인증 로직까지 도달했다는 뜻이다.
 - `mockUser`는 인증 조건을 만들고 `csrf()`는 CSRF 조건을 만든다. 둘은 서로 대체할 수 없다.
+- 로그인 인증 매니저를 테스트용 실패 응답으로 격리하므로 DB 상태와 관계없이 CSRF 필터 통과 뒤 `401`에 도달하는지 확인할 수 있다.
 - 주문 성공 자체는 주문 도메인 테스트의 책임이다. 여기서는 응답이 `403`이 아닌지 확인해 CSRF 필터 통과 여부만 검사한다.
 - 안전한 `GET`에는 CSRF가 없어도 되지만 보호 경로이므로 인증은 필요하다.
 
 ### 완료 기준
 
-- [ ] 토큰 발급 API 응답을 검사한다.
-- [ ] CSRF 없는 로그인과 주문이 `403`인지 검사한다.
-- [ ] CSRF가 있으면 필터를 통과하는지 검사한다.
-- [ ] `GET` 요청은 CSRF 없이 필터를 통과하는지 검사한다.
+- [x] 토큰 발급 API 응답을 검사한다.
+- [x] CSRF 없는 로그인과 주문이 `403`인지 검사한다.
+- [x] CSRF가 있으면 필터를 통과하는지 검사한다.
+- [x] `GET` 요청은 CSRF 없이 필터를 통과하는지 검사한다.
 
 ---
 
@@ -975,8 +991,10 @@ API 표 아래에 다음 설명을 추가한다.
 
 1. 앱 시작 시 `GET /api/auth/csrf`를 호출해 `SESSION` 쿠키와 CSRF 토큰을 준비한다.
 2. `POST`, `PUT`, `PATCH`, `DELETE` 요청에는 응답으로 받은 `headerName`과 `token`을 헤더로 보낸다.
-3. 로그인 성공 뒤 세션 ID가 바뀌므로 현재 세션의 CSRF 토큰을 다시 받는다.
+3. 로그인 성공 뒤 세션 ID가 바뀌므로 현재 세션 기준으로 CSRF 토큰을 다시 조회해 클라이언트 메모리와 동기화한다.
 4. 로그아웃과 세션 만료 뒤에는 클라이언트 메모리의 토큰을 제거한다.
+
+세션 ID가 바뀌어도 WebSession 속성은 유지되므로 로그인 뒤 같은 CSRF 토큰이 반환될 수 있다. 실제 토큰 회전은 백엔드 로그인 성공 경로에서 별도로 구현해야 한다.
 
 CSRF 토큰과 `SESSION` 값은 로그, URL, README 예제의 실제 값으로 남기지 않는다.
 ```
@@ -991,9 +1009,9 @@ CSRF 토큰과 `SESSION` 값은 로그, URL, README 예제의 실제 값으로 �
 
 ### 완료 기준
 
-- [ ] API 표에 `/api/auth/csrf`가 있다.
-- [ ] 변경 요청에 CSRF가 필요하다고 표시했다.
-- [ ] 기존 “CSRF off” 설명을 현재 구현에 맞게 고쳤다.
+- [x] API 표에 `/api/auth/csrf`가 있다.
+- [x] 변경 요청에 CSRF가 필요하다고 표시했다.
+- [x] 기존 “CSRF off” 설명을 현재 구현에 맞게 고쳤다.
 
 ---
 
@@ -1041,9 +1059,9 @@ mobile/src/api/paperApi.ts
 
 ### 완료 기준
 
-- [ ] 모바일 5단계에 토큰 준비·갱신·제거 흐름이 있다.
-- [ ] 예정 파일 위치가 적혀 있다.
-- [ ] 현재 모바일 단계에서는 실제 모바일 코드를 만들지 않는다고 명시했다.
+- [x] 모바일 5단계에 토큰 준비·갱신·제거 흐름이 있다.
+- [x] 예정 파일 위치가 적혀 있다.
+- [x] 현재 모바일 단계에서는 실제 모바일 코드를 만들지 않는다고 명시했다.
 
 ---
 
@@ -1193,11 +1211,11 @@ React CSRF 메모리 제거
 
 ## 테스트와 문서
 
-- [ ] 9단계 테스트 의존성
-- [ ] 10단계 CSRF 보안 테스트
-- [ ] 11단계 README
-- [ ] 12단계 모바일 계획
-- [ ] `.\gradlew.bat test` 통과
+- [x] 9단계 테스트 의존성
+- [x] 10단계 CSRF 보안 테스트
+- [x] 11단계 README
+- [x] 12단계 모바일 계획
+- [x] `.\gradlew.bat test` 통과
 - [x] `frontend`의 `npm run build` 통과
 - [ ] 브라우저 Network 탭 확인
 

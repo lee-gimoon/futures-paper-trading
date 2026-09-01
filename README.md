@@ -244,22 +244,38 @@ npm run dev
 |---|---|---|---|
 | GET | `/api/binance-futures/btcusdt/depth/latest` | – | 최신 호가 스냅샷 1건 |
 | GET | `/api/binance-futures/btcusdt/depth/stream` | – | 호가 SSE 스트림 |
-| POST | `/api/auth/signup` | – | 회원가입 |
-| POST | `/api/auth/login` | – | 로그인 (세션 발급) |
-| POST | `/api/auth/logout` | 세션 | 로그아웃 |
+| GET | `/api/auth/csrf` | – | 현재 세션의 CSRF 헤더 이름과 토큰 발급 |
+| POST | `/api/auth/signup` | CSRF | 회원가입 |
+| POST | `/api/auth/login` | CSRF | 로그인 (세션 발급) |
+| POST | `/api/auth/logout` | 세션 + CSRF | 로그아웃 |
 | GET | `/api/auth/me` | 세션 | 내 정보 조회 |
-| POST | `/api/paper/orders` | 세션 | 주문 생성 (시장가/지정가) |
+| POST | `/api/paper/orders` | 세션 + CSRF | 주문 생성 (시장가/지정가) |
 | GET | `/api/paper/orders` | 세션 | 내 주문 목록 |
-| DELETE | `/api/paper/orders/{id}` | 세션 | 대기 지정가 주문 취소 |
+| DELETE | `/api/paper/orders/{id}` | 세션 + CSRF | 대기 지정가 주문 취소 |
 | GET | `/api/paper/account` | 세션 | 내 계좌 (잔고·실현/미실현 PnL·equity·마진·포지션) |
 | GET | `/api/paper/fills` | 세션 | 내 체결 내역 |
-| PUT | `/api/paper/account/leverage` | 세션 | 레버리지 변경 (1·3·5·10·20·50x) |
+| PUT | `/api/paper/account/leverage` | 세션 + CSRF | 레버리지 변경 (1·3·5·10·20·50x) |
+
+### 세션 인증과 CSRF 요청 순서
+
+1. 앱 시작 시 `GET /api/auth/csrf`를 호출해 `SESSION` 쿠키와 CSRF 토큰을 준비한다.
+2. `POST`, `PUT`, `PATCH`, `DELETE` 요청에는 응답으로 받은 `headerName`과 `token`을 헤더로 보낸다.
+3. 로그인 성공 뒤 Spring Security가 세션 ID를 바꾸므로 현재 세션 기준으로 CSRF 토큰을 다시 조회해 클라이언트 메모리와 동기화한다.
+4. 로그아웃과 세션 만료 뒤에는 클라이언트 메모리의 토큰을 제거한다.
+
+세션 ID가 바뀌어도 WebSession 속성은 유지되므로 로그인 뒤 같은 CSRF 토큰이 반환될 수 있다. 로그인마다 토큰 값까지 실제로 회전하려면 백엔드 로그인 성공 경로에서 기존 토큰을 제거하고 새 토큰을 발급해야 한다.
+
+CSRF 토큰과 `SESSION` 값은 로그, URL, README 예제의 실제 값으로 남기지 않는다.
 
 주문 생성 예시:
 
 ```bash
+curl -c cookies.txt http://localhost:8080/api/auth/csrf
+
+# 위 응답의 token 값을 <CSRF_TOKEN> 자리에 넣는다.
 curl -X POST http://localhost:8080/api/paper/orders \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-TOKEN: <CSRF_TOKEN>" \
   -b cookies.txt \
   -d '{"symbol":"BTCUSDT","side":"BUY","type":"MARKET","quantity":"0.01"}'
 ```
@@ -305,14 +321,16 @@ docs/          문서와 시각 자료
 
 | 파일 | 역할 |
 |---|---|
-| `auth/config/SecurityConfig.java` | Spring Security WebFlux 설정. 공개 API와 세션이 필요한 API를 나누고, JSON 로그인에 맞게 form login/basic/csrf를 끈다. |
+| `auth/config/SecurityConfig.java` | Spring Security WebFlux 설정. 공개 API와 세션이 필요한 API를 나누고, 변경 요청은 WebSession 기반 CSRF 토큰으로 검증한다. |
 | `auth/config/PasswordEncoderConfig.java` | 비밀번호 해시와 검증에 사용할 BCrypt `PasswordEncoder` 빈을 등록한다. |
 | `auth/controller/AuthController.java` | 회원가입, 로그인, 로그아웃, 내 정보 조회 API 입구. 로그인 성공 시 SecurityContext를 세션에 저장한다. |
+| `auth/controller/CsrfController.java` | 현재 WebSession의 CSRF 헤더 이름과 토큰을 React에 전달하는 API 입구다. |
 | `auth/controller/AuthExceptionHandler.java` | 인증 모듈 예외를 HTTP 응답으로 번역한다. 예: 중복 이메일 `409 Conflict`. |
 | `auth/domain/User.java` | `users` 테이블과 매핑되는 사용자 엔티티. 비밀번호는 원문이 아니라 BCrypt 해시로 저장한다. |
 | `auth/dto/SignupRequest.java` | 회원가입 요청 본문 DTO. 이메일, 비밀번호, 표시 이름 입력값을 받는다. |
 | `auth/dto/LoginRequest.java` | 로그인 요청 본문 DTO. 이메일과 비밀번호를 받는다. |
 | `auth/dto/UserResponse.java` | 사용자 응답 DTO. `passwordHash`를 제외하고 클라이언트에 보여줄 값만 담는다. |
+| `auth/dto/CsrfTokenResponse.java` | CSRF 헤더 이름과 토큰을 클라이언트에 전달하는 응답 DTO다. |
 | `auth/repository/UserRepository.java` | `users` 테이블 접근 계층. 이메일 중복 검사와 로그인 사용자 조회에 사용한다. |
 | `auth/service/AuthService.java` | 회원가입 비즈니스 로직. 이메일 중복 검사, 비밀번호 해싱, 사용자 저장을 담당한다. |
 | `auth/service/SecurityUserDetailsService.java` | Spring Security 로그인 과정에서 이메일로 사용자를 조회하고 인증용 `UserDetails`로 변환한다. |

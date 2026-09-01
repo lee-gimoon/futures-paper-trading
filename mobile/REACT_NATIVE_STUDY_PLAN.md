@@ -292,6 +292,26 @@ GET /api/binance-futures/btcusdt/depth/latest
 
 기존 Spring SESSION 쿠키 인증을 우선 사용한다. 인증 화면을 만든 뒤 인증 상태를 앱 전체에서 공유한다.
 
+### 세션 CSRF도 함께 구현한다
+
+- 앱 시작 시 `GET /api/auth/csrf`를 먼저 호출한다.
+- 응답의 CSRF 토큰은 React Native JavaScript 메모리에 저장한다.
+- 로그인·회원가입·로그아웃 요청에 서버가 알려 준 CSRF 헤더를 추가한다.
+- 로그인 뒤 현재 세션 기준으로 CSRF 토큰을 다시 조회해 메모리와 동기화하고, 로그아웃·세션 만료 뒤에는 제거한다.
+- `SESSION` 쿠키와 CSRF 토큰이 같은 서버 세션에 연결되는지 실기기에서 확인한다.
+
+예정 파일:
+
+```text
+mobile/src/api/csrf.ts
+mobile/src/api/client.ts
+mobile/src/api/authApi.ts
+mobile/src/features/auth/AuthProvider.tsx
+mobile/src/api/paperApi.ts
+```
+
+현재 모바일은 1단계이므로 파일은 미리 만들지 않고 모바일 5단계에서 구현한다.
+
 ## 만들거나 수정할 파일
 
 ```text

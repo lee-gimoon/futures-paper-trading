@@ -59,6 +59,14 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
                 .securityContextRepository(securityContextRepository)
                 // authorizeExchange = 현재 요청의 로그인(인증) 상태를 기준으로 경로별 접근 허용(permitAll) 또는 로그인 요구(authenticated)를 정하는 인가 규칙이다.
                 .authorizeExchange(ex -> ex
+                        // Swagger UI와 Swagger UI가 읽는 OpenAPI JSON/YAML 명세는 로그인 없이 볼 수 있게 공개한다.
+                        .pathMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml"
+                        ).permitAll()
                         // Docker/배포 모드에서는 React 빌드 결과물을 Spring Boot가 직접 서빙한다.
                         .pathMatchers("/", "/index.html", "/assets/**", "/*.ico", "/*.png", "/*.svg").permitAll()
                         // 로그인 전에도 현재 익명 세션의 CSRF 토큰을 받아야 하므로 토큰 발급 API를 공개한다.

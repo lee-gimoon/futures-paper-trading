@@ -19,6 +19,8 @@
 
 **Live App**: [futures-paper-trading-production.up.railway.app](https://futures-paper-trading-production.up.railway.app/)
 
+**Swagger 문서**: [futures-paper-trading-production.up.railway.app/swagger-ui.html](https://futures-paper-trading-production.up.railway.app/swagger-ui.html)
+
 **ERD 문서**: [데이터베이스 테이블 관계 보기](docs/backend/erd.md)
 
 **API 한 개 요청 흐름**: [POST 주문 생성 요청 흐름 보기](docs/backend/paper-request-flow.md)

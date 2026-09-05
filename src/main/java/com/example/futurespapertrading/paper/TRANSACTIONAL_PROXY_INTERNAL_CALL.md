@@ -128,54 +128,61 @@ fillRepository.saveAll(...)
 **“이 메서드를 트랜잭션 안에서 실행해야 한다”는 표시**이며,
 이 표시를 읽고 실제로 트랜잭션을 시작하는 주체는 Spring Proxy다.
 
-따라서 Proxy를 거치지 않는 내부 호출에서는 다음과 같은 흐름이 만들어지지 않는다.
+### 현재 `PaperOrderService`에 적용하면
 
-```text
-Proxy.saveOrder()
-   ↓
-@Transactional 검사
-   ↓
-트랜잭션 시작
-   ↓
-실제 객체.saveOrder()
-```
+예를 들어 `saveOrder()`에 `@Transactional`을 붙였다고 가정한다.
 
-예를 들어:
 ```java
 public Mono<?> placeOrder() {
     return saveOrder();
 }
+
+@Transactional
+private Mono<?> saveOrder() {
+    // 주문과 체결 저장
+}
 ```
 
-여기서:
-```java
-saveOrder();
-```
+여기서 `saveOrder()` 호출은 사실상 다음과 같다.
 
-는 사실상:
 ```java
 this.saveOrder();
 ```
 
-와 같다.
+같은 객체 내부 호출만 떼어서 보면 원래 흐름은 다음과 같다.
 
-그리고 이때 `this`는 Proxy가 아니라 **현재 실행 중인 실제&#x20;****`PaperOrderService`****&#x20;객체 자신**을 가리킨다.
+```text
+실제 객체.placeOrder()
+   ↓
+this.saveOrder()
+   ↓
+실제 객체.saveOrder()
+```
+
+`Controller`가 주입받은 `PaperOrderService`가 Proxy인 경우에도, Proxy가 처음 가로챈 호출은 `placeOrder()`다. 실제 객체의 `placeOrder()` 안에서 실행되는 `this.saveOrder()`는 Proxy로 다시 돌아가지 않는다.
+
 ```text
 Controller
    │
-   │ paperOrderService = Proxy
+   │ placeOrder() 호출
    ▼
-Proxy
+Spring Proxy
    │
-   │ 실제 객체.placeOrder()
+   │ placeOrder()의 @Transactional 확인
+   │ 현재 placeOrder()에는 @Transactional 없음
+   │ 실제 객체로 호출 전달
    ▼
-실제 PaperOrderService
+실제 PaperOrderService.placeOrder()
    │
    │ this = 실제 객체
-   │
    │ this.saveOrder()
+   │ Proxy로 다시 돌아가지 않음
    ▼
 실제 PaperOrderService.saveOrder()
+   │
+   │ saveOrder()의 @Transactional을 Proxy가 확인하지 못함
+   ▼
+새로운 트랜잭션 시작 안 함
 ```
 
 ### 결론

@@ -159,31 +159,53 @@ this.saveOrder()
 실제 객체.saveOrder()
 ```
 
-`Controller`가 주입받은 `PaperOrderService`가 Proxy인 경우에도, Proxy가 처음 가로챈 호출은 `placeOrder()`다. 실제 객체의 `placeOrder()` 안에서 실행되는 `this.saveOrder()`는 Proxy로 다시 돌아가지 않는다.
+`Controller`에 주입된 `paperOrderService` 변수에는 실제 객체가 아니라 Spring Proxy가 들어 있다. 따라서 Controller 코드에서 `paperOrderService.placeOrder()`를 호출하면, 실제 호출 대상은 처음부터 Proxy다.
+
+```text
+Controller의 paperOrderService = Spring Proxy
+
+Controller가 paperOrderService.placeOrder() 호출
+→ 실제로는 Spring Proxy.placeOrder() 호출
+```
+
+Proxy는 자신이 가로챈 현재 호출의 메서드인 `placeOrder()`에 트랜잭션을 적용해야 하는지 확인한다. 이때 `saveOrder()`까지 미리 찾아가서 모든 `@Transactional`을 검사하는 것은 아니다.
+
+#### `placeOrder()`에 `@Transactional`이 있는 경우
 
 ```text
 Controller
-   │
-   │ placeOrder() 호출
-   ▼
-Spring Proxy
-   │
-   │ placeOrder()의 @Transactional 확인
-   │ 현재 placeOrder()에는 @Transactional 없음
-   │ 실제 객체로 호출 전달
-   ▼
-실제 PaperOrderService.placeOrder()
-   │
-   │ this = 실제 객체
-   │ this.saveOrder()
-   │ Proxy로 다시 돌아가지 않음
-   ▼
-실제 PaperOrderService.saveOrder()
-   │
-   │ saveOrder()의 @Transactional을 Proxy가 확인하지 못함
-   ▼
-새로운 트랜잭션 시작 안 함
+→ Spring Proxy.placeOrder()
+→ Proxy가 placeOrder()의 @Transactional 확인
+→ 트랜잭션 시작
+→ 실제 PaperOrderService.placeOrder() 호출
+→ 실제 객체 내부에서 this.saveOrder() 호출
+→ this.saveOrder()는 Proxy를 다시 거치지 않음
+→ 하지만 이미 시작된 트랜잭션 안에서 saveOrder()의 DB 작업 실행
+→ 성공 시 COMMIT / 실패 시 ROLLBACK
 ```
+
+이 경우 내부의 `saveOrder()` 호출 자체에는 AOP가 다시 적용되지 않는다. 그래도 `placeOrder()`를 시작할 때 이미 트랜잭션이 만들어졌으므로, 같은 리액티브 체인에 연결된 `saveOrder()`의 DB 작업은 기존 트랜잭션에 참여한다.
+
+#### `placeOrder()`에는 없고 `saveOrder()`에만 `@Transactional`이 있는 경우
+
+```text
+Controller
+→ Spring Proxy.placeOrder()
+→ Proxy가 현재 호출인 placeOrder()의 트랜잭션 정보 확인
+→ placeOrder()에는 @Transactional이 없으므로 트랜잭션을 시작하지 않음
+→ 실제 PaperOrderService.placeOrder() 호출
+→ 실제 객체 내부에서 this.saveOrder() 호출
+→ this.saveOrder()는 Proxy를 다시 거치지 않음
+→ Proxy의 트랜잭션 AOP가 saveOrder() 호출을 가로채지 못함
+→ saveOrder()의 @Transactional은 검사되지 않음
+→ 새로운 트랜잭션 시작 안 함
+```
+
+여기서 실제 객체가 `saveOrder()`의 `@Transactional`을 보고도 그냥 지나치는 것이 아니다. 실제 객체는 어노테이션을 해석해 트랜잭션을 시작하는 역할을 하지 않는다. `saveOrder()` 호출이 Proxy에 도착하지 않았기 때문에, Proxy의 트랜잭션 AOP가 그 어노테이션을 아예 확인하지 못한 것이다.
+
+또한 예시처럼 `saveOrder()`가 `private`이면 Proxy가 해당 메서드를 직접 가로챌 수도 없다. `saveOrder()`를 `public`으로 바꾸더라도 같은 객체 내부에서 `this.saveOrder()`로 호출하면 Proxy를 우회한다는 점은 같다.
+
+위 흐름은 개념을 설명하기 위해 단순화한 것이다. R2DBC의 리액티브 트랜잭션은 반환된 `Mono`가 구독될 때 시작되고, 해당 리액티브 작업이 정상 완료되거나 에러로 끝날 때 COMMIT 또는 ROLLBACK된다.
 
 ### 결론
 ```text

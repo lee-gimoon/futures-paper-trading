@@ -172,19 +172,38 @@ Proxy는 자신이 가로챈 현재 호출의 메서드인 `placeOrder()`에 트
 
 #### `placeOrder()`에 `@Transactional`이 있는 경우
 
+`Controller`가 `placeOrder()`를 호출하면 Proxy가 `placeOrder()`의 `@Transactional`을 확인하고 트랜잭션을 시작한다. 이 상태에서 실제 객체가 내부 메서드인 `this.saveOrder()`를 호출한다.
+
+이때 `saveOrder()` 자체의 트랜잭션 처리와 그 안의 DB 작업을 구분해야 한다.
+
+```text
+saveOrder()의 @Transactional
+→ Proxy를 다시 거치지 않으므로 별도로 적용되지 않음
+
+saveOrder() 안의 DB 작업
+→ placeOrder()에서 이미 시작한 트랜잭션에 참여
+```
+
+전체 흐름은 다음과 같다.
+
 ```text
 Controller
 → Spring Proxy.placeOrder()
 → Proxy가 placeOrder()의 @Transactional 확인
 → 트랜잭션 시작
-→ 실제 PaperOrderService.placeOrder() 호출
-→ 실제 객체 내부에서 this.saveOrder() 호출
-→ this.saveOrder()는 Proxy를 다시 거치지 않음
-→ 하지만 이미 시작된 트랜잭션 안에서 saveOrder()의 DB 작업 실행
-→ 성공 시 COMMIT / 실패 시 ROLLBACK
+┌──────────────────────────────────────────────┐
+│ 실제 PaperOrderService.placeOrder() 실행    │
+│ → 실제 객체 내부에서 this.saveOrder() 호출  │
+│ → this.saveOrder()는 Proxy를 다시 거치지 않음 │
+│ → saveOrder()의 주문 저장                    │
+│ → saveOrder()의 체결 저장                    │
+│ → 두 DB 작업 모두 기존 트랜잭션에 참여       │
+└──────────────────────────────────────────────┘
+→ 모두 성공하면 COMMIT
+→ 중간에 에러가 발생하면 ROLLBACK
 ```
 
-이 경우 내부의 `saveOrder()` 호출 자체에는 AOP가 다시 적용되지 않는다. 그래도 `placeOrder()`를 시작할 때 이미 트랜잭션이 만들어졌으므로, 같은 리액티브 체인에 연결된 `saveOrder()`의 DB 작업은 기존 트랜잭션에 참여한다.
+내부의 `this.saveOrder()` 호출에는 트랜잭션 AOP가 다시 적용되지 않는다. 하지만 `placeOrder()`를 시작할 때 이미 트랜잭션이 만들어졌기 때문에, 같은 리액티브 체인에 연결된 `saveOrder()`의 DB 작업은 그 기존 트랜잭션 안에서 실행된다.
 
 #### `placeOrder()`에는 없고 `saveOrder()`에만 `@Transactional`이 있는 경우
 

@@ -78,6 +78,7 @@ public class PaperOrderService {
             if (!isLimit && state.mark() == null)
                 return Mono.<OrderResponse>error(new QuoteUnavailableException("호가 수신 전이라 증거금을 계산할 수 없습니다."));
 
+            // 현재 포지션과 새 주문을 기준으로, 이번 주문에 추가로 필요한 증거금을 계산한다.
             BigDecimal requiredAdditionalMargin = requiredAdditionalMargin(req, state);
             // 새로 여는/늘리는 주문의 필요 증거금이 가용잔고를 넘으면 거부한다(400).
             //   축소/청산만 하는 주문은 requiredAdditionalMargin이 0이라 통과한다.

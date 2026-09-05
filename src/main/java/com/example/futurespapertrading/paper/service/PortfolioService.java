@@ -94,7 +94,7 @@ public class PortfolioService {
                         // 예: 주문 id 10번의 레버리지가 5배, 11번의 레버리지가 10배라면 {10=5, 11=10}
                         orderRepository.findByUserIdOrderByIdDesc(userId)
                                 .collectMap(PaperOrder::id, PaperOrder::leverage)
-                // Mono.zip(a, b)의 반환 타입은 Reactor가 정해둔 Mono<Tuple2<A, B>>라서 getT1()/getT2()로 꺼낸다.
+                // Mono.zip(a, b)의 반환 타입은 Reactor가 정해둔 Mono<Tuple2<List<PaperFill>, Map<Long, Integer>>>라서 getT1()/getT2()로 꺼낸다.
                 // map(): zip 결과 묶음에서 t.getT1()은 체결 목록, t.getT2()는 주문 레버리지 Map이다.
                 ).map(t -> toState(account, t.getT1(), t.getT2())));
     }

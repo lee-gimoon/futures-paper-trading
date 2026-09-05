@@ -130,45 +130,42 @@ fillRepository.saveAll(...)
 
 ### 현재 `PaperOrderService`에 적용하면
 
-예를 들어 `saveOrder()`에 `@Transactional`을 붙였다고 가정한다.
+이 절에서는 `placeOrder()`가 같은 객체의 `saveOrder()`를 호출할 때, `@Transactional`을 어느 메서드에 붙이느냐에 따라 트랜잭션 적용 결과가 어떻게 달라지는지 비교한다.
+
+두 경우 모두 메서드의 호출 관계는 다음과 같다.
 
 ```java
 public Mono<?> placeOrder() {
     return saveOrder();
 }
 
-@Transactional
 private Mono<?> saveOrder() {
     // 주문과 체결 저장
 }
 ```
 
-여기서 `saveOrder()` 호출은 사실상 다음과 같다.
+`placeOrder()` 안의 `saveOrder()` 호출은 `this.saveOrder()`와 같다. 여기서 `this`는 Spring Proxy가 아니라 현재 `placeOrder()`를 실행하고 있는 실제 `PaperOrderService` 객체다.
 
-```java
-this.saveOrder();
-```
-
-같은 객체 내부 호출만 떼어서 보면 원래 흐름은 다음과 같다.
-
-```text
-실제 객체.placeOrder()
-   ↓
-this.saveOrder()
-   ↓
-실제 객체.saveOrder()
-```
-
-`Controller`에 주입된 `paperOrderService` 변수에는 실제 객체가 아니라 Spring Proxy가 들어 있다. 따라서 Controller 코드에서 `paperOrderService.placeOrder()`를 호출하면, 실제 호출 대상은 처음부터 Proxy다.
+한편 `Controller`에 주입된 `paperOrderService`는 실제 객체가 아니라 Spring Proxy다. 따라서 Controller가 `paperOrderService.placeOrder()`를 호출하면 처음에는 Proxy로 들어가지만, Proxy가 실제 객체의 `placeOrder()`를 호출한 이후의 `this.saveOrder()`는 실제 객체 내부 호출이 된다.
 
 ```text
 Controller의 paperOrderService = Spring Proxy
-
-Controller가 paperOrderService.placeOrder() 호출
-→ 실제로는 Spring Proxy.placeOrder() 호출
+→ Controller가 paperOrderService.placeOrder() 호출
+→ Spring Proxy.placeOrder()가 호출을 받음
+→ Proxy가 현재 호출된 placeOrder()의 트랜잭션 정보 확인
+→ 실제 PaperOrderService.placeOrder() 실행
+   → this.saveOrder() 호출
+   → 실제 PaperOrderService.saveOrder() 실행
 ```
 
-Proxy는 자신이 가로챈 현재 호출의 메서드인 `placeOrder()`에 트랜잭션을 적용해야 하는지 확인한다. 이때 `saveOrder()`까지 미리 찾아가서 모든 `@Transactional`을 검사하는 것은 아니다.
+Proxy는 자신이 직접 받은 `placeOrder()` 호출의 트랜잭션 정보만 확인한다. `placeOrder()`가 나중에 어떤 내부 메서드를 호출할지 미리 찾아가서 그 메서드들의 `@Transactional`까지 모두 검사하지는 않는다.
+
+따라서 다음 두 경우를 나누어 봐야 한다.
+
+1. Proxy가 직접 호출받는 `placeOrder()`에 `@Transactional`이 있는 경우
+2. 내부에서 직접 호출되는 `saveOrder()`에만 `@Transactional`이 있는 경우
+
+먼저 `placeOrder()`에 `@Transactional`이 있는 경우부터 살펴보자.
 
 #### `placeOrder()`에 `@Transactional`이 있는 경우
 
@@ -244,11 +241,32 @@ Controller
 → 체결 저장 중 에러가 발생하면 먼저 끝난 주문 저장은 남을 수 있음
 ```
 
-내부의 `this.saveOrder()` 호출에는 트랜잭션 AOP가 적용되지 않는다. `placeOrder()`에서도 트랜잭션을 시작하지 않았으므로 `saveOrder()`의 DB 작업이 참여할 기존 트랜잭션도 없다. 따라서 주문 저장과 체결 저장 중 하나가 실패했을 때 두 작업을 함께 ROLLBACK할 수 없다.
+##### 참고: 트랜잭션 AOP란?
 
-여기서 실제 객체가 `saveOrder()`의 `@Transactional`을 보고도 그냥 지나치는 것은 아니다. 실제 객체는 어노테이션을 해석해 트랜잭션을 시작하는 역할을 하지 않는다. `saveOrder()` 호출이 Proxy에 도착하지 않았기 때문에, Proxy의 트랜잭션 AOP가 그 어노테이션을 아예 확인하지 못한 것이다.
+AOP(Aspect-Oriented Programming)는 여러 메서드에 공통으로 필요한 처리를 실제 비즈니스 코드와 분리해, 메서드 실행 전후에 적용하는 방식이다. 트랜잭션 AOP는 이 구조를 이용해 대상 메서드 실행 전에는 트랜잭션을 준비하고, 실행 결과에 따라 COMMIT 또는 ROLLBACK을 처리한다.
 
-또한 예시처럼 `saveOrder()`가 `private`이면 Proxy가 해당 메서드를 직접 가로챌 수도 없다. `saveOrder()`를 `public`으로 바꾸더라도 같은 객체 내부에서 `this.saveOrder()`로 호출하면 Proxy를 우회한다는 점은 같다.
+`@Transactional`은 트랜잭션을 직접 시작하는 코드가 아니라 트랜잭션 설정을 담은 메타데이터다. Spring의 트랜잭션 AOP는 다음 구성 요소를 통해 이 정보를 처리한다.
+
+- `TransactionInterceptor`: Proxy로 들어온 메서드 호출에서 트랜잭션 처리를 실행하는 AOP 인터셉터
+- `TransactionAttributeSource`: 현재 호출된 메서드와 대상 클래스에서 트랜잭션 설정을 조회하는 역할
+- `AnnotationTransactionAttributeSource`: `@Transactional`을 읽어 전파 방식, 격리 수준, 읽기 전용 여부, ROLLBACK 규칙 등의 트랜잭션 설정으로 변환하는 구현체
+- `TransactionManager`: 읽어 낸 설정에 따라 실제 트랜잭션을 시작하고 COMMIT 또는 ROLLBACK하는 역할
+
+개념적인 처리 순서는 다음과 같다.
+
+```text
+외부 Bean에서 메서드 호출
+→ Spring Proxy가 호출을 받음
+→ TransactionInterceptor 실행
+→ TransactionAttributeSource가 현재 메서드와 대상 클래스의 트랜잭션 정보 조회
+→ AnnotationTransactionAttributeSource가 @Transactional을 읽음
+   ├─ @Transactional 없음: 트랜잭션 없이 실제 메서드 실행
+   └─ @Transactional 있음: TransactionManager를 이용해 트랜잭션 경계 생성
+                              → 실제 메서드의 DB 작업 실행
+                              → 성공 시 COMMIT / 실패 시 ROLLBACK
+```
+
+따라서 실제 객체 내부의 `this.saveOrder()`처럼 Proxy를 거치지 않는 호출에서는 `TransactionInterceptor`가 실행되지 않는다. `TransactionAttributeSource`에 트랜잭션 정보를 조회하는 단계에도 도달하지 않으므로 `saveOrder()`의 `@Transactional`은 읽히지 않는다.
 
 위 흐름은 개념을 설명하기 위해 단순화한 것이다. R2DBC의 리액티브 트랜잭션은 반환된 `Mono`가 구독될 때 시작되고, 해당 리액티브 작업이 정상 완료되거나 에러로 끝날 때 COMMIT 또는 ROLLBACK된다.
 

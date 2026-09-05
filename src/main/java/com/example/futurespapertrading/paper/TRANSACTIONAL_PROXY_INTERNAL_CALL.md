@@ -211,9 +211,14 @@ Controller
 
 이 경우에도 `saveOrder()` 자체의 트랜잭션 처리와 그 안의 DB 작업을 구분해서 봐야 한다.
 
-`saveOrder()`는 Proxy가 호출하는 것이 아니라 실제 객체 내부에서 `this.saveOrder()`로 직접 호출된다. 따라서 호출이 Proxy를 거치지 않으며, `@Transactional`을 검사하는 트랜잭션 AOP도 실행되지 않는다. 그 결과 `saveOrder()`의 `@Transactional`은 적용되지 않는다.
-
 ```text
+saveOrder()의 @Transactional
+→ 실제 객체 내부에서 this.saveOrder()로 직접 호출됨
+→ 호출이 Proxy를 거치지 않음
+(`this.saveOrder()`의 호출 대상이 Proxy가 아니라 실제 객체이므로)
+→ @Transactional을 검사하는 트랜잭션 AOP가 실행되지 않음
+→ saveOrder()의 @Transactional이 적용되지 않음
+
 saveOrder() 안의 DB 작업
 → placeOrder()에서 시작된 기존 트랜잭션이 없음
 → 주문 저장과 체결 저장이 하나의 트랜잭션으로 묶이지 않음

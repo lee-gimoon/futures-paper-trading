@@ -207,20 +207,43 @@ Controller
 
 #### `placeOrder()`에는 없고 `saveOrder()`에만 `@Transactional`이 있는 경우
 
+`Controller`가 `placeOrder()`를 호출하면 Proxy는 자신이 가로챈 `placeOrder()`의 트랜잭션 정보만 확인한다. `placeOrder()`에는 `@Transactional`이 없으므로 트랜잭션을 시작하지 않고 실제 객체의 메서드를 호출한다. 이후 실제 객체가 내부 메서드인 `this.saveOrder()`를 호출한다.
+
+이 경우에도 `saveOrder()` 자체의 트랜잭션 처리와 그 안의 DB 작업을 구분해서 봐야 한다.
+
+```text
+saveOrder()의 @Transactional
+→ Proxy가 saveOrder() 호출을 가로채지 못함
+→ 어노테이션이 검사되지 않으므로 적용되지 않음
+
+saveOrder() 안의 DB 작업
+→ placeOrder()에서 시작된 기존 트랜잭션이 없음
+→ 주문 저장과 체결 저장이 하나의 트랜잭션으로 묶이지 않음
+```
+
+전체 흐름은 다음과 같다.
+
 ```text
 Controller
 → Spring Proxy.placeOrder()
 → Proxy가 현재 호출인 placeOrder()의 트랜잭션 정보 확인
 → placeOrder()에는 @Transactional이 없으므로 트랜잭션을 시작하지 않음
-→ 실제 PaperOrderService.placeOrder() 호출
-→ 실제 객체 내부에서 this.saveOrder() 호출
-→ this.saveOrder()는 Proxy를 다시 거치지 않음
-→ Proxy의 트랜잭션 AOP가 saveOrder() 호출을 가로채지 못함
-→ saveOrder()의 @Transactional은 검사되지 않음
-→ 새로운 트랜잭션 시작 안 함
+┌──────────────────────────────────────────────────┐
+│ 실제 PaperOrderService.placeOrder() 실행        │
+│ → 실제 객체 내부에서 this.saveOrder() 호출      │
+│ → this.saveOrder()는 Proxy를 다시 거치지 않음    │
+│ → saveOrder()의 @Transactional은 검사되지 않음  │
+│ → saveOrder()의 주문 저장                        │
+│ → saveOrder()의 체결 저장                        │
+│ → 두 DB 작업을 묶는 트랜잭션 없음                │
+└──────────────────────────────────────────────────┘
+→ 모두 성공하면 각각의 DB 변경 사항이 저장됨
+→ 체결 저장 중 에러가 발생하면 먼저 끝난 주문 저장은 남을 수 있음
 ```
 
-여기서 실제 객체가 `saveOrder()`의 `@Transactional`을 보고도 그냥 지나치는 것이 아니다. 실제 객체는 어노테이션을 해석해 트랜잭션을 시작하는 역할을 하지 않는다. `saveOrder()` 호출이 Proxy에 도착하지 않았기 때문에, Proxy의 트랜잭션 AOP가 그 어노테이션을 아예 확인하지 못한 것이다.
+내부의 `this.saveOrder()` 호출에는 트랜잭션 AOP가 적용되지 않는다. `placeOrder()`에서도 트랜잭션을 시작하지 않았으므로 `saveOrder()`의 DB 작업이 참여할 기존 트랜잭션도 없다. 따라서 주문 저장과 체결 저장 중 하나가 실패했을 때 두 작업을 함께 ROLLBACK할 수 없다.
+
+여기서 실제 객체가 `saveOrder()`의 `@Transactional`을 보고도 그냥 지나치는 것은 아니다. 실제 객체는 어노테이션을 해석해 트랜잭션을 시작하는 역할을 하지 않는다. `saveOrder()` 호출이 Proxy에 도착하지 않았기 때문에, Proxy의 트랜잭션 AOP가 그 어노테이션을 아예 확인하지 못한 것이다.
 
 또한 예시처럼 `saveOrder()`가 `private`이면 Proxy가 해당 메서드를 직접 가로챌 수도 없다. `saveOrder()`를 `public`으로 바꾸더라도 같은 객체 내부에서 `this.saveOrder()`로 호출하면 Proxy를 우회한다는 점은 같다.
 

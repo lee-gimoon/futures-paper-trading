@@ -1,429 +1,361 @@
 /**
- * 이 파일은 거래 화면 전체를 담당한다.
- * 주문 방식과 수량 같은 화면 상태를 관리하고, 제목·주문 입력·호가 목록을 조합한다.
- * 아직 Spring 서버에는 연결하지 않으며 버튼을 누르면 로컬 결과 메시지만 보여 준다.
- * 이 화면에서 함께 사용하는 주문 방식·수량·결과 메시지 상태는 이 컴포넌트가 `useState`로 관리한다.
- * AppButton과 PriceRow는 자체 화면 상태를 관리하지 않고, 부모가 props로 전달한 값을 표시하거나 콜백을 실행한다.
+ * BTCUSDT 주문 화면 전체를 조합하고 화면 상태를 관리한다.
+ * 과거 캔들은 Binance REST로 한 번 받고 진행 봉·호가·계좌·주문은 Spring API를 사용한다.
+ * 작은 컴포넌트는 전달받은 값을 표시하고, 이 화면이 주문 방향과 확인 창 상태를 연결한다.
  */
-
-// useState는 선택한 주문 방식, 입력 수량처럼 화면 안에서 바뀌는 값을 기억하는 React Hook이다.
 import { useState } from 'react';
-
-/*
- * 아래 항목은 모두 `react-native`가 제공한다.
- *
- * FlatList: 배열 데이터를 필요한 항목만 효율적으로 렌더링하는 목록 컴포넌트다.
- * KeyboardAvoidingView: 키보드가 열릴 때 입력 영역이 가려지지 않도록 사용 가능한 높이를 조정한다.
- * Platform: 현재 앱이 Android와 iOS 중 어디에서 실행되는지 알려 주는 API 객체다.
- * ScrollView: 화면보다 긴 내용을 손가락으로 스크롤할 수 있게 한다.
- * StyleSheet: 색상·간격·Flexbox 배치 같은 스타일 묶음을 만든다.
- * Text: 글자를 표시하고, TextInput은 사용자가 글자나 숫자를 입력하게 한다.
- * View: 다른 컴포넌트를 묶고 배치하는 UI 컨테이너이며 웹의 div와 비슷하다.
- */
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-
-// SafeAreaView는 화면 내용이 상태 표시줄, 카메라 구멍과 홈 표시 영역에 겹치지 않게 한다.
+import { router, useLocalSearchParams } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 완성된 화면 안에서 반복해서 사용하는 버튼과 가격 행을 별도 컴포넌트에서 가져온다.
-import { AppButton } from '@/components/AppButton';
-import { PriceRow } from '@/components/PriceRow';
-
-// `import type`은 실행할 값이 아니라 TypeScript 검사에만 사용할 타입 정보를 가져온다.
-import type { PriceSide } from '@/components/PriceRow';
-
-// 반복되는 색상값은 직접 작성하지 않고 공통 테마에서 가져온다.
+import { AppIcon } from '@/components/AppIcon';
+import { OrderBook } from '@/components/OrderBook';
+import { SignInNotice } from '@/components/SignInNotice';
+import { PositionCard } from '@/features/account/components/PositionCard';
+import { usePaperAccount } from '@/features/account/usePaperAccount';
+import { useAuth } from '@/features/auth/useAuth';
+import { PriceChart } from '@/features/market/chart/PriceChart';
+import { useDepthStream } from '@/features/market/useDepthStream';
+import { OrderRow } from '@/features/orders/components/OrderRow';
+import { usePaperOrders } from '@/features/orders/usePaperOrders';
+import { LeverageSheet } from '@/features/trade/components/LeverageSheet';
+import { OrderConfirmModal } from '@/features/trade/components/OrderConfirmModal';
+import { OrderForm } from '@/features/trade/components/OrderForm';
+import { useOrderForm } from '@/features/trade/useOrderForm';
+import { useSubmitOrder } from '@/features/trade/useSubmitOrder';
 import { colors } from '@/theme/colors';
+import type { CreateOrderInput, OrderSide } from '@/types/paper';
+import { formatMarketPrice } from '@/utils/format';
 
-// 주문 방식과 방향에 허용되는 문자열을 TypeScript 타입으로 제한한다.
-type OrderType = 'market' | 'limit';
-type OrderSide = 'buy' | 'sell';
-
-// FlatList의 항목 하나가 가져야 하는 데이터 모양이다.
-type OrderBookItem = {
-  id: string;
-  price: string;
-  quantity: string;
-  side: PriceSide;
-};
-
-// 이 화면은 API를 호출하지 않으므로 현재가는 로컬 고정 값으로 사용한다.
-const CURRENT_PRICE = '104,280.50';
-
-// 서버 대신 로컬에 정의한 고정 호가를 화면에 표시한다.
-const ORDER_BOOK: OrderBookItem[] = [
-  { id: 'ask-3', price: '104,310.00', quantity: '0.084', side: 'ask' },
-  { id: 'ask-2', price: '104,300.50', quantity: '0.126', side: 'ask' },
-  { id: 'ask-1', price: '104,291.20', quantity: '0.218', side: 'ask' },
-  { id: 'bid-1', price: '104,280.50', quantity: '0.194', side: 'bid' },
-  { id: 'bid-2', price: '104,271.80', quantity: '0.311', side: 'bid' },
-  { id: 'bid-3', price: '104,260.10', quantity: '0.152', side: 'bid' },
-];
-
-// index.tsx의 HomeScreen이 자식으로 렌더링하는 거래 화면 컴포넌트다.
 export function TradeScreen() {
-  // orderType은 현재 선택한 시장가/지정가를 보관한다. 처음에는 시장가가 선택된다.
-  const [orderType, setOrderType] = useState<OrderType>('market');
-  // quantity는 TextInput에 입력한 문자열을 그대로 보관한다.
-  const [quantity, setQuantity] = useState('');
-  // message가 빈 문자열이 아니면 주문 버튼 아래에 결과 안내를 표시한다.
-  const [message, setMessage] = useState('');
+  const params = useLocalSearchParams<{ side?: string; intent?: string }>();
+  const { status } = useAuth();
+  const authenticated = status === 'authenticated';
+  const market = useDepthStream();
+  const account = usePaperAccount(authenticated);
+  const orders = usePaperOrders(authenticated);
+  const form = useOrderForm();
+  const submission = useSubmitOrder();
+  const initialSide: OrderSide = params.side === 'SELL' ? 'SELL' : 'BUY';
+  const [sideSelection, setSideSelection] = useState({
+    side: initialSide,
+    routeIntent: params.intent,
+  });
+  const [pendingOrder, setPendingOrder] = useState<CreateOrderInput | null>(
+    null,
+  );
+  const [leverageOpen, setLeverageOpen] = useState(false);
+  const [previewLeverage, setPreviewLeverage] = useState(10);
+  const [message, setMessage] = useState<string | null>(null);
 
-  // 매수 또는 매도 버튼을 눌렀을 때 입력을 검사하고 로컬 준비 메시지를 만든다.
-  // 이 화면은 로컬 입력 상태만 관리하므로 서버에 주문을 전송하지 않는다.
-  const prepareOrder = (side: OrderSide) => {
-    // TextInput 값은 문자열이므로 크기를 검사할 수 있도록 숫자로 변환한다.
-    const numericQuantity = Number(quantity);
+  const referencePrice = market.depth?.midPrice ?? null;
+  const leverage = account.portfolio?.leverage ?? previewLeverage;
+  const connected = market.status === 'connected';
+  const requestedSide =
+    params.side === 'BUY' || params.side === 'SELL' ? params.side : null;
+  const side =
+    requestedSide && sideSelection.routeIntent !== params.intent
+      ? requestedSide
+      : sideSelection.side;
 
-    // 빈 값, 숫자가 아닌 값, 0 이하는 주문 수량으로 사용할 수 없다.
-    if (!quantity.trim() || !Number.isFinite(numericQuantity) || numericQuantity <= 0) {
-      setMessage('0보다 큰 주문 수량을 입력해 주세요.');
-      return;
-    }
+  const confirmOrder = async () => {
+    if (!pendingOrder) return;
+    const created = await submission.submit(pendingOrder);
+    if (!created) return;
 
-    const sideLabel = side === 'buy' ? '매수' : '매도';
-    const orderTypeLabel = orderType === 'market' ? '시장가' : '지정가';
-    // setMessage가 상태를 바꾸면 React가 이 컴포넌트를 다시 렌더링해 새 메시지를 표시한다.
-    setMessage(`${sideLabel} ${orderTypeLabel} 주문을 준비했습니다. (${quantity} BTC)`);
+    setPendingOrder(null);
+    form.clearAfterSubmit();
+    setMessage(`주문 #${created.id}이 Spring 서버에 접수되었습니다.`);
+    await Promise.all([account.refresh(false), orders.refresh(false)]);
   };
 
   return (
-    // SafeAreaView가 전체 화면의 가장 바깥쪽에서 휴대폰의 안전 영역을 적용한다.
-    <SafeAreaView style={styles.safeArea}>
-      {/* 키보드가 열리면 사용할 수 있는 화면 높이에 맞춰 입력 영역을 줄인다. */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardArea}
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.screen}>
-          {/* 입력 영역만 스크롤되므로 작은 화면이나 열린 키보드 뒤에 버튼이 가려지지 않는다. */}
-          <ScrollView
-            contentContainerStyle={styles.formContent}
-            keyboardDismissMode="on-drag"
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            style={styles.formScroll}
-          >
-            {/* 종목명과 이 시세가 로컬 데이터라는 표시를 가로로 배치한다. */}
-            <View style={styles.titleRow}>
-              <View>
-                <Text style={styles.eyebrow}>무기한 선물 · 모의투자</Text>
-                <Text style={styles.symbol}>BTCUSDT</Text>
-              </View>
-              <View style={styles.liveBadge}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>로컬 시세</Text>
-              </View>
-            </View>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.symbol}>BTCUSDT</Text>
+            <Text style={styles.caption}>USDⓈ-M 무기한 · 모의 선물</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setLeverageOpen(true)}
+              style={styles.headerButton}
+            >
+              <Text style={styles.headerButtonText}>격리 {leverage}x</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="상세 차트"
+              accessibilityRole="button"
+              onPress={() => router.push('/chart')}
+              style={styles.iconButton}
+            >
+              <AppIcon name="chart" color={colors.accentText} size={20} />
+            </Pressable>
+          </View>
+        </View>
 
-            {/* 현재가는 아직 API 값이 아니라 위에서 선언한 CURRENT_PRICE를 표시한다. */}
-            <View style={styles.priceCard}>
-              <Text style={styles.priceLabel}>현재가</Text>
-              <Text style={styles.currentPrice}>{CURRENT_PRICE}</Text>
-              <Text style={styles.currency}>USDT</Text>
-            </View>
+        <View style={styles.priceStrip}>
+          <View>
+            <Text style={styles.caption}>비트코인 가격</Text>
+            <Text style={styles.price}>
+              {formatMarketPrice(referencePrice)}
+            </Text>
+          </View>
+          <View style={styles.connection}>
+            <View style={[styles.dot, connected && styles.connectedDot]} />
+            <Text style={styles.connectionText}>
+              {connected ? '호가 실시간' : '호가 연결 중'}
+            </Text>
+          </View>
+        </View>
+        {market.error ? (
+          <Pressable accessibilityRole="button" onPress={market.reconnect}>
+            <Text style={styles.error}>{market.error} · 다시 연결</Text>
+          </Pressable>
+        ) : null}
 
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>주문 방식</Text>
-              <View style={styles.buttonRow}>
-                {/* 시장가와 지정가 AppButton 컴포넌트는 항상 함께 렌더링된다.
-                    orderType과 일치하는 AppButton만 selected가 true가 되어 선택된 모양으로 표시된다. */}
-                <AppButton
-                  label="시장가"
-                  onPress={() => setOrderType('market')}
-                  selected={orderType === 'market'}
-                  style={styles.flexButton}
-                  variant="choice"
-                />
-                <AppButton
-                  label="지정가"
-                  onPress={() => setOrderType('limit')}
-                  selected={orderType === 'limit'}
-                  style={styles.flexButton}
-                  variant="choice"
-                />
-              </View>
-            </View>
+        <PriceChart
+          compact
+          liveConnected={connected}
+          liveKlines={market.liveKlines}
+        />
 
-            {/* TextInput의 입력값과 quantity 상태를 value/onChangeText로 서로 연결한다. */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>수량</Text>
-              <View style={styles.inputShell}>
-                <TextInput
-                  accessibilityLabel="주문 수량"
-                  keyboardType="decimal-pad"
-                  onChangeText={(value) => {
-                    // 입력할 때마다 최신 문자열을 저장하고 이전 결과 메시지는 지운다.
-                    setQuantity(value);
-                    setMessage('');
-                  }}
-                  placeholder="0.001"
-                  placeholderTextColor={colors.textMuted}
-                  returnKeyType="done"
-                  style={styles.input}
-                  value={quantity}
-                />
-                <Text style={styles.inputUnit}>BTC</Text>
-              </View>
-            </View>
-
-            {/* 같은 AppButton에 서로 다른 variant와 동작을 props로 전달해 매수·매도 버튼을 만든다. */}
-            <View style={styles.buttonRow}>
-              <AppButton
-                label="매수"
-                onPress={() => prepareOrder('buy')}
-                style={styles.flexButton}
-                variant="buy"
-              />
-              <AppButton
-                label="매도"
-                onPress={() => prepareOrder('sell')}
-                style={styles.flexButton}
-                variant="sell"
-              />
-            </View>
-
-            {/* message가 있을 때만 안내 영역을 렌더링하는 조건부 JSX다. */}
-            {message ? (
-              <View accessibilityLiveRegion="polite" style={styles.messageBox}>
-                <Text style={styles.messageText}>{message}</Text>
-              </View>
-            ) : null}
-          </ScrollView>
-
-          {/* 주문 입력과 별도로 호가 제목, 열 이름과 FlatList를 묶는 영역이다. */}
-          <View style={styles.orderBookSection}>
-            <View style={styles.orderBookTitleRow}>
-              <Text style={styles.orderBookTitle}>호가</Text>
-              <Text style={styles.orderBookCaption}>서버 연결 전 고정 데이터</Text>
-            </View>
-            <View style={styles.columnHeader}>
-              <Text style={styles.columnLabel}>가격(USDT)</Text>
-              <Text style={styles.columnLabel}>수량(BTC)</Text>
-            </View>
-            {/* FlatList는 호가 데이터가 많아져도 현재 보이는 영역과 주변 항목을 중심으로 렌더링해 성능을 관리한다.
-                사용자가 목록을 스크롤하면 다음 호가 행을 추가로 렌더링한다. */}
-            <FlatList
-              // 목록에서 사용할 전체 데이터 배열이다.
-              data={ORDER_BOOK}
-              // 각 행 사이에 표시할 구분선 컴포넌트다.
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              // 키보드가 열린 상태에서 목록을 터치했을 때의 처리 방식을 정한다.
-              keyboardShouldPersistTaps="handled"
-              // 각 데이터 항목에서 React가 사용할 고유 key를 꺼낸다.
-              keyExtractor={(item) => item.id}
-              // FlatList가 data 배열의 각 항목을 하나씩 꺼내 renderItem 함수의 item 매개변수로 전달한다.
-              // renderItem은 전달받은 item을 PriceRow의 props로 넘겨 호가 한 행을 만든다.
-              renderItem={({ item }) => (
-                <PriceRow price={item.price} quantity={item.quantity} side={item.side} />
-              )}
-              // 세로 스크롤 표시줄을 보여 줄지 결정한다.
-              showsVerticalScrollIndicator={false}
-              // FlatList 전체 컴포넌트에 적용할 스타일이다.
-              style={styles.orderBookList}
+        <View style={styles.tradingArea}>
+          <View style={styles.orderColumn}>
+            <OrderForm
+              authenticated={authenticated}
+              disabled={
+                submission.submitting ||
+                (authenticated && (!connected || account.loading))
+              }
+              form={form}
+              leverage={leverage}
+              onPrepare={(input) => {
+                submission.clearError();
+                setMessage(null);
+                setPendingOrder(input);
+              }}
+              onSideChange={(value) =>
+                setSideSelection({ side: value, routeIntent: params.intent })
+              }
+              onSignIn={() =>
+                router.push({
+                  pathname: '/login',
+                  params: { returnTo: '/trade' },
+                })
+              }
+              portfolio={account.portfolio}
+              referencePrice={referencePrice}
+              side={side}
+            />
+          </View>
+          <View style={styles.bookColumn}>
+            <OrderBook
+              compact
+              depth={market.depth}
+              onSelectPrice={form.selectLimitPrice}
+              statusText={connected ? 'Spring 실시간' : '갱신 지연'}
             />
           </View>
         </View>
-      </KeyboardAvoidingView>
+
+        {message ? (
+          <Text accessibilityLiveRegion="polite" style={styles.success}>
+            {message}
+          </Text>
+        ) : null}
+
+        <View style={styles.personalSection}>
+          <View style={styles.sectionHeading}>
+            <Text style={styles.sectionTitle}>내 포지션과 주문</Text>
+            {authenticated ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.navigate('/orders')}
+                style={styles.allOrders}
+              >
+                <Text style={styles.allOrdersText}>전체 주문 보기</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {!authenticated ? (
+            <SignInNotice
+              message="로그인하면 Spring 서버의 내 계좌로 주문하고 포지션을 확인할 수 있습니다."
+              returnTo="/trade"
+            />
+          ) : (
+            <>
+              {account.error ? (
+                <Text style={styles.error}>{account.error}</Text>
+              ) : null}
+              {account.portfolio?.position ? (
+                <PositionCard
+                  closing={account.closingPosition}
+                  onClose={() => void account.closePosition()}
+                  position={account.portfolio.position}
+                />
+              ) : (
+                <Text style={styles.empty}>현재 열린 포지션이 없습니다.</Text>
+              )}
+              {orders.orders.slice(0, 2).map((order) => (
+                <View key={order.id} style={styles.orderRow}>
+                  <OrderRow
+                    canceling={orders.cancelingId === order.id}
+                    onCancel={(id) => void orders.cancel(id)}
+                    order={order}
+                  />
+                </View>
+              ))}
+            </>
+          )}
+        </View>
+      </ScrollView>
+
+      <LeverageSheet
+        error={account.error}
+        leverage={leverage}
+        onClose={() => setLeverageOpen(false)}
+        onSave={async (value) => {
+          if (!authenticated) {
+            setPreviewLeverage(value);
+            return true;
+          }
+          return account.changeLeverage(value);
+        }}
+        preview={!authenticated}
+        saving={account.changingLeverage}
+        visible={leverageOpen}
+      />
+      <OrderConfirmModal
+        error={submission.error}
+        input={pendingOrder}
+        leverage={leverage}
+        onCancel={() => {
+          if (!submission.submitting) {
+            submission.clearError();
+            setPendingOrder(null);
+          }
+        }}
+        onConfirm={() => void confirmOrder()}
+        referencePrice={referencePrice}
+        submitting={submission.submitting}
+      />
     </SafeAreaView>
   );
 }
 
-// 위 JSX에서 참조하는 색상·크기·간격과 Flexbox 배치 규칙을 이름별로 만든다.
 const styles = StyleSheet.create({
-  // 가장 바깥 두 영역은 flex: 1로 사용 가능한 화면 높이를 모두 채운다.
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardArea: {
-    flex: 1,
-  },
-  screen: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  // 입력 영역과 호가 영역이 화면 높이를 나눠 가지며, 입력 내용이 길면 ScrollView가 스크롤한다.
-  formScroll: {
-    flex: 1.15,
-  },
-  formContent: {
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  // flexDirection: 'row'는 자식들을 가로로, space-between은 양 끝으로 배치한다.
-  titleRow: {
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 34 },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  eyebrow: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  symbol: {
-    marginTop: 4,
-    color: colors.textPrimary,
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  liveBadge: {
-    // 점과 글자를 가로로 나란히 놓는다.
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceMuted,
-  },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-    backgroundColor: colors.accent,
-  },
-  liveText: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  priceCard: {
-    // 현재가 이름, 가격과 단위를 한 줄에 배치한다.
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-  },
-  priceLabel: {
-    marginRight: 12,
-    color: colors.textSecondary,
-    fontSize: 13,
-  },
-  currentPrice: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 25,
-    fontVariant: ['tabular-nums'],
-    fontWeight: '800',
-  },
-  currency: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  section: {
-    marginTop: 18,
-  },
-  sectionLabel: {
-    marginBottom: 9,
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  buttonRow: {
-    // 두 개의 버튼을 가로로 배치하고 버튼 사이에 10만큼 간격을 둔다.
-    flexDirection: 'row',
-    gap: 10,
-  },
-  flexButton: {
-    // 같은 행의 각 버튼이 남은 너비를 동일한 비율로 나눠 가진다.
-    flex: 1,
-  },
-  inputShell: {
-    // TextInput과 BTC 단위를 하나의 입력 상자 안에 가로로 배치한다.
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: 14,
-    backgroundColor: colors.input,
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: 15,
-    paddingVertical: 14,
-    color: colors.textPrimary,
-    fontSize: 17,
-    fontVariant: ['tabular-nums'],
-  },
-  inputUnit: {
-    paddingRight: 15,
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  messageBox: {
-    marginTop: 13,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    borderWidth: 1,
-    borderColor: colors.accentBorder,
-    borderRadius: 12,
-    backgroundColor: colors.accentMuted,
-  },
-  messageText: {
-    color: colors.accentText,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-  },
-  orderBookSection: {
-    // 남은 화면 높이를 사용하되 작은 화면에서도 최소 190 높이의 목록 영역을 확보한다.
-    flex: 1,
-    minHeight: 190,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  orderBookTitleRow: {
-    // 호가 제목은 왼쪽, 고정 데이터 설명은 오른쪽에 배치한다.
-    flexDirection: 'row',
-    alignItems: 'baseline',
     justifyContent: 'space-between',
     gap: 12,
   },
-  orderBookTitle: {
-    color: colors.textPrimary,
-    fontSize: 17,
-    fontWeight: '800',
+  symbol: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
+  caption: { marginTop: 4, color: colors.textMuted, fontSize: 9 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerButton: {
+    minHeight: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    backgroundColor: colors.surfaceMuted,
   },
-  orderBookCaption: {
-    color: colors.textMuted,
+  headerButtonText: {
+    color: colors.accentText,
     fontSize: 11,
+    fontWeight: '700',
   },
-  columnHeader: {
-    // 가격과 수량 열 이름을 각각 목록의 양쪽 끝에 배치한다.
+  iconButton: {
+    minWidth: 40,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priceStrip: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    paddingBottom: 8,
+    marginTop: 18,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.divider,
   },
-  columnLabel: {
+  price: {
+    marginTop: 5,
+    color: colors.textPrimary,
+    fontSize: 24,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  connection: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.textMuted,
+  },
+  connectedDot: { backgroundColor: colors.buyText },
+  connectionText: { color: colors.textMuted, fontSize: 9 },
+  error: {
+    marginVertical: 8,
+    color: colors.sellText,
+    fontSize: 11,
+    lineHeight: 17,
+  },
+  tradingArea: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 5,
+    borderTopColor: colors.surface,
+  },
+  orderColumn: { flex: 1.06, minWidth: 0 },
+  bookColumn: { flex: 0.94, minWidth: 0 },
+  success: {
+    marginTop: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.accentBorder,
+    borderRadius: 6,
+    backgroundColor: colors.accentMuted,
+    color: colors.accentText,
+    fontSize: 11,
+    lineHeight: 17,
+    textAlign: 'center',
+  },
+  personalSection: {
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 5,
+    borderTopColor: colors.surface,
+  },
+  sectionHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '800' },
+  allOrders: { minHeight: 38, justifyContent: 'center', paddingHorizontal: 6 },
+  allOrdersText: { color: colors.accentText, fontSize: 10 },
+  empty: {
+    paddingVertical: 28,
     color: colors.textMuted,
     fontSize: 11,
-    fontWeight: '600',
+    textAlign: 'center',
   },
-  orderBookList: {
-    flex: 1,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: colors.divider,
-  },
+  orderRow: { marginTop: 10 },
 });

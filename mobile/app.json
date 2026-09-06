@@ -3,17 +3,32 @@
     "name": "Futures Paper Trading",
     "slug": "futures-paper-trading-mobile",
     "version": "1.0.0",
+    "icon": "./assets/app-icon.png",
     "orientation": "portrait",
     "scheme": "futurespapertrading",
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.futurespapertrading.mobile",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/app-icon.png",
+        "backgroundColor": "#07111f"
+      },
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#07111f",
+          "image": "./assets/app-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

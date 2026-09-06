@@ -24,6 +24,8 @@ export default function RootLayout() {
        * Stack은 찾은 화면들을 순서대로 쌓아 화면 이동·뒤로 가기·전환을 관리한다.
        * Stack이 없으면 이전 화면 기록, 뒤로 가기와 화면 전환을 앱 코드로 직접 만들어야 한다.
        */}
+      {/* 앱을 일반 실행하면 Expo Router가 첫 경로 `/`에 해당하는 app/index.tsx를 선택하고,
+          그 파일의 HomeScreen을 Stack의 활성 화면으로 지정한다. RootLayout이 실행되면 Stack이 HomeScreen을 첫 화면으로 렌더링한다. */}
       {/* 모든 화면에 기본으로 표시되는 Stack 제목 표시줄을 숨긴다. */}
       <Stack screenOptions={{ headerShown: false }} />
 
@@ -36,14 +38,13 @@ export default function RootLayout() {
 /**
  * 앱 시작 시 화면이 준비되는 순서
  *
- * QR 코드로 앱을 처음 열면 기본 경로 /로 시작한다.
+ * 앱을 일반 실행하면 기본 경로 `/`로 시작한다.
  * → expo-router/entry 실행
- * → Expo Router 시작
- * → Expo Router가 /를 app/index.tsx에 연결하고,
- *   app/_layout.tsx를 모든 화면에 공통으로 적용할 틀(루트 레이아웃)로 사용
- * → RootLayout() 함수 실행
- * → RootLayout이 반환한 <Stack />과 <StatusBar /> 렌더링
- * → Stack이 Expo Router가 연결한 app/index.tsx 화면 표시
+ * → Expo Router가 `/`를 app/index.tsx의 HomeScreen과 연결하고,
+ *   app/_layout.tsx를 공통 루트 레이아웃으로 선택
+ * → RootLayout() 실행
+ * → RootLayout의 Stack과 StatusBar 렌더링
+ * → Stack이 활성 화면으로 선택된 HomeScreen을 첫 화면으로 렌더링
  */
 
 /**

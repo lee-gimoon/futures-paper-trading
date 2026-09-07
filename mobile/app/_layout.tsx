@@ -5,26 +5,29 @@
  */
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { WebAppFrame } from '@/components/WebAppFrame';
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { colors } from '@/theme/colors';
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      {/* Stack은 현재 경로 파일의 기본 export를 화면으로 렌더링하고 뒤로 가기 기록을 관리한다. */}
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="chart" />
-        <Stack.Screen name="login" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="signup" options={{ presentation: 'modal' }} />
-      </Stack>
-      <StatusBar style="light" />
+      <WebAppFrame>
+        {/* Stack은 현재 경로 파일의 기본 export를 화면으로 렌더링하고 뒤로 가기 기록을 관리한다. */}
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="chart" />
+          <Stack.Screen name="login" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="signup" options={{ presentation: 'modal' }} />
+        </Stack>
+        <StatusBar style="light" />
+      </WebAppFrame>
     </AuthProvider>
   );
 }

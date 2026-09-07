@@ -14,6 +14,7 @@ COPY mobile/package*.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY mobile/ ./
+# Expo 웹 포트폴리오 화면을 Spring의 /mobile 정적 리소스로 내보낸다.
 RUN npm run build:web
 
 FROM eclipse-temurin:21-jdk-alpine AS backend-build

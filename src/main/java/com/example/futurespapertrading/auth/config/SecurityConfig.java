@@ -68,7 +68,16 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
                                 "/v3/api-docs.yaml"
                         ).permitAll()
                         // Docker/배포 모드에서는 React 빌드 결과물을 Spring Boot가 직접 서빙한다.
-                        .pathMatchers("/", "/index.html", "/assets/**", "/*.ico", "/*.png", "/*.svg").permitAll()
+                        .pathMatchers(
+                                "/",
+                                "/index.html",
+                                "/assets/**",
+                                "/*.ico",
+                                "/*.png",
+                                "/*.svg",
+                                "/mobile",
+                                "/mobile/**"
+                        ).permitAll()
                         // 로그인 전에도 현재 익명 세션의 CSRF 토큰을 받아야 하므로 토큰 발급 API를 공개한다.
                         .pathMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()

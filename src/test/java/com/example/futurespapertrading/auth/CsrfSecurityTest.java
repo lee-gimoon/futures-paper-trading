@@ -57,6 +57,26 @@ class CsrfSecurityTest {
     }
 
     @Test
+    void mobileRootRedirectsToTrailingSlashWithoutAuthentication() {
+        webTestClient.get()
+                .uri("/mobile")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.PERMANENT_REDIRECT)
+                .expectHeader().location("/mobile/");
+    }
+
+    @Test
+    void mobileExpoRouteIsPublicAndServesTheWebEntryPoint() {
+        webTestClient.get()
+                .uri("/mobile/market")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentTypeCompatibleWith(MediaType.TEXT_HTML)
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("mobile-web-test-entry"));
+    }
+
+    @Test
     void loginWithoutCsrfIsForbidden() {
         webTestClient.post()
                 .uri("/api/auth/login")

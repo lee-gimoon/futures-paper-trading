@@ -10,6 +10,8 @@ docs
 frontend/node_modules
 frontend/dist
 frontend/vite-dev.*.log
+mobile/node_modules
+mobile/dist
 
 *.iml
 *.log

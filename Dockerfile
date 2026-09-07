@@ -7,6 +7,15 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
+FROM node:20-alpine AS mobile-web-build
+WORKDIR /workspace/mobile
+
+COPY mobile/package*.json ./
+RUN npm ci
+
+COPY mobile/ ./
+RUN npm run build:web
+
 FROM eclipse-temurin:21-jdk-alpine AS backend-build
 WORKDIR /workspace
 
@@ -16,6 +25,7 @@ RUN chmod +x ./gradlew
 
 COPY src/ ./src/
 COPY --from=frontend-build /workspace/frontend/dist/ ./src/main/resources/static/
+COPY --from=mobile-web-build /workspace/mobile/dist/ ./src/main/resources/static/mobile/
 RUN ./gradlew bootJar --no-daemon -x test
 
 FROM eclipse-temurin:21-jre-alpine

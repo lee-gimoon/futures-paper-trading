@@ -7,6 +7,9 @@
     "orientation": "portrait",
     "scheme": "futurespapertrading",
     "userInterfaceStyle": "dark",
+    "web": {
+      "output": "single"
+    },
     "android": {
       "package": "com.futurespapertrading.mobile",
       "versionCode": 1,
@@ -31,7 +34,8 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/mobile"
     }
   }
 }

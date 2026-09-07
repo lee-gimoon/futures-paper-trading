@@ -19,6 +19,8 @@
 
 **Live App**: [futures-paper-trading-production.up.railway.app](https://futures-paper-trading-production.up.railway.app/)
 
+**모바일 앱 (웹 체험 · Android APK · 화면 미리보기)**: [모바일 포트폴리오 README 보기](mobile/README.md)
+
 **Swagger 문서**: [futures-paper-trading-production.up.railway.app/swagger-ui.html](https://futures-paper-trading-production.up.railway.app/swagger-ui.html)
 
 **ERD 문서**: [데이터베이스 테이블 관계 보기](docs/backend/erd.md)

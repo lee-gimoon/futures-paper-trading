@@ -3,12 +3,15 @@
  * Tabs.Screen은 같은 폴더의 경로 이름을 탭 이름·아이콘과 연결한다.
  */
 import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { colors } from '@/theme/colors';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const isWeb = Platform.OS === 'web';
+
   return (
     <Tabs
       initialRouteName="market"
@@ -21,9 +24,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           borderTopColor: colors.border,
           backgroundColor: colors.background,
-          height: 62 + insets.bottom,
-          paddingTop: 6,
-          paddingBottom: Math.max(insets.bottom, 6),
+          height: isWeb ? 72 : 62 + insets.bottom,
+          paddingTop: isWeb ? 8 : 6,
+          paddingBottom: isWeb ? 10 : Math.max(insets.bottom, 6),
         },
       }}
     >

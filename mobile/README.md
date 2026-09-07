@@ -10,41 +10,27 @@
 | --- | --- |
 | 모바일 웹에서 체험 | [모바일 앱 실행하기](https://futures-paper-trading-production.up.railway.app/mobile/) |
 | Android APK 다운로드 | 준비 중 |
-| 모바일 앱 시연 영상 | 준비 중 |
+| 모바일 화면 미리보기 | [실서비스 스크린샷 4장 보기](#앱-화면) |
 
-> 모바일 웹 주소는 이 변경 사항을 Railway에 배포한 뒤부터 열립니다. APK 설치가 어려운 환경에서는 모바일 웹 또는 시연 영상으로 주요 기능을 확인할 수 있습니다.
+> APK 설치가 어려운 환경에서는 모바일 웹과 아래 실서비스 스크린샷으로 주요 기능을 확인할 수 있습니다.
 
-### APK와 영상 링크 입력 예시
+### APK 링크 입력 예시
 
 ```md
 | Android APK 다운로드 | [Android 앱 설치하기](https://APK-다운로드-주소) |
-| 모바일 앱 시연 영상 | [약 1분 시연 영상 보기](https://영상-주소) |
 ```
 
 ## 앱 화면
 
-현재 스크린샷 준비 중입니다. 아래 네 화면을 같은 크기의 세로 이미지로 추가할 예정입니다.
+Railway에 배포된 모바일 웹의 실제 비로그인 화면입니다. 실시간 BTCUSDT 가격·호가와 캔들 차트는 Spring WebFlux 서버에서 받은 데이터로 표시됩니다.
 
-| 실시간 호가 | 주문 | 캔들 차트 | 포지션·손익 |
-| --- | --- | --- | --- |
-| 준비 중 | 준비 중 | 준비 중 | 준비 중 |
+| 실시간 마켓·호가 | 선물 주문 |
+| --- | --- |
+| <img src="./docs/screenshots/market.png" width="280" alt="실시간 BTCUSDT 가격, 차트와 호가 화면"> | <img src="./docs/screenshots/trade.png" width="280" alt="시장가와 지정가 선물 주문 화면"> |
 
-스크린샷 파일은 다음 경로에 저장하는 것을 권장합니다.
-
-```text
-mobile/docs/screenshots/market.png
-mobile/docs/screenshots/trade.png
-mobile/docs/screenshots/chart.png
-mobile/docs/screenshots/account.png
-```
-
-파일을 추가한 후 위 표를 다음과 같이 교체합니다.
-
-```md
-| 실시간 호가 | 주문 | 캔들 차트 | 포지션·손익 |
-| --- | --- | --- | --- |
-| <img src="./docs/screenshots/market.png" width="200" alt="실시간 호가 화면"> | <img src="./docs/screenshots/trade.png" width="200" alt="주문 화면"> | <img src="./docs/screenshots/chart.png" width="200" alt="캔들 차트 화면"> | <img src="./docs/screenshots/account.png" width="200" alt="포지션과 손익 화면"> |
-```
+| 캔들 차트 상세 | 자산·포지션 |
+| --- | --- |
+| <img src="./docs/screenshots/chart.png" width="280" alt="BTCUSDT 캔들 차트 상세 화면"> | <img src="./docs/screenshots/account.png" width="280" alt="모의 계좌 자산과 포지션 화면"> |
 
 ## 주요 기능
 
@@ -162,8 +148,8 @@ npm run doctor
 - [ ] 주문 생성·취소·체결 확인
 - [ ] 포지션과 손익 계산 확인
 - [ ] Android 실기기에서 APK 설치 및 실행 확인
-- [ ] `/mobile/` 모바일 웹 동작 확인
+- [x] `/mobile/` 모바일 웹 동작 확인
 - [ ] APK 다운로드 주소 입력
 - [ ] 시연 영상 주소 입력
-- [ ] 화면 스크린샷 4장 추가
+- [x] 화면 스크린샷 4장 추가
 - [ ] README의 모든 링크를 시크릿 브라우저에서 확인

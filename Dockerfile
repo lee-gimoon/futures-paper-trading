@@ -11,7 +11,7 @@ FROM node:20-alpine AS mobile-web-build
 WORKDIR /workspace/mobile
 
 COPY mobile/package*.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 COPY mobile/ ./
 RUN npm run build:web

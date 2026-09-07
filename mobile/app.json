@@ -36,6 +36,13 @@
     "experiments": {
       "typedRoutes": true,
       "baseUrl": "/mobile"
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f66203f2-278d-4986-95f4-5d42e34e97b7"
+      }
+    },
+    "owner": "leegimoon"
   }
 }

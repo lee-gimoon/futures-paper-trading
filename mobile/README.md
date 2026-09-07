@@ -9,16 +9,10 @@
 | 구분 | 주소 |
 | --- | --- |
 | 모바일 웹에서 체험 | [모바일 앱 실행하기](https://futures-paper-trading-production.up.railway.app/mobile/) |
-| Android APK 다운로드 | 준비 중 |
+| Android APK 다운로드 | [Android 앱 설치하기](https://github.com/lee-gimoon/futures-paper-trading/releases/latest/download/futures-paper-trading.apk) |
 | 모바일 화면 미리보기 | [실서비스 스크린샷 4장 보기](#앱-화면) |
 
-> APK 설치가 어려운 환경에서는 모바일 웹과 아래 실서비스 스크린샷으로 주요 기능을 확인할 수 있습니다.
-
-### APK 링크 입력 예시
-
-```md
-| Android APK 다운로드 | [Android 앱 설치하기](https://APK-다운로드-주소) |
-```
+> APK는 Android 전용입니다. 설치 시 브라우저의 다운로드 허용과 Android의 `알 수 없는 앱 설치` 승인이 필요할 수 있습니다. Expo Go는 필요하지 않습니다.
 
 ## 앱 화면
 
@@ -102,7 +96,7 @@ npx eas-cli@latest init
 npx eas-cli@latest build --platform android --profile preview
 ```
 
-첫 프로젝트 연결이 완료된 이후에는 `eas init`을 다시 실행하지 않아도 됩니다. 빌드가 끝나면 EAS 빌드 페이지의 설치 주소를 이 문서 상단의 `Android APK 다운로드` 항목에 넣습니다.
+첫 프로젝트 연결이 완료된 이후에는 `eas init`을 다시 실행하지 않아도 됩니다. EAS에서 생성한 APK는 GitHub Release에 `futures-paper-trading.apk`라는 이름으로 첨부하며, 문서 상단의 고정 주소는 최신 정식 Release의 APK를 내려받습니다.
 
 ## 로컬 실행
 
@@ -149,7 +143,7 @@ npm run doctor
 - [ ] 포지션과 손익 계산 확인
 - [ ] Android 실기기에서 APK 설치 및 실행 확인
 - [x] `/mobile/` 모바일 웹 동작 확인
-- [ ] APK 다운로드 주소 입력
+- [x] APK 다운로드 주소 입력
 - [ ] 시연 영상 주소 입력
 - [x] 화면 스크린샷 4장 추가
 - [ ] README의 모든 링크를 시크릿 브라우저에서 확인

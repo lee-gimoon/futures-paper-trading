@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-import heroBackground from '../assets/landing/hero-background.png';
+import heroBackground from '../assets/landing/hero-background-4k.webp';
 import styles from './LandingPage.module.css';
 
 // 코인·산맥·차트는 장식용 이미지로 표시하고, 제목·버튼·안내문은 실제 React 요소로 렌더링한다.

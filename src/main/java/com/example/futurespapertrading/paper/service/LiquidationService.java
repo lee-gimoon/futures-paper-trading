@@ -17,9 +17,10 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 
-// 자동 강제청산(9단계 레버리지). 현재 mark가 청산가를 넘긴 포지션을 찾아 반대방향 시장가로 강제 청산한다.
-//   청산은 "주문 1건 + 체결 1건"을 청산가에 만들어 포지션을 닫는다 → 실현 PnL이 −usedMargin으로 확정된다.
-//   LiquidationMonitor가 snapshot마다(샘플링) runOnce()를 호출한다.
+// 한 회차의 강제청산 검사와 실행을 담당하는 서비스다.
+// 모든 계좌의 포지션을 조회해 현재 mark가 청산 조건에 도달했는지 판정하고,
+// 대상 계좌에는 기존 포지션의 반대 방향 주문과 체결을 저장해 포지션을 닫는다.
+// 반복 실행 시점과 호가 스트림 구독은 LiquidationMonitor가 담당한다.
 @Service
 public class LiquidationService {
 
@@ -41,8 +42,8 @@ public class LiquidationService {
         this.orderRepository = orderRepository;
     }
 
-    // 모든 계좌의 현재 포지션을 한 번씩 평가하고, 청산 조건이면 강제 청산한다.
-    // runOnce는 1회 스캔만 수행하며, 반복 호출은 LiquidationMonitor가 담당한다.
+    // 호출될 때마다 모든 계좌를 한 번씩 평가하고, 청산 조건을 충족한 포지션을 강제 청산한다.
+    // 이 메서드는 한 회차만 실행하며 타이머나 반복 실행 기능은 포함하지 않는다.
     // MVP라 매 호출마다 전 계좌를 본다(계좌 수에 비례). 사용자가 많아지면 '포지션 보유 계좌' 인덱스로 최적화.
     public Mono<Void> runOnce() {
         return accountRepository.findAll()

@@ -71,6 +71,8 @@ public class SecurityConfig { // 스프링 시큐리티 설정(인증/인가 규
                         .pathMatchers(
                                 "/",
                                 "/index.html",
+                                "/trade",
+                                "/trade/",
                                 "/assets/**",
                                 "/*.ico",
                                 "/*.png",

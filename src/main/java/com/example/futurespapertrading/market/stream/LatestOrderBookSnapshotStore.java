@@ -8,14 +8,14 @@ import reactor.core.publisher.Sinks;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-// 3단계의 핵심 — 흘러가는 push 스트림을 "지금 상태"로 붙잡아두는 양동이.
-// 메시지가 도착할 때마다 통째로 교체되고(매번 새 양동이), HTTP 요청은 양동이를 그 순간 들여다본다.
+// WebSocket으로 들어오는 호가 중 최신 snapshot 한 건을 메모리에 보관하고 구독자에게 발행한다.
+// 새 메시지가 도착할 때마다 snapshot 전체를 교체하며, HTTP 요청은 그 순간의 최신값을 조회한다.
 //
 // 동시성: Writer = WebSocket event loop 1개, Reader = HTTP 요청 N개.
 // AtomicReference.set/get은 단일 참조 교체/조회를 락 없이 원자적으로 처리하므로
 // 락(synchronized) 없이 안전하다. 우리는 한 snapshot 안의 필드를 부분 갱신하지 않고
 // 매번 새 OrderBookSnapshot으로 통째 교체하기 때문에 이걸로 충분하다.
-//   (6단계에서 diff 적용으로 갈 때는 별도 자료구조가 필요해질 수 있다.)
+// 향후 호가 변경분을 기존 snapshot에 반영하는 구조로 바뀌면 별도의 상태 관리가 필요할 수 있다.
 @Component
 public class LatestOrderBookSnapshotStore {
 
@@ -28,12 +28,12 @@ public class LatestOrderBookSnapshotStore {
 	//   (PaperOrderService.placeOrder가 체결 기준 snapshot으로 꺼내 씀).
 	private final AtomicReference<OrderBookSnapshot> latest = new AtomicReference<>();
 
-	// ✨ 추가: 변화 알리미 (Hot Flux + multicast + replay(1))
+	// snapshot 변화 알리미 (Hot Flux + multicast + replay(1))
 	// replay().limit(1) = 멀티캐스트 + 최근 1건 캐싱
 	private final Sinks.Many<OrderBookSnapshot> sink =
 			Sinks.many().replay().limit(1);
 
-	// 새 메시지가 파싱되어 도착할 때마다 호출된다. 통째로 교체 — 6단계에서 diff로 발전.
+	// 새 메시지가 파싱되어 도착할 때마다 최신 snapshot을 통째로 교체하고 구독자에게 발행한다.
 	//   호출 주기: 구독 스트림이 @depth20@100ms라 Binance가 100ms 간격으로 push
 	//   → 사실상 100ms마다 set + tryEmitNext가 한 번씩 일어난다.
 	//   단, 우리 쪽 타이머가 아니라 Binance push에 끌려가는 주기라서 연결이 끊기거나 메시지가 안 오면 호출도 같이 멈춘다.
@@ -101,4 +101,4 @@ public class LatestOrderBookSnapshotStore {
 //
 //		final이 빠지는 이유: 일반 필드는 필드 자체가 새 snapshot을 가리키도록 매번 재할당돼야 하기 때문.
 //		(AtomicReference 버전은 박스 객체 자체는 평생 같은 박스라 final이 살아있고, 박스 안의
-//		메모리 주소만 set으로 바뀌는 구조 — 불변성과 가변성을 한 단계 간접으로 분리한 셈이다.)
+//		메모리 주소만 set으로 바뀌므로, 고정된 참조 상자와 교체 가능한 내부 값을 분리한 구조다.)

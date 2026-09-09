@@ -2,6 +2,7 @@
 // Vite가 이 지정자를 실제 패키지 모듈로 해석하며, 가져온 React 객체는 아래의 React.StrictMode에 사용한다.
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles.css';
 
@@ -36,9 +37,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   // JSX는 JavaScript/TypeScript 안에 HTML과 비슷한 표기법으로 React UI 구조를 작성하는 문법이다.
   // Vite가 JSX를 브라우저에서 실행할 JavaScript 표현으로 변환한다.
   <React.StrictMode>
-    {/* <App />은 App 컴포넌트를 렌더링하라는 React 요소 설명이며, 여기서 App()을 직접 호출하지 않는다. */}
-    {/* React는 예약된 렌더링 작업에서 App 함수를 호출하고 반환된 화면 구조를 처리한다. */}
-    <App />
+    {/* Spring은 최초 HTML 요청을 처리하고, BrowserRouter는 HTML이 로드된 이후 브라우저 내부에서 React 화면 경로를 처리합니다. */}
+    {/* 구체적으로 BrowserRouter는 현재 브라우저 주소를 React의 라우팅 정보로 제공하고, 주소가 바뀌면 이 정보를 갱신합니다. */}
+    {/* 그러면 App 안의 Routes가 현재 주소와 일치하는 Route를 골라 해당 화면 컴포넌트를 렌더링합니다. */}
+    <BrowserRouter>
+      {/* <App />은 App 컴포넌트를 렌더링하라는 React 요소 설명이며, 여기서 App()을 직접 호출하지 않는다. */}
+      {/* React는 예약된 렌더링 작업에서 App 함수를 호출하고 반환된 화면 구조를 처리한다. */}
+      <App />
+    </BrowserRouter>
   </React.StrictMode>
 );
 

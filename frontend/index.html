@@ -3,20 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BTCUSDT 호가창</title>
+    <meta
+      name="description"
+      content="실시간 BTCUSDT 시세를 기반으로 선물거래를 연습할 수 있는 비트코인 모의거래 서비스"
+    />
+    <meta name="theme-color" content="#07090e" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="BTC Paper | 비트코인 모의 선물거래" />
+    <meta
+      property="og:description"
+      content="가상 자금으로 실시간 비트코인 선물거래를 연습해 보세요."
+    />
+    <title>BTC Paper | 비트코인 모의 선물거래</title>
   </head>
   <body>
     <div id="root"></div>
-    <!-- 사용자가 사이트 URL에 접속하면 Vite가 기본 문서인 index.html을 응답하고,
-         브라우저는 아래 script 태그를 읽어 main.tsx를 다시 요청하면서 React 앱이 시작된다. -->
+    <!-- 개발 환경에서는 Vite 개발 서버가 이 index.html을 응답하고, 브라우저가 아래 script 태그의 main.tsx를 요청하면서 React 앱이 시작된다.
+         배포 환경에서는 Vite가 main.tsx와 그 의존 파일을 빌드된 JavaScript·CSS 파일로 변환하고 이 script 경로도 /assets/...로 바꾼다.
+         Docker가 그 빌드 결과를 Spring JAR의 static 디렉터리에 포함하므로, 배포된 서버에서는 Spring Boot가 index.html과 /assets 파일을 응답한다. -->
     <!-- script 태그: HTML 문서에서 JavaScript 파일을 불러와 실행한다. -->
     <!-- type="module": 이 파일을 ES 모듈 방식으로 실행하며 import/export 문법을 사용할 수 있다.
          또한 일반 script와 달리 module script는 기본적으로 defer처럼 동작하여 HTML을 끝까지 읽은 뒤 실행된다. -->
-    <!-- src: React 앱의 실행이 시작되는 진입 파일(main.tsx)의 경로를 지정한다. -->
+    <!-- src: 개발 서버와 Vite 빌드가 React 앱의 진입점으로 사용할 main.tsx 경로를 지정한다. -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-<!-- Vite 개발 서버로부터 index.html 데이터 청크 도착
+<!-- 아래는 개발 환경에서 Vite 개발 서버가 원본 index.html을 응답할 때의 브라우저 처리 흐름이다.
+
+     Vite 개발 서버로부터 index.html 데이터 청크 도착
      → HTML 파싱 작업이 태스크 큐에 준비됨
      → 이벤트 루프 구현 코드가 실행 가능한 태스크 확인
      → HTML 파싱 태스크 선택
